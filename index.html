@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Team Status</title>
+<title>Team Manager</title>
+<script>if (window.location.protocol === 'file:') window.location.replace('public/index.html');</script>
 <style>
 :root {
   --bg: #fbfaf8; --surface: #ffffff; --muted-bg: #eef0f3; --border: #e3e6ea;
@@ -237,12 +238,12 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     <span class="logo-badge">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
     </span>
-    <span class="app-name" id="sb-app-name">Team Status</span>
+    <span class="app-name" id="sb-app-name">Team Manager</span>
   </div>
   <nav id="sb-nav">
     <button class="nav-btn" data-page="grid" onclick="nav('grid')">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      Grid View
+      Schedule
     </button>
     <button class="nav-btn" data-page="dashboard" onclick="nav('dashboard')">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v9H3z"/><path d="M14 3h7v5h-7z"/><path d="M14 12h7v9h-7z"/><path d="M3 16h7v5H3z"/></svg>
@@ -250,7 +251,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     </button>
     <button class="nav-btn" data-page="employees" onclick="nav('employees')">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      Personnel
+      People
     </button>
     <button class="nav-btn" data-page="summary" onclick="nav('summary')">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -280,7 +281,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 <!-- Login Modal -->
 <div class="modal-bg" id="login-modal" style="background:var(--bg); z-index:9999;">
   <div class="modal" style="width:360px; box-shadow:0 10px 40px rgba(0,0,0,0.1);">
-    <h3 style="margin-bottom:16px; text-align:center;">Team Status Logg inn</h3>
+    <h3 style="margin-bottom:16px; text-align:center;">Team Manager sign in</h3>
     <div class="form-row"><label>Brukernavn</label><input id="login-user" type="text" placeholder="admin"></div>
     <div class="form-row"><label>Passord</label><input id="login-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()"></div>
     <p id="login-err" style="color:var(--destructive); font-size:12px; display:none;">Feil brukernavn eller passord</p>
