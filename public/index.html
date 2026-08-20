@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Team Manager</title>
+<script>if (window.location.protocol === 'file:') window.location.replace('public/index.html');</script>
 <style>
 :root {
   --bg: #fbfaf8; --surface: #ffffff; --muted-bg: #eef0f3; --border: #e3e6ea;
@@ -228,11 +229,6 @@ select.plain-select { padding: 8px 10px; border: 1px solid var(--border); border
 a.tel-link { color: var(--text); text-decoration: none; border-bottom: 1px dotted var(--muted); }
 a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); }
 .empty-note { text-align: center; padding: 44px 16px; color: var(--muted); font-size: 13.5px; }
-.ics-import-list { max-height: min(52vh, 420px); overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
-.ics-import-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-bottom: 1px solid var(--border); cursor: pointer; }
-.ics-import-row:last-child { border-bottom: none; }
-.ics-import-row:hover { background: color-mix(in srgb, var(--muted-bg) 60%, transparent); }
-.ics-import-row input { width: 15px; height: 15px; accent-color: var(--primary); flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -265,8 +261,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   <div class="sb-section">
     <div class="sb-section-label">Server Sync</div>
     <button class="sb-link" id="save-btn" onclick="saveData()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5M4 20h16"/></svg> Save to Server</button>
-    <button class="sb-link" onclick="exportData()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5M5 20h14"/></svg> Export JSON</button>
-    <button class="sb-link" onclick="document.getElementById('import-file').click()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5M4 4h16"/></svg> Import JSON</button>
     <button class="sb-link" id="undo-btn" onclick="undoLastChange()" disabled><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/></svg> Undo Change</button>
     <button class="sb-link" onclick="doLogout()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Log Out</button>
     <div class="sb-info"><span class="db-indicator connected" id="db-dot"></span><span id="db-status-text">Connected to server</span></div>
@@ -283,29 +277,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 <main id="main">
   <div id="content" style="padding:0;overflow:hidden;display:flex;flex-direction:column;height:100%"></div>
 </main>
-
-<input id="import-file" type="file" accept="application/json,.json" hidden onchange="importDataFile(event)">
-<input id="holiday-ics-file" type="file" accept="text/calendar,.ics" hidden onchange="importHolidayIcs(event)">
-
-<div class="modal-bg" id="ics-import-modal">
-  <div class="modal" style="width:560px">
-    <h3>Import holidays</h3>
-    <p class="modal-desc">Select the holidays to add as red days. Existing matching holidays can be selected to update them.</p>
-    <div class="flex items-center justify-between" style="gap:10px;margin-bottom:10px">
-      <span id="ics-import-count" class="muted text-sm"></span>
-      <span class="flex gap-2">
-        <button class="btn btn-sm" type="button" onclick="selectAllIcsHolidays()">Check all</button>
-        <button class="btn btn-sm" type="button" onclick="selectFutureIcsHolidays()">Future only</button>
-        <button class="btn btn-sm" type="button" onclick="selectNoIcsHolidays()">Check none</button>
-      </span>
-    </div>
-    <div id="ics-import-list" class="ics-import-list"></div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeModal('ics-import-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmIcsImport()">Import selected</button>
-    </div>
-  </div>
-</div>
 
 <!-- Login Modal -->
 <div class="modal-bg" id="login-modal" style="background:var(--bg); z-index:9999;">
@@ -528,17 +499,9 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     <h3>Application settings</h3>
     <p class="modal-desc">Customise the app name and working-hours configuration.</p>
     <div class="form-row">
-      <label>Team name</label>
-      <input id="set-team-name" placeholder="e.g. Operations Team">
-      <div class="form-hint">Your team or organisation name shown in the workspace.</div>
-    </div>
-    <div class="form-row">
-      <label>Data storage mode</label>
-      <select id="set-storage-mode" class="plain-select" style="width:100%">
-        <option value="local">Local JSON mode</option>
-        <option value="online">Online SQLite mode</option>
-      </select>
-      <div class="form-hint">Local mode keeps data in this browser and uses JSON import/export. Online mode stores data through the authenticated SQLite server.</div>
+      <label>Application name</label>
+      <input id="set-app-name" placeholder="e.g. JDLOC Employee Overview">
+      <div class="form-hint">Shown in the sidebar and as the main heading in Grid View.</div>
     </div>
     <div class="form-row">
       <label>Core working hours per day</label>
@@ -553,6 +516,30 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
         <div><label class="muted text-sm">High up to %</label><input id="set-high-max" type="number" min="1" max="500" step="1"></div>
       </div>
       <div class="form-hint">Values above the High limit are Overloaded. Limits must increase from Light to High.</div>
+    </div>
+    <div class="form-row">
+      <label>Red dates / holidays</label>
+      <div style="display:flex;gap:8px;align-items:end">
+        <div style="flex:0 0 140px"><label class="muted text-sm">From</label><input id="set-holiday-date" type="date"></div>
+        <div style="flex:0 0 140px"><label class="muted text-sm">To</label><input id="set-holiday-end" type="date"></div>
+        <div style="flex:1"><label class="muted text-sm">Name</label><input id="set-holiday-name" placeholder="Christmas Day"></div>
+        <button class="btn btn-sm" type="button" onclick="addHolidaySetting()">Add</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:8px"><input id="set-holiday-nonworking" type="checkbox" checked> Subtract from normal capacity</label>
+      <div class="form-hint">Use the same date for one day, or From/To for a holiday week or longer non-working period.</div>
+      <div id="set-holiday-list" style="display:flex;flex-direction:column;gap:4px;margin-top:8px"></div>
+    </div>
+    <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+    <div class="form-row">
+      <label>Endre passord</label>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <input id="set-pass-current" type="password" placeholder="Nåværende passord" style="flex:1">
+        <input id="set-pass-new" type="password" placeholder="Nytt passord" style="flex:1">
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn btn-sm" type="button" onclick="changePassword()">Oppdater passord</button>
+        <span id="set-pass-msg" style="font-size:12px;font-weight:500"></span>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('settings-modal')">Cancel</button>
@@ -584,8 +571,6 @@ const DEPT_ACC_LIGHT = ['#86efac','#93c5fd','#d8b4fe','#fdba74','#7dd3fc','#fde0
 const DEPT_BG_DARK   = ['#052e16','#1e3a5f','#2e1065','#431407','#082f49','#422006','#500724','#1a2e05','#4c0519','#1e1b4b','#064e3b','#0c2340'];
 const DEPT_ACC_DARK  = ['#166534','#1d4ed8','#6d28d9','#c2410c','#0369a1','#a16207','#be185d','#4d7c0f','#be123c','#4c1d95','#065f46','#0e7490'];
 const SETTINGS_KEY = 'team-status-app-settings';
-const OFFLINE_DATA_KEY = 'team-manager-offline-data';
-const RUNNING_FROM_FILE = window.location.protocol === 'file:';
 const LEGACY_THEME_KEY = 'team-status-theme';
 function svgIcon(name, title = '') {
   const paths = {
@@ -613,9 +598,7 @@ function lsSet(key, value) { try { window.localStorage.setItem(key, value); } ca
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
 let appSettings = { 
-  appName: 'Team Manager', 
-  teamName: '',
-  storageMode: RUNNING_FROM_FILE ? 'local' : 'online',
+  appName: 'Team Status', 
   darkMode: false, 
   coreHoursPerDay: 7.5, 
   lightMax: 70, 
@@ -629,9 +612,7 @@ function loadSettings() {
     const raw = lsGet(SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      appSettings.appName = 'Team Manager';
-      appSettings.teamName = typeof parsed.teamName === 'string' ? parsed.teamName : '';
-      appSettings.storageMode = parsed.storageMode === 'local' || RUNNING_FROM_FILE ? 'local' : 'online';
+      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Status';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.coreHoursPerDay = typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5;
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
@@ -643,7 +624,6 @@ function loadSettings() {
     appSettings.darkMode = lsGet(LEGACY_THEME_KEY) === 'dark';
   } catch (err) { }
 }
-function usesLocalMode() { return RUNNING_FROM_FILE || appSettings.storageMode === 'local'; }
 function persistSettings() { lsSet(SETTINGS_KEY, JSON.stringify(appSettings)); }
 function applyTheme() {
   document.body.classList.toggle('dark', appSettings.darkMode);
@@ -652,154 +632,78 @@ function applyTheme() {
 }
 function toggleTheme() { appSettings.darkMode = !appSettings.darkMode; persistSettings(); applyTheme(); renderPage(); }
 function applyAppName() {
-  document.getElementById('sb-app-name').textContent = 'Team Manager';
-  document.title = 'Team Manager';
+  document.getElementById('sb-app-name').textContent = appSettings.appName;
+  document.title = appSettings.appName;
 }
+
+async function changePassword() {
+  const currentPassword = document.getElementById('set-pass-current').value;
+  const newPassword = document.getElementById('set-pass-new').value;
+  const msgEl = document.getElementById('set-pass-msg');
+
+  if (!currentPassword || !newPassword) {
+    msgEl.textContent = 'Fyll ut begge feltene.';
+    msgEl.style.color = 'var(--destructive)';
+    return;
+  }
+
+  msgEl.textContent = 'Lagrer...';
+  msgEl.style.color = 'var(--muted)';
+
+  try {
+    const res = await fetch('/api/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      msgEl.textContent = 'Passordet er oppdatert!';
+      msgEl.style.color = '#22c55e'; // Grønn
+      document.getElementById('set-pass-current').value = '';
+      document.getElementById('set-pass-new').value = '';
+      setTimeout(() => { msgEl.textContent = ''; }, 4000);
+    } else {
+      msgEl.textContent = data.error || 'Kunne ikke oppdatere passord.';
+      msgEl.style.color = 'var(--destructive)'; // Rød
+    }
+  } catch (e) {
+    msgEl.textContent = 'Nettverksfeil.';
+    msgEl.style.color = 'var(--destructive)';
+  }
+}
+
 function openSettings() {
-  document.getElementById('set-team-name').value = appSettings.teamName;
-  document.getElementById('set-storage-mode').value = appSettings.storageMode;
-  document.getElementById('set-storage-mode').disabled = RUNNING_FROM_FILE;
+  document.getElementById('set-app-name').value = appSettings.appName;
   document.getElementById('set-core-hours').value = String(appSettings.coreHoursPerDay);
   document.getElementById('set-light-max').value = String(appSettings.lightMax);
   document.getElementById('set-normal-max').value = String(appSettings.normalMax);
   document.getElementById('set-high-max').value = String(appSettings.highMax);
+  renderHolidaySettings();
   document.getElementById('settings-modal').classList.add('open');
 }
-function unfoldIcsLines(text) {
-  return text.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '').split(/\r?\n/);
-}
-function decodeIcsText(value) {
-  return String(value || '').replace(/\\([nN])/g, '\n').replace(/\\([,;\\])/g, '$1').trim();
-}
-function icsDate(value) {
-  const match = String(value || '').match(/^(\d{4})(\d{2})(\d{2})/);
-  return match ? `${match[1]}-${match[2]}-${match[3]}` : '';
-}
-function parseIcsHolidays(text) {
-  const holidays = [];
-  let event = null;
-  for (const line of unfoldIcsLines(text)) {
-    if (line === 'BEGIN:VEVENT') { event = {}; continue; }
-    if (line === 'END:VEVENT') {
-      if (event?.start) {
-        const startDate = icsDate(event.start);
-        const endExclusive = icsDate(event.end);
-        let endDate = endExclusive || startDate;
-        if (endExclusive) {
-          const end = new Date(`${endExclusive}T00:00:00`);
-          end.setDate(end.getDate() - 1);
-          endDate = fmt(end);
-        }
-        if (startDate && endDate >= startDate) holidays.push({
-          name: decodeIcsText(event.summary) || 'Holiday', startDate, endDate,
-          nonWorking: true, color: '#ef4444', source: 'ics'
-        });
-      }
-      event = null;
-      continue;
-    }
-    if (!event) continue;
-    const separator = line.indexOf(':');
-    if (separator < 0) continue;
-    const property = line.slice(0, separator), value = line.slice(separator + 1);
-    if (property.startsWith('DTSTART')) event.start = value;
-    else if (property.startsWith('DTEND')) event.end = value;
-    else if (property.startsWith('SUMMARY')) event.summary = value;
-  }
-  return holidays;
-}
-let pendingIcsHolidays = [];
-let selectedIcsIndexes = new Set();
-let pendingIcsExcludedCount = 0;
-function icsHolidayKey(holiday) {
-  return `${holiday.startDate || holiday.date}|${holiday.endDate || holiday.date}|${holiday.name}`;
-}
-function updateIcsImportCount() {
-  const count = document.getElementById('ics-import-count');
-  if (!count) return;
-  const excluded = pendingIcsExcludedCount ? ` · ${pendingIcsExcludedCount} outside ${gridYear} excluded` : '';
-  count.textContent = `${selectedIcsIndexes.size} selected · ${pendingIcsHolidays.length} in ${gridYear}${excluded}`;
-}
-function renderIcsImportList() {
-  const list = document.getElementById('ics-import-list');
+function renderHolidaySettings() {
+  const list = document.getElementById('set-holiday-list');
   if (!list) return;
-  list.innerHTML = pendingIcsHolidays.map((holiday, index) => {
-    const start = holiday.startDate, end = holiday.endDate || start;
-    const dates = start === end ? fmtMed(start) : `${fmtMed(start)} – ${fmtMed(end)}`;
-    const checked = selectedIcsIndexes.has(index);
-    return `<label class="ics-import-row" style="${holiday.duplicate ? 'opacity:.72' : ''}">
-      <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleIcsHoliday(${index},this.checked)">
-      <span style="min-width:0;flex:1"><b>${esc(holiday.name)}</b><span class="muted text-sm" style="display:block;margin-top:2px">${esc(dates)}${holiday.duplicate ? ' · already imported, will replace' : ''}</span></span>
-    </label>`;
-  }).join('');
-  updateIcsImportCount();
+  list.innerHTML = appSettings.holidays.length ? appSettings.holidays.map((holiday, index) => `<div class="flex items-center justify-between" style="padding:5px 8px;background:var(--muted-bg);border-radius:5px;font-size:12px"><span><b>${esc(fmtMed(holiday.date))}</b> · ${esc(holiday.name || 'Holiday')} <span class="muted">(${holiday.nonWorking === false ? 'highlight only' : 'non-working'})</span></span><button class="icon-btn danger" type="button" title="Remove" onclick="removeHolidaySetting(${index})">&times;</button></div>`).join('') : '<div class="muted text-sm">No red dates added.</div>';
 }
-function toggleIcsHoliday(index, checked) {
-  if (checked) selectedIcsIndexes.add(index);
-  else selectedIcsIndexes.delete(index);
-  updateIcsImportCount();
-}
-function selectAllIcsHolidays() {
-  selectedIcsIndexes = new Set(pendingIcsHolidays.map((_, index) => index));
-  renderIcsImportList();
-}
-function selectNoIcsHolidays() {
-  selectedIcsIndexes.clear();
-  renderIcsImportList();
-}
-function selectFutureIcsHolidays() {
-  const today = todayStr();
-  selectedIcsIndexes = new Set(pendingIcsHolidays.map((holiday, index) =>
-    holiday.endDate >= today ? index : null
-  ).filter(index => index !== null));
-  renderIcsImportList();
-}
-async function confirmIcsImport() {
-  const additions = pendingIcsHolidays.filter((_, index) => selectedIcsIndexes.has(index));
-  if (!additions.length) {
-    closeModal('ics-import-modal');
-    pendingIcsHolidays = [];
-    selectedIcsIndexes.clear();
-    pendingIcsExcludedCount = 0;
-    return;
+function addHolidaySetting() {
+  const date = document.getElementById('set-holiday-date').value;
+  const endDate = document.getElementById('set-holiday-end').value || date;
+  const name = document.getElementById('set-holiday-name').value.trim();
+  const nonWorking = document.getElementById('set-holiday-nonworking').checked;
+  if (!date || endDate < date) return;
+  for (const day = new Date(`${date}T00:00:00`); fmt(day) <= endDate; day.setDate(day.getDate() + 1)) {
+    const holidayDate = fmt(day);
+    if (!appSettings.holidays.some(holiday => holiday.date === holidayDate)) appSettings.holidays.push({ date: holidayDate, name, nonWorking });
   }
-  const additionKeys = new Set(additions.map(icsHolidayKey));
-  appSettings.holidays = appSettings.holidays.filter(holiday => !additionKeys.has(icsHolidayKey(holiday)));
-  appSettings.holidays.push(...additions.map(({ duplicate, ...holiday }) => holiday));
-  persistSettings();
-  markUnsaved();
-  await saveState();
-  closeModal('ics-import-modal');
-  renderPage();
-  pendingIcsHolidays = [];
-  selectedIcsIndexes.clear();
-  pendingIcsExcludedCount = 0;
+  document.getElementById('set-holiday-date').value = '';
+  document.getElementById('set-holiday-end').value = '';
+  document.getElementById('set-holiday-name').value = '';
+  renderHolidaySettings();
 }
-async function importHolidayIcs(event) {
-  const file = event.target.files?.[0];
-  event.target.value = '';
-  if (!file) return;
-  try {
-    const imported = parseIcsHolidays(await file.text());
-    if (!imported.length) throw new Error('No all-day holiday events were found.');
-    const yearStart = `${gridYear}-01-01`, yearEnd = `${gridYear}-12-31`;
-    const inPlannerYear = imported.filter(holiday => holiday.endDate >= yearStart && holiday.startDate <= yearEnd).map(holiday => ({
-      ...holiday,
-      startDate: holiday.startDate < yearStart ? yearStart : holiday.startDate,
-      endDate: holiday.endDate > yearEnd ? yearEnd : holiday.endDate,
-    }));
-    if (!inPlannerYear.length) throw new Error(`No holiday events found for planner year ${gridYear}.`);
-    pendingIcsExcludedCount = imported.length - inPlannerYear.length;
-    const existing = new Set(appSettings.holidays.map(icsHolidayKey));
-    pendingIcsHolidays = inPlannerYear.map(holiday => ({ ...holiday, duplicate: existing.has(icsHolidayKey(holiday)) }));
-    selectedIcsIndexes = new Set(pendingIcsHolidays.map((_, index) => index));
-    closeModal('holiday-modal');
-    renderIcsImportList();
-    document.getElementById('ics-import-modal').classList.add('open');
-  } catch (err) {
-    alert(`Could not import ICS file: ${err.message}`);
-  }
-}
+function removeHolidaySetting(index) { appSettings.holidays.splice(index, 1); renderHolidaySettings(); }
 function holidayFor(date) {
   return appSettings.holidays.find(holiday => {
     if (holiday.startDate && holiday.endDate) return date >= holiday.startDate && date <= holiday.endDate;
@@ -844,7 +748,7 @@ function openHolidayModal(index = null, indexes = null) {
   buildSwatchRow('hf-swatches', selectedHolidayColor, color => { selectedHolidayColor = color; markSwatch('hf-swatches', color); });
   document.getElementById('holiday-modal').classList.add('open');
 }
-async function saveHolidayFromModal() {
+function saveHolidayFromModal() {
   const name = document.getElementById('hf-name').value.trim();
   const startDate = document.getElementById('hf-start').value;
   const endDate = document.getElementById('hf-end').value;
@@ -857,25 +761,20 @@ async function saveHolidayFromModal() {
     appSettings.holidays.push(holiday);
   }
   persistSettings();
-  markUnsaved();
-  await saveState();
   closeModal('holiday-modal');
   renderPage();
 }
-async function deleteHolidayFromModal() {
+function deleteHolidayFromModal() {
   if (editingHolidayIndex === null) return;
   recordUndo();
   appSettings.holidays = appSettings.holidays.filter((_, index) => !editingHolidayIndexes.includes(index));
   persistSettings();
-  markUnsaved();
-  await saveState();
   closeModal('holiday-modal');
   renderPage();
 }
-async function saveSettings() {
-  const previousStorageMode = appSettings.storageMode;
-  appSettings.teamName = document.getElementById('set-team-name').value.trim();
-  if (!RUNNING_FROM_FILE) appSettings.storageMode = document.getElementById('set-storage-mode').value === 'local' ? 'local' : 'online';
+function saveSettings() {
+  const name = document.getElementById('set-app-name').value.trim();
+  if (name) appSettings.appName = name;
   const hours = parseFloat(document.getElementById('set-core-hours').value);
   if (!isNaN(hours) && hours > 0 && hours <= 24) appSettings.coreHoursPerDay = hours;
   const lightMax = parseFloat(document.getElementById('set-light-max').value);
@@ -888,18 +787,11 @@ async function saveSettings() {
   appSettings.lightMax = lightMax;
   appSettings.normalMax = normalMax;
   appSettings.highMax = highMax;
-  persistSettings();
-  if (!RUNNING_FROM_FILE && previousStorageMode !== appSettings.storageMode) {
-    window.location.reload();
-    return;
-  }
-  markUnsaved();
-  await saveState();
-  applyAppName(); closeModal('settings-modal'); renderPage();
+  persistSettings(); applyAppName(); closeModal('settings-modal'); renderPage();
 }
 
 // ═══ DATA STATE ══════════════════════════════════════════════════════════════
-let currentPage = 'dashboard';
+let currentPage = 'grid';
 let gridYear = new Date().getFullYear();
 let summaryYear = new Date().getFullYear();
 let summarySortKey = 'name', summarySortDir = 'asc';
@@ -945,30 +837,14 @@ async function undoLastChange() {
 function updateSaveButton() {
   const button = document.getElementById('save-btn');
   if (!button) return;
-  const local = usesLocalMode();
-  const destination = local ? 'Save Local JSON' : 'Save to Server';
-  if (!local && !hasUnsavedChanges) {
-    button.innerHTML = `${svgIcon('check')} Saved to server`;
-    button.style.background = '';
-    button.style.color = '';
-    button.style.fontWeight = '';
-    button.disabled = true;
-    button.style.opacity = '.7';
-    button.style.cursor = 'default';
-    return;
-  }
-  button.disabled = false;
-  button.style.opacity = '';
-  button.style.cursor = '';
   button.innerHTML = hasUnsavedChanges
-    ? `${svgIcon('save')} ${destination} (Unsaved!)`
-    : `${svgIcon('save')} ${destination}`;
+    ? `${svgIcon('save')} Save to Server (Unsaved!)`
+    : `${svgIcon('save')} Save to Server`;
   button.style.background = hasUnsavedChanges ? '#dc2626' : '';
   button.style.color = hasUnsavedChanges ? '#fff' : '';
   button.style.fontWeight = hasUnsavedChanges ? '700' : '';
 }
 function markUnsaved() {
-  if (!usesLocalMode()) return;
   hasUnsavedChanges = true;
   updateSaveButton();
 }
@@ -982,7 +858,6 @@ function safeColor(c) { return /^#[0-9a-fA-F]{3,8}$/.test(String(c || '')) ? c :
 function loadFromData(data) {
   undoStack = [];
   updateUndoButton();
-  if (Array.isArray(data.holidays)) appSettings.holidays = data.holidays;
   courses = (data.courses || []).map(course => ({ ...course, id: +course.id }));
   courseStatuses = data.courseStatuses && typeof data.courseStatuses === 'object' ? { ...data.courseStatuses } : {};
   fitnessTests = data.fitnessTests && typeof data.fitnessTests === 'object' ? { ...data.fitnessTests } : {};
@@ -1066,8 +941,8 @@ function loadFromData(data) {
 function updateSbStatus() {
   const dot = document.getElementById('db-dot');
   const text = document.getElementById('db-status-text');
-  dot.className = `db-indicator${usesLocalMode() ? '' : ' connected'}`;
-  text.textContent = `${usesLocalMode() ? 'Local JSON mode' : 'Connected to server'} · ${employees.length} employees`;
+  dot.className = 'db-indicator connected'; 
+  text.textContent = `Connected to server · ${employees.length} employees`;
   renderSbToday();
 }
 function renderSbToday() {
@@ -1111,78 +986,39 @@ async function doLogout() {
 function snapshotData() {
   return {
     version: 2, savedAt: new Date().toISOString(),
-    holidays: appSettings.holidays,
     employees, categories, statuses, activities, courses, courseStatuses, fitnessTests, entriesMap, activityShiftsMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   };
 }
 
 async function saveState() {
-  if (usesLocalMode()) {
-    lsSet(OFFLINE_DATA_KEY, JSON.stringify(snapshotData()));
-    return;
-  }
   try {
     const res = await fetch('/api/state', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(snapshotData())
     });
     if (!res.ok) throw new Error('Failed to save to server');
-    hasUnsavedChanges = false;
-    updateSaveButton();
-  } catch (err) {
-    hasUnsavedChanges = true;
-    updateSaveButton();
-    console.warn('Auto-save failed:', err.message);
-    throw err;
-  }
+  } catch (err) { console.warn('Auto-save feilet:', err.message); throw err; }
 }
 
 async function saveData() {
-  const btn = document.getElementById('save-btn');
   try {
-    btn.disabled = true;
-    btn.innerHTML = usesLocalMode() ? 'Saving locally...' : 'Saving...';
+    const btn = document.getElementById('save-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Lagrer...';
     await saveState();
     hasUnsavedChanges = false;
-    updateSbStatus();
     updateSaveButton();
-  } catch (err) {
-    alert(usesLocalMode() ? 'Could not save local data.' : 'Could not save to server.');
+    updateSbStatus();
+    btn.innerHTML = originalText;
+  } catch (err) { 
+    alert('Kunne ikke lagre til server.'); 
     updateSaveButton();
   }
 }
 
 async function importData() {
-  document.getElementById('import-file').click();
-}
-
-function exportData() {
-  const blob = new Blob([JSON.stringify(snapshotData(), null, 2)], { type: 'application/json' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `team-manager-${todayStr()}.json`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
-
-async function importDataFile(event) {
-  const file = event.target.files?.[0];
-  event.target.value = '';
-  if (!file) return;
-  try {
-    const data = JSON.parse(await file.text());
-    if (!data || typeof data !== 'object' || !Array.isArray(data.employees)) throw new Error('Invalid Team Manager JSON');
-    recordUndo();
-    loadFromData(data);
-    await saveState();
-    hasUnsavedChanges = false;
-    updateSaveButton();
-    updateSbStatus();
-    renderPage();
-  } catch (err) {
-    alert(`Could not import JSON: ${err.message}`);
-  }
+  alert('Backup function to be implemented. Currently autosaving to server.');
 }
 
 // ═══ HELPERS ═════════════════════════════════════════════════════════════════
@@ -1336,7 +1172,7 @@ function renderGrid() {
     <div id="grid-wrap">
       <div class="grid-topbar">
         <div>
-          <div class="page-title">${esc(appSettings.teamName || 'Team Manager')}</div>
+          <div class="page-title">${esc(appSettings.appName)}</div>
           <div class="page-sub">Daily status for the whole year with week numbers and activity timeline.</div>
         </div>
         <div class="flex items-center gap-2">
@@ -1355,7 +1191,6 @@ function renderGrid() {
                 <div class="form-row" style="margin:0"><label>From *</label><input id="hf-start" type="date"></div>
                 <div class="form-row" style="margin:0"><label>To *</label><input id="hf-end" type="date"></div>
               </div>
-              <button class="btn btn-sm" type="button" onclick="document.getElementById('holiday-ics-file').click()">Import .ics holidays</button>
               <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:12px"><input id="hf-nonworking" type="checkbox"> Subtract from normal capacity</label>
               <div class="form-row" style="margin-top:12px"><label>Color</label><div class="swatches" id="hf-swatches"></div></div>
               <div class="modal-actions">
@@ -3004,10 +2839,7 @@ function renderSummary() {
 }
 
 // ═══ MODAL PLUMBING ══════════════════════════════════════════════════════════
-function closeModal(id) {
-  const modal = document.getElementById(id);
-  if (modal) modal.classList.remove('open');
-}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-bg').forEach(bg => {
   bg.addEventListener('mousedown', e => { if (e.target === bg) bg.classList.remove('open'); });
 });
@@ -3020,22 +2852,6 @@ document.addEventListener('keydown', e => {
 
 // ═══ BOOT ════════════════════════════════════════════════════════════════════
 async function bootApp() {
-  loadSettings();
-  if (usesLocalMode()) {
-    try {
-      const raw = lsGet(OFFLINE_DATA_KEY);
-      if (raw) loadFromData(JSON.parse(raw));
-    } catch (err) {
-      console.warn('Could not load local JSON data:', err.message);
-    }
-    applyTheme(); applyAppName(); updateSaveButton(); updateUndoButton();
-    document.getElementById('login-modal').classList.remove('open');
-    document.getElementById('af-start').addEventListener('change', updateActivityWeekLabels);
-    document.getElementById('af-end').addEventListener('change', updateActivityWeekLabels);
-    updateSbStatus();
-    nav('dashboard');
-    return;
-  }
   try {
     const res = await fetch('/api/state');
     if (res.status === 401) {
@@ -3048,7 +2864,7 @@ async function bootApp() {
     console.warn("Could not load from server. If running locally without backend, data will remain empty.");
   }
   
-  applyTheme(); applyAppName(); updateSaveButton(); updateUndoButton();
+  loadSettings(); applyTheme(); applyAppName(); updateSaveButton(); updateUndoButton();
   document.getElementById('af-start').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-end').addEventListener('change', updateActivityWeekLabels);
   
