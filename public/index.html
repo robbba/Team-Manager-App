@@ -808,8 +808,6 @@ async function confirmIcsImport() {
   persistSettings();
   markUnsaved();
   await saveState();
-  hasUnsavedChanges = false;
-  updateSaveButton();
   renderHolidaySettings();
   closeModal('ics-import-modal');
   renderPage();
@@ -887,7 +885,7 @@ function openHolidayModal(index = null, indexes = null) {
   buildSwatchRow('hf-swatches', selectedHolidayColor, color => { selectedHolidayColor = color; markSwatch('hf-swatches', color); });
   document.getElementById('holiday-modal').classList.add('open');
 }
-function saveHolidayFromModal() {
+async function saveHolidayFromModal() {
   const name = document.getElementById('hf-name').value.trim();
   const startDate = document.getElementById('hf-start').value;
   const endDate = document.getElementById('hf-end').value;
@@ -900,18 +898,22 @@ function saveHolidayFromModal() {
     appSettings.holidays.push(holiday);
   }
   persistSettings();
+  markUnsaved();
+  await saveState();
   closeModal('holiday-modal');
   renderPage();
 }
-function deleteHolidayFromModal() {
+async function deleteHolidayFromModal() {
   if (editingHolidayIndex === null) return;
   recordUndo();
   appSettings.holidays = appSettings.holidays.filter((_, index) => !editingHolidayIndexes.includes(index));
   persistSettings();
+  markUnsaved();
+  await saveState();
   closeModal('holiday-modal');
   renderPage();
 }
-function saveSettings() {
+async function saveSettings() {
   const previousStorageMode = appSettings.storageMode;
   appSettings.teamName = document.getElementById('set-team-name').value.trim();
   if (!RUNNING_FROM_FILE) appSettings.storageMode = document.getElementById('set-storage-mode').value === 'local' ? 'local' : 'online';
@@ -932,6 +934,8 @@ function saveSettings() {
     window.location.reload();
     return;
   }
+  markUnsaved();
+  await saveState();
   applyAppName(); closeModal('settings-modal'); renderPage();
 }
 
@@ -982,7 +986,21 @@ async function undoLastChange() {
 function updateSaveButton() {
   const button = document.getElementById('save-btn');
   if (!button) return;
-  const destination = usesLocalMode() ? 'Save Local JSON' : 'Save to Server';
+  const local = usesLocalMode();
+  const destination = local ? 'Save Local JSON' : 'Save to Server';
+  if (!local && !hasUnsavedChanges) {
+    button.innerHTML = `${svgIcon('check')} Saved to server`;
+    button.style.background = '';
+    button.style.color = '';
+    button.style.fontWeight = '';
+    button.disabled = true;
+    button.style.opacity = '.7';
+    button.style.cursor = 'default';
+    return;
+  }
+  button.disabled = false;
+  button.style.opacity = '';
+  button.style.cursor = '';
   button.innerHTML = hasUnsavedChanges
     ? `${svgIcon('save')} ${destination} (Unsaved!)`
     : `${svgIcon('save')} ${destination}`;
@@ -991,6 +1009,7 @@ function updateSaveButton() {
   button.style.fontWeight = hasUnsavedChanges ? '700' : '';
 }
 function markUnsaved() {
+  if (!usesLocalMode()) return;
   hasUnsavedChanges = true;
   updateSaveButton();
 }
@@ -1150,20 +1169,26 @@ async function saveState() {
       body: JSON.stringify(snapshotData())
     });
     if (!res.ok) throw new Error('Failed to save to server');
-  } catch (err) { console.warn('Auto-save feilet:', err.message); throw err; }
+    hasUnsavedChanges = false;
+    updateSaveButton();
+  } catch (err) {
+    hasUnsavedChanges = true;
+    updateSaveButton();
+    console.warn('Auto-save failed:', err.message);
+    throw err;
+  }
 }
 
 async function saveData() {
+  const btn = document.getElementById('save-btn');
   try {
-    const btn = document.getElementById('save-btn');
-    const originalText = btn.innerHTML;
+    btn.disabled = true;
     btn.innerHTML = usesLocalMode() ? 'Saving locally...' : 'Saving...';
     await saveState();
     hasUnsavedChanges = false;
-    updateSaveButton();
     updateSbStatus();
-    btn.innerHTML = originalText;
-  } catch (err) { 
+    updateSaveButton();
+  } catch (err) {
     alert(usesLocalMode() ? 'Could not save local data.' : 'Could not save to server.');
     updateSaveButton();
   }
