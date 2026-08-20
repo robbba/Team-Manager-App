@@ -529,6 +529,18 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="form-hint">Use the same date for one day, or From/To for a holiday week or longer non-working period.</div>
       <div id="set-holiday-list" style="display:flex;flex-direction:column;gap:4px;margin-top:8px"></div>
     </div>
+    <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+    <div class="form-row">
+      <label>Endre passord</label>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <input id="set-pass-current" type="password" placeholder="Nåværende passord" style="flex:1">
+        <input id="set-pass-new" type="password" placeholder="Nytt passord" style="flex:1">
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn btn-sm" type="button" onclick="changePassword()">Oppdater passord</button>
+        <span id="set-pass-msg" style="font-size:12px;font-weight:500"></span>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('settings-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveSettings()">Save</button>
@@ -623,6 +635,45 @@ function applyAppName() {
   document.getElementById('sb-app-name').textContent = appSettings.appName;
   document.title = appSettings.appName;
 }
+
+async function changePassword() {
+  const currentPassword = document.getElementById('set-pass-current').value;
+  const newPassword = document.getElementById('set-pass-new').value;
+  const msgEl = document.getElementById('set-pass-msg');
+
+  if (!currentPassword || !newPassword) {
+    msgEl.textContent = 'Fyll ut begge feltene.';
+    msgEl.style.color = 'var(--destructive)';
+    return;
+  }
+
+  msgEl.textContent = 'Lagrer...';
+  msgEl.style.color = 'var(--muted)';
+
+  try {
+    const res = await fetch('/api/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      msgEl.textContent = 'Passordet er oppdatert!';
+      msgEl.style.color = '#22c55e'; // Grønn
+      document.getElementById('set-pass-current').value = '';
+      document.getElementById('set-pass-new').value = '';
+      setTimeout(() => { msgEl.textContent = ''; }, 4000);
+    } else {
+      msgEl.textContent = data.error || 'Kunne ikke oppdatere passord.';
+      msgEl.style.color = 'var(--destructive)'; // Rød
+    }
+  } catch (e) {
+    msgEl.textContent = 'Nettverksfeil.';
+    msgEl.style.color = 'var(--destructive)';
+  }
+}
+
 function openSettings() {
   document.getElementById('set-app-name').value = appSettings.appName;
   document.getElementById('set-core-hours').value = String(appSettings.coreHoursPerDay);

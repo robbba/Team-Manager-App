@@ -554,19 +554,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       </div>
       <div class="form-hint">Values above the High limit are Overloaded. Limits must increase from Light to High.</div>
     </div>
-    <div class="form-row">
-      <label>Red dates / holidays</label>
-      <div style="display:flex;gap:8px;align-items:end">
-        <div style="flex:0 0 140px"><label class="muted text-sm">From</label><input id="set-holiday-date" type="date"></div>
-        <div style="flex:0 0 140px"><label class="muted text-sm">To</label><input id="set-holiday-end" type="date"></div>
-        <div style="flex:1"><label class="muted text-sm">Name</label><input id="set-holiday-name" placeholder="Christmas Day"></div>
-        <button class="btn btn-sm" type="button" onclick="addHolidaySetting()">Add</button>
-      </div>
-      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:8px"><input id="set-holiday-nonworking" type="checkbox" checked> Subtract from normal capacity</label>
-      <div class="form-hint">Use the same date for one day, or From/To for a holiday week or longer non-working period.</div>
-      <button class="btn btn-sm" type="button" style="margin-top:8px" onclick="document.getElementById('holiday-ics-file').click()">Import .ics holidays</button>
-      <div id="set-holiday-list" style="display:flex;flex-direction:column;gap:4px;margin-top:8px"></div>
-    </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('settings-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveSettings()">Save</button>
@@ -676,33 +663,7 @@ function openSettings() {
   document.getElementById('set-light-max').value = String(appSettings.lightMax);
   document.getElementById('set-normal-max').value = String(appSettings.normalMax);
   document.getElementById('set-high-max').value = String(appSettings.highMax);
-  renderHolidaySettings();
   document.getElementById('settings-modal').classList.add('open');
-}
-function renderHolidaySettings() {
-  const list = document.getElementById('set-holiday-list');
-  if (!list) return;
-  list.innerHTML = appSettings.holidays.length ? appSettings.holidays.map((holiday, index) => {
-    const start = holiday.startDate || holiday.date;
-    const end = holiday.endDate || holiday.date || start;
-    const dates = start === end ? fmtMed(start) : `${fmtMed(start)} – ${fmtMed(end)}`;
-    return `<div class="flex items-center justify-between" style="padding:5px 8px;background:var(--muted-bg);border-radius:5px;font-size:12px"><span><b>${esc(dates)}</b> · ${esc(holiday.name || 'Holiday')} <span class="muted">(${holiday.nonWorking === false ? 'highlight only' : 'non-working'})</span></span><button class="icon-btn danger" type="button" title="Remove" onclick="removeHolidaySetting(${index})">&times;</button></div>`;
-  }).join('') : '<div class="muted text-sm">No red dates added.</div>';
-}
-function addHolidaySetting() {
-  const date = document.getElementById('set-holiday-date').value;
-  const endDate = document.getElementById('set-holiday-end').value || date;
-  const name = document.getElementById('set-holiday-name').value.trim();
-  const nonWorking = document.getElementById('set-holiday-nonworking').checked;
-  if (!date || endDate < date) return;
-  for (const day = new Date(`${date}T00:00:00`); fmt(day) <= endDate; day.setDate(day.getDate() + 1)) {
-    const holidayDate = fmt(day);
-    if (!appSettings.holidays.some(holiday => holiday.date === holidayDate)) appSettings.holidays.push({ date: holidayDate, name, nonWorking });
-  }
-  document.getElementById('set-holiday-date').value = '';
-  document.getElementById('set-holiday-end').value = '';
-  document.getElementById('set-holiday-name').value = '';
-  renderHolidaySettings();
 }
 function unfoldIcsLines(text) {
   return text.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '').split(/\r?\n/);
@@ -808,7 +769,6 @@ async function confirmIcsImport() {
   persistSettings();
   markUnsaved();
   await saveState();
-  renderHolidaySettings();
   closeModal('ics-import-modal');
   renderPage();
   pendingIcsHolidays = [];
@@ -840,7 +800,6 @@ async function importHolidayIcs(event) {
     alert(`Could not import ICS file: ${err.message}`);
   }
 }
-function removeHolidaySetting(index) { appSettings.holidays.splice(index, 1); renderHolidaySettings(); }
 function holidayFor(date) {
   return appSettings.holidays.find(holiday => {
     if (holiday.startDate && holiday.endDate) return date >= holiday.startDate && date <= holiday.endDate;

@@ -72,6 +72,27 @@ app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
+// API: Endre passord
+app.post('/api/change-password', requireAuth, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
+
+  // Sjekk om nåværende passord stemmer
+  if (!user || !bcrypt.compareSync(currentPassword, user.password_hash)) {
+    return res.status(401).json({ error: 'Feil nåværende passord' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'Nytt passord må ha minst 6 tegn' });
+  }
+
+  // Hash det nye passordet og lagre
+  const newHash = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
+
+  res.json({ success: true });
+});
+
 // API: Hent app-data
 app.get('/api/state', requireAuth, (req, res) => {
   const row = db.prepare('SELECT state_json FROM app_state WHERE id = 1').get();
