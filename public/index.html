@@ -331,7 +331,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 <div class="modal-bg" id="emp-modal">
   <div class="modal">
     <h3 id="emp-modal-title">Add Employee</h3>
-    <p class="modal-desc">Personnel details, contact numbers and category tags.</p>
+    <p class="modal-desc">Personnel details, contact numbers, address and category tags.</p>
     <div class="form-row"><label>Full name *</label><input id="ef-name" placeholder="Jane Smith"></div>
     <div class="form-row"><label>Email *</label><input id="ef-email" type="email" placeholder="jane@company.com"></div>
     <div class="form-row-2">
@@ -339,6 +339,10 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="form-row" style="margin:0"><label>Department *</label><input id="ef-dept" placeholder="Engineering"></div>
     </div>
     <div class="form-row"><label>Level <span class="muted" style="font-weight:400">(optional; e.g. Management / Senior / Associate)</span></label><input id="ef-level" placeholder="Senior"></div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label>Birthday <span class="muted" style="font-weight:400">(optional)</span></label><input id="ef-birthday" type="date"></div>
+      <div class="form-row" style="margin:0"><label>Home address <span class="muted" style="font-weight:400">(optional)</span></label><input id="ef-address" placeholder="Street, city"></div>
+    </div>
     <div class="form-row-2">
       <div class="form-row" style="margin:0"><label>Work phone</label><input id="ef-phone-work" type="tel" placeholder="+47 999 88 777"></div>
       <div class="form-row" style="margin:0"><label>Private phone</label><input id="ef-phone-priv" type="tel" placeholder="+47 111 22 333"></div>
@@ -625,6 +629,20 @@ function loadSettings() {
   } catch (err) { }
 }
 function persistSettings() { lsSet(SETTINGS_KEY, JSON.stringify(appSettings)); }
+const GRID_YEAR_KEY = 'teamManagerGridYear';
+const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
+function loadGridPreferences() {
+  const savedYear = parseInt(lsGet(GRID_YEAR_KEY), 10);
+  if (Number.isInteger(savedYear)) gridYear = savedYear;
+  try {
+    const savedHidden = JSON.parse(lsGet(GRID_HIDDEN_EMPLOYEES_KEY) || '[]');
+    hiddenEmployees = new Set(Array.isArray(savedHidden) ? savedHidden.map(Number).filter(Number.isFinite) : []);
+  } catch (err) { hiddenEmployees = new Set(); }
+}
+function saveGridPreferences() {
+  lsSet(GRID_YEAR_KEY, String(gridYear));
+  lsSet(GRID_HIDDEN_EMPLOYEES_KEY, JSON.stringify([...hiddenEmployees]));
+}
 function applyTheme() {
   document.body.classList.toggle('dark', appSettings.darkMode);
   const toggle = document.getElementById('theme-toggle');
@@ -796,6 +814,7 @@ let gridYear = new Date().getFullYear();
 let summaryYear = new Date().getFullYear();
 let summarySortKey = 'name', summarySortDir = 'asc';
 let empSearch = '', empFilterDept = '', empFilterCatId = null;
+let hiddenEmployees = new Set();
 let pastActivitiesExpanded = false;
 
 let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, fitnessTests = {};
@@ -874,6 +893,8 @@ function loadFromData(data) {
     email: e.email || '',
     phoneWork: e.phoneWork || '',
     phonePrivate: e.phonePrivate || '',
+    birthday: e.birthday || '',
+    homeAddress: e.homeAddress || '',
     categoryIds: Array.isArray(e.categoryIds) && e.categoryIds.length
       ? e.categoryIds.map(Number).filter(Number.isFinite)
       : (joinCatIds[+e.id] || []),
@@ -1120,6 +1141,7 @@ function deptGroups() {
   const sorted = sortedEmployees();
   const order = [], byDept = new Map();
   for (const emp of sorted) {
+    if (hiddenEmployees.has(emp.id)) continue;
     if (!byDept.has(emp.department)) { byDept.set(emp.department, []); order.push(emp.department); }
     byDept.get(emp.department).push(emp);
   }
@@ -1179,7 +1201,12 @@ function renderGrid() {
           <button class="btn btn-sm" onclick="openStatusManager()">Manage statuses</button>
           <button class="btn btn-sm" onclick="openTeamScheduleReport()">Team Work Schedule</button>
           <button class="btn btn-sm" onclick="goToday()">Today</button>
-          <span class="year-label" aria-label="Calendar year">${gridYear}</span>
+          <div class="year-nav" aria-label="Calendar year">
+            <button class="btn btn-icon" onclick="changeGridYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
+            <span class="year-label">${gridYear}</span>
+            <button class="btn btn-icon" onclick="changeGridYear(1)" aria-label="Next year">${svgIcon('chevronRight')}</button>
+          </div>
+          ${hiddenEmployees.size ? `<button class="btn btn-sm" onclick="showAllEmployees()">Show all employees</button>` : ''}
 
           <!-- Holiday / red-day modal -->
           <div class="modal-bg" id="holiday-modal">
@@ -1347,7 +1374,7 @@ function renderGridBody(days, today) {
       </td><td colspan="${days.length}" style="background:${colors.bg};opacity:.45;border-bottom:2px solid ${colors.accent}"></td></tr>`;
     for (const emp of group.emps) {
       html += `<tr><td class="gempl sticky-left" style="background:${colors.bg};border-right:2px solid ${colors.accent} !important">
-        <div class="emp-name">${esc(emp.name)}</div>
+        <div class="flex items-center justify-between gap-2"><div class="emp-name">${esc(emp.name)}</div><button class="icon-btn" title="Solo ${esc(emp.name)}" onclick="event.stopPropagation();soloEmployee(${emp.id})">Solo</button></div>
         <div class="emp-sub">${esc(emp.role)}</div>
       </td>`;
       for (const d of days) {
@@ -1448,8 +1475,23 @@ function scrollToToday() {
 }
 function goToday() {
   const y = new Date().getFullYear();
-  if (gridYear !== y) { gridYear = y; renderPage(); }
+  if (gridYear !== y) { gridYear = y; saveGridPreferences(); renderPage(); }
   else scrollToToday();
+}
+function changeGridYear(delta) {
+  gridYear += delta;
+  saveGridPreferences();
+  renderPage();
+}
+function soloEmployee(empId) {
+  hiddenEmployees = new Set(employees.filter(emp => emp.id !== empId).map(emp => emp.id));
+  saveGridPreferences();
+  renderPage();
+}
+function showAllEmployees() {
+  hiddenEmployees.clear();
+  saveGridPreferences();
+  renderPage();
 }
 
 // ═══ GRID RANGE SELECTION ════════════════════════════════════════════════════
@@ -1838,6 +1880,7 @@ async function saveActivity() {
   if (!start || !end) { alert('Start date and end date are required.'); return; }
   if (end < start) { alert('End date must be on or after start date.'); return; }
   if (!timeRangeHours(dayShift) || !timeRangeHours(nightShift)) { alert('Enter valid Day and Night shift ranges, e.g. 0730-2400 and 0000-0730.'); return; }
+  const previousAct = editingActId ? activities.find(a => a.id === editingActId) : null;
   recordUndo();
   const rec = { name, abbreviation: abbr, project, order, billing, type, countsTowardLoad, dayShift, nightShift, includeWeekends, color: selectedActColor, startDate: start, endDate: end,
     participants: selectedParticipants.map(p => ({ ...p })), notes };
@@ -1860,10 +1903,13 @@ async function saveActivity() {
   }
   const endD = new Date(rec.endDate + 'T00:00:00');
   for (const p of rec.participants) {
+    const previousParticipant = previousAct?.participants?.find(previous => previous.id === p.id);
     for (const d = new Date(rec.startDate + 'T00:00:00'); d <= endD; d.setDate(d.getDate() + 1)) {
       const key = `${p.id}_${fmt(d)}_${rec.id}`;
       if (p.shiftType === 'none') delete activityShiftsMap[key];
-      else if (!activityShiftsMap[key]) activityShiftsMap[key] = 'fullday';
+      else if (!activityShiftsMap[key] && (!previousAct || !previousParticipant || previousParticipant.shiftType === 'none' || fmt(d) < previousAct.startDate || fmt(d) > previousAct.endDate)) {
+        activityShiftsMap[key] = 'fullday';
+      }
     }
   }
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -2137,7 +2183,8 @@ function renderEmployees() {
     const matchesSearch = !searchLower ||
       emp.name.toLowerCase().includes(searchLower) || (emp.email || '').toLowerCase().includes(searchLower) ||
       (emp.department || '').toLowerCase().includes(searchLower) || (emp.role || '').toLowerCase().includes(searchLower) ||
-      (emp.level || '').toLowerCase().includes(searchLower);
+      (emp.level || '').toLowerCase().includes(searchLower) || (emp.birthday || '').toLowerCase().includes(searchLower) ||
+      (emp.homeAddress || '').toLowerCase().includes(searchLower);
     const matchesDept = !empFilterDept || emp.department === empFilterDept;
     const matchesCat = empFilterCatId === null || (emp.categoryIds || []).includes(empFilterCatId);
     return matchesSearch && matchesDept && matchesCat;
@@ -2157,10 +2204,10 @@ function renderEmployees() {
   const catChip = cat => `<span class="chip" style="${chipStyle(cat.color)}"><span class="chip-dot" style="background:${cat.color}"></span>${esc(cat.name)}</span>`;
   let rowsHtml = '';
   if (!filtered.length) {
-    rowsHtml = `<tr><td colspan="8" class="empty-note">${employees.length ? 'No personnel match the current filters.' : 'No personnel yet. Click "Add Employee" to create the first record.'}</td></tr>`;
+    rowsHtml = `<tr><td colspan="10" class="empty-note">${employees.length ? 'No personnel match the current filters.' : 'No personnel yet. Click "Add Employee" to create the first record.'}</td></tr>`;
   } else {
     for (const group of groups) {
-      rowsHtml += `<tr class="dept-row"><td colspan="8">${esc(group.department)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
+      rowsHtml += `<tr class="dept-row"><td colspan="10">${esc(group.department)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
       for (const emp of group.list) {
         const cats = (emp.categoryIds || []).map(catById).filter(Boolean);
         rowsHtml += `<tr>
@@ -2168,6 +2215,8 @@ function renderEmployees() {
           <td class="muted">${esc(emp.email || '') || '<span class="sum-dash">—</span>'}</td>
           <td>${esc(emp.role || '')}</td>
           <td class="muted">${esc(emp.department || '')}${emp.level ? `<div style="font-size:11px;margin-top:2px">${esc(emp.level)}</div>` : ''}</td>
+          <td class="muted">${emp.birthday ? esc(fmtMed(emp.birthday)) : '<span class="sum-dash">—</span>'}</td>
+          <td class="muted">${emp.homeAddress ? esc(emp.homeAddress) : '<span class="sum-dash">—</span>'}</td>
           <td>${emp.phoneWork ? `<a class="tel-link" href="tel:${esc(emp.phoneWork)}">${esc(emp.phoneWork)}</a>` : '<span class="sum-dash">—</span>'}</td>
           <td>${emp.phonePrivate ? `<a class="tel-link" href="tel:${esc(emp.phonePrivate)}">${esc(emp.phonePrivate)}</a>` : '<span class="sum-dash">—</span>'}</td>
           <td class="muted" style="font-variant-numeric:tabular-nums">${emp.sortOrder ?? ''}</td>
@@ -2209,7 +2258,7 @@ function renderEmployees() {
     <div class="card" style="padding:0;overflow:hidden">
       <div style="overflow:auto">
         <table class="list-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department / Level</th><th>Work phone</th><th>Private phone</th><th>Order</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department / Level</th><th>Birthday</th><th>Home address</th><th>Work phone</th><th>Private phone</th><th>Order</th><th></th></tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>
@@ -2243,6 +2292,8 @@ function openEmpModal(id) {
   document.getElementById('ef-role').value = emp?.role || '';
   document.getElementById('ef-dept').value = emp?.department || '';
   document.getElementById('ef-level').value = emp?.level || '';
+  document.getElementById('ef-birthday').value = emp?.birthday || '';
+  document.getElementById('ef-address').value = emp?.homeAddress || '';
   document.getElementById('ef-phone-work').value = emp?.phoneWork || '';
   document.getElementById('ef-phone-priv').value = emp?.phonePrivate || '';
   document.getElementById('ef-sort').value = emp?.sortOrder ?? '';
@@ -2257,6 +2308,8 @@ async function saveEmployee() {
   const role = document.getElementById('ef-role').value.trim();
   const dept = document.getElementById('ef-dept').value.trim();
   const level = document.getElementById('ef-level').value.trim();
+  const birthday = document.getElementById('ef-birthday').value;
+  const homeAddress = document.getElementById('ef-address').value.trim();
   const phoneWork = document.getElementById('ef-phone-work').value.trim();
   const phonePrivate = document.getElementById('ef-phone-priv').value.trim();
   const sortRaw = document.getElementById('ef-sort').value.trim();
@@ -2267,7 +2320,7 @@ async function saveEmployee() {
     if (isNaN(n) || n < 1 || n > 9999) { alert('Sort order must be a number between 1 and 9999.'); return; }
     sortOrder = n;
   }
-  const rec = { name, email, role, department: dept, level, phoneWork, phonePrivate, sortOrder, categoryIds: [...selectedEmpCatIds] };
+  const rec = { name, email, role, department: dept, level, birthday, homeAddress, phoneWork, phonePrivate, sortOrder, categoryIds: [...selectedEmpCatIds] };
   if (editingEmpId) {
     rec.id = editingEmpId;
     const idx = employees.findIndex(e => e.id === editingEmpId);
@@ -2864,7 +2917,10 @@ async function bootApp() {
     console.warn("Could not load from server. If running locally without backend, data will remain empty.");
   }
   
-  loadSettings(); applyTheme(); applyAppName(); updateSaveButton(); updateUndoButton();
+  loadSettings(); loadGridPreferences();
+  hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
+  saveGridPreferences();
+  applyTheme(); applyAppName(); updateSaveButton(); updateUndoButton();
   document.getElementById('af-start').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-end').addEventListener('change', updateActivityWeekLabels);
   
