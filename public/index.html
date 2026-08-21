@@ -42,7 +42,8 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sa
 .sb-today .today-count { font-size: 24px; font-weight: 700; line-height: 1.1; }
 .sb-today .today-sub { font-size: 11px; color: var(--muted); }
 .sb-footrow { display: flex; align-items: center; gap: 8px; }
-.sb-info { padding: 4px 8px; font-size: 11px; color: var(--muted); line-height: 1.4; word-break: break-all; }
+.sb-info { padding: 4px 8px; font-size: 11px; color: var(--muted); line-height: 1.4; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sb-info #db-status-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; flex: 1; min-width: 0; }
 .db-indicator { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; background: #94a3b8; vertical-align: middle; }
 .db-indicator.connected { background: #22c55e; }
 
@@ -94,12 +95,12 @@ tr:hover .act-cell-actions { opacity: 1; }
 .icon-btn { border: none; background: none; cursor: pointer; padding: 3px; border-radius: 4px; color: var(--muted); line-height: 1; font-size: 11px; }
 .icon-btn:hover { background: var(--muted-bg); color: var(--text); }
 .icon-btn.danger:hover { color: var(--destructive); background: color-mix(in srgb, var(--destructive) 12%, transparent); }
-.holiday-add-menu { position: relative; display: inline-block; }
-.holiday-add-options { position: absolute; right: 0; top: calc(100% + 6px); min-width: 214px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.16); padding: 4px; display: none; flex-direction: column; gap: 2px; z-index: 80; }
-.holiday-add-menu.open .holiday-add-options { display: flex; }
+.holiday-add-menu { position: relative; display: inline-block; z-index: 140; }
+.holiday-add-popover { position: fixed; min-width: 214px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.16); padding: 4px; display: none; flex-direction: column; gap: 2px; z-index: 2200; }
+.holiday-add-popover.open { display: flex; }
 .holiday-add-option { border: none; background: none; text-align: left; padding: 7px 9px; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--text); font-family: inherit; }
 .holiday-add-option:hover { background: var(--muted-bg); }
-.act-bar-cell { cursor: pointer; }
+.act-bar-cell { cursor: pointer; overflow: visible; }
 .act-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .act-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .act-dates { font-size: 10px; }
@@ -161,6 +162,7 @@ tr:hover .act-cell-actions { opacity: 1; }
 .form-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 13px; }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 13px; }
+.activity-meta-row .form-row > label { min-height: 30px; display: flex; align-items: flex-end; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .participant-list { max-height: 210px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
 .participant-option { padding: 7px 10px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
@@ -213,6 +215,7 @@ tr:hover .act-cell-actions { opacity: 1; }
 .sum-table tbody td { border-bottom: 1px solid var(--border); padding: 9px 12px; }
 .sum-table tbody tr:last-child td { border-bottom: none; }
 .sum-table tbody tr:hover td { background: color-mix(in srgb, var(--muted-bg) 45%, transparent); }
+.sum-table tfoot td { padding: 9px 12px; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--muted-bg) 35%, var(--surface)); }
 .sum-table td.num { text-align: right; }
 .sum-pill { display: inline-block; border-radius: 5px; padding: 2px 6px; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; border: 1px solid transparent; }
 .sum-dash { color: color-mix(in srgb, var(--muted) 55%, transparent); font-size: 11.5px; }
@@ -267,6 +270,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   <div class="sb-section">
     <div class="sb-section-label">Server Sync</div>
     <button class="sb-link" id="save-btn" onclick="saveData()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5M4 20h16"/></svg> Save to Server</button>
+    <button class="sb-link" id="autosave-btn" onclick="toggleAutoSave()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/><circle cx="12" cy="12" r="8"/></svg> Auto-save: On</button>
     <button class="sb-link" id="undo-btn" onclick="undoLastChange()" disabled><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/></svg> Undo Change</button>
     <button class="sb-link" onclick="doLogout()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Log Out</button>
     <div class="sb-info"><span class="db-indicator connected" id="db-dot"></span><span id="db-status-text">Connected to server</span></div>
@@ -305,7 +309,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   <div id="pk-duration-section" style="display:none;flex-direction:column;gap:4px;border-top:1px solid var(--border);padding-top:6px;margin-top:2px">
     <div class="pk-label" id="pk-duration-label">Duration</div>
     <button class="pk-btn" style="background:var(--muted-bg);color:var(--text)" onclick="saveWithDuration('fullday')"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg> Full day</button>
-    <button class="pk-btn" style="background:var(--muted-bg);color:var(--text)" onclick="saveWithDuration('24hours')"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8"/><path d="M12 7v5l3 2"/></svg> 24 hours</button>
     <div style="display:flex;flex-direction:column;gap:3px;border-top:1px solid var(--border);padding-top:5px">
       <div class="pk-label">Specific time</div>
       <input id="pk-time" type="text" class="pk-input" placeholder="e.g. 1000-1130">
@@ -313,6 +316,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     </div>
   </div>
   <div id="pk-shift-section"></div>
+  <button class="pk-btn" id="pk-add-activity-btn" style="display:none;background:var(--muted-bg);color:var(--text)" onclick="openActivityFromSelection()">${svgIcon('plus')} Add activity for selected dates</button>
   <div class="pk-sep"></div>
   <button class="pk-clear" id="pk-clear-btn" style="display:none" onclick="clearStatus()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg> Clear status</button>
   <button class="pk-cancel" onclick="closePicker()">Cancel</button>
@@ -423,9 +427,9 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     <p class="modal-desc">Shown as a timeline row and as participation strips on the grid.</p>
     <div class="form-row-2">
       <div class="form-row" style="margin:0"><label>Name *</label><input id="af-name" placeholder="Q2 Planning"></div>
-      <div class="form-row" style="margin:0"><label>Abbreviation <span class="muted" style="font-weight:400">(optional, max 3)</span></label><input id="af-abbr" maxlength="3" placeholder="e.g. ØV" style="text-transform:uppercase"></div>
+      <div class="form-row" style="margin:0"><label>Abbreviation <span class="muted" style="font-weight:400">(optional, max 4)</span></label><input id="af-abbr" maxlength="4" placeholder="e.g. APAM" style="text-transform:uppercase"></div>
     </div>
-    <div class="form-row-3">
+    <div class="form-row-3 activity-meta-row">
       <div class="form-row" style="margin:0"><label>Cost Center <span class="muted" style="font-weight:400">(letters/num)</span></label><input id="af-project" placeholder="e.g. PRJ2026A" pattern="[A-Za-z0-9]*"></div>
       <div class="form-row" style="margin:0"><label>Order <span class="muted" style="font-weight:400">(max 9 chars)</span></label><input id="af-order" maxlength="9" placeholder="e.g. ORD123456" pattern="[A-Za-z0-9]*"></div>
       <div class="form-row" style="margin:0"><label>Billing explanation</label><input id="af-billing" placeholder="e.g. Customer"></div>
@@ -541,9 +545,9 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="form-hint">Shown in the sidebar and as the main heading in Grid View.</div>
     </div>
     <div class="form-row">
-      <label>Core working hours per day</label>
-      <input id="set-core-hours" type="number" min="1" max="24" step="0.5" style="width:110px">
-      <div class="form-hint">Used to convert hours to days in the Summary (e.g. 7.5 h = 1 d).</div>
+      <label>Core workday time range</label>
+      <input id="set-core-time" type="text" placeholder="0730-1500" style="width:160px">
+      <div class="form-hint">Used in workload calculations to decide whether activity time is inside or outside core hours (e.g. 0800-1600). <span id="set-core-hours-display"></span></div>
     </div>
     <div class="form-row">
       <label>Staffing-load thresholds</label>
@@ -553,6 +557,19 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
         <div><label class="muted text-sm">High up to %</label><input id="set-high-max" type="number" min="1" max="500" step="1"></div>
       </div>
       <div class="form-hint">Values above the High limit are Overloaded. Limits must increase from Light to High.</div>
+    </div>
+    <div class="form-row">
+      <label>Data storage mode</label>
+      <select id="set-storage-mode" class="plain-select" style="width:100%">
+        <option value="server">Online SQLite mode (server)</option>
+        <option value="local">Local JSON mode (standalone)</option>
+      </select>
+      <div class="form-hint" id="set-storage-hint">Choose where data is persisted.</div>
+      <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" type="button" onclick="exportData()">Export JSON</button>
+        <button class="btn btn-sm" type="button" onclick="importData()">Import JSON</button>
+      </div>
+      <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
     </div>
     <div style="height:1px;background:var(--border);margin:16px 0;"></div>
     <div class="form-row">
@@ -588,9 +605,13 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 <script>
 'use strict';
 // ═══ CONSTANTS ═══════════════════════════════════════════════════════════════
-const PALETTE = ['#2563eb','#4f46e5','#7c3aed','#a855f7','#ec4899','#f43f5e',
-  '#e11d48','#f97316','#f59e0b','#facc15','#10b981','#14b8a6',
-  '#0ea5e9','#38bdf8','#64748b','#475569'];
+const PALETTE = [
+  '#2563eb','#3b82f6','#4f46e5','#6366f1','#7c3aed','#8b5cf6',
+  '#a855f7','#c026d3','#db2777','#ec4899','#f43f5e','#e11d48',
+  '#ef4444','#dc2626','#f97316','#ea580c','#f59e0b','#d97706',
+  '#eab308','#65a30d','#10b981','#059669','#14b8a6','#0d9488',
+  '#06b6d4','#0ea5e9','#0284c7','#64748b','#475569'
+];
 const SHIFT_PRESETS = ['0000-0800','0800-1600','1600-0000','0600-1800','0700-1900'];
 const DEPT_BG_LIGHT  = ['#f0fdf4','#eff6ff','#fdf4ff','#fff7ed','#f0f9ff','#fefce8','#fdf2f8','#f7fee7','#fff1f2','#f5f3ff','#ecfdf5','#e0f2fe'];
 const DEPT_ACC_LIGHT = ['#86efac','#93c5fd','#d8b4fe','#fdba74','#7dd3fc','#fde047','#f9a8d4','#a3e635','#fda4af','#c4b5fd','#6ee7b7','#7dd3fc'];
@@ -599,6 +620,10 @@ const DEPT_ACC_DARK  = ['#166534','#1d4ed8','#6d28d9','#c2410c','#0369a1','#a162
 const SETTINGS_KEY = 'team-manager-app-settings';
 const LEGACY_SETTINGS_KEY = 'team-status-app-settings';
 const LEGACY_THEME_KEY = 'team-status-theme';
+const STORAGE_MODE_KEY = 'team-manager-storage-mode';
+const LOCAL_STATE_KEY = 'team-manager-local-state';
+const STORAGE_MODE_SERVER = 'server';
+const STORAGE_MODE_LOCAL = 'local';
 function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 function svgIcon(name, title = '') {
   const paths = {
@@ -631,18 +656,45 @@ const DATA_VERSION = 3;
 let appSettings = {
   appName: 'Team Manager',
   darkMode: false,
+  autoSaveEnabled: true,
   coreHoursPerDay: 7.5,
+  coreWorkdayRange: '0730-1500',
   lightMax: 70,
   normalMax: 100,
   highMax: 110,
   holidays: [],
   departmentColors: {},
 };
+let storageMode = STORAGE_MODE_SERVER;
 
 function normalizeHexColor(color, fallback = '#3b82f6') {
   if (typeof color !== 'string') return fallback;
   const value = color.trim();
   return /^#[0-9a-fA-F]{3,8}$/.test(value) ? value : fallback;
+}
+function normalizeCoreWorkdayRange(value, fallback = '0730-1500') {
+  const normalized = String(value || '').trim().replace(/\s+/g, '').replace('–', '-');
+  const m = normalized.match(/^(\d{1,2}):?(\d{2})-(\d{1,2}):?(\d{2})$/);
+  if (!m) return fallback;
+  const startHour = +m[1];
+  const startMinute = +m[2];
+  const endHour = +m[3];
+  const endMinute = +m[4];
+  if (startHour > 23 || endHour > 23 || startMinute > 59 || endMinute > 59) return fallback;
+  const canonical = `${String(startHour).padStart(2, '0')}${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}${String(endMinute).padStart(2, '0')}`;
+  return timeRangeHours(canonical) ? canonical : fallback;
+}
+function updateCoreHoursDisplayFromRangeInput() {
+  const output = document.getElementById('set-core-hours-display');
+  const input = document.getElementById('set-core-time');
+  if (!output || !input) return;
+  const normalized = normalizeCoreWorkdayRange(input.value, '');
+  if (!normalized) {
+    output.textContent = 'Invalid range';
+    return;
+  }
+  const hours = timeRangeHours(normalized);
+  output.textContent = hours ? `= ${hours} h/day` : 'Invalid range';
 }
 
 function normalizeStateVersion(data) {
@@ -665,7 +717,9 @@ function loadSettings() {
       const parsed = JSON.parse(raw);
       appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
       appSettings.darkMode = parsed.darkMode === true;
-      appSettings.coreHoursPerDay = typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5;
+      appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
+      appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(parsed.coreWorkdayRange, '0730-1500');
+      appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || (typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5);
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
       appSettings.normalMax = typeof parsed.normalMax === 'number' ? parsed.normalMax : 100;
       appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 110;
@@ -685,6 +739,31 @@ function loadSettings() {
 function persistSettings() {
   lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
   lsRemove(LEGACY_SETTINGS_KEY);
+}
+function loadStorageMode() {
+  const saved = lsGet(STORAGE_MODE_KEY);
+  storageMode = saved === STORAGE_MODE_LOCAL ? STORAGE_MODE_LOCAL : STORAGE_MODE_SERVER;
+  if (window.location.protocol === 'file:') storageMode = STORAGE_MODE_LOCAL;
+}
+function persistStorageMode() {
+  lsSet(STORAGE_MODE_KEY, storageMode);
+}
+function applyStorageModeControls() {
+  const select = document.getElementById('set-storage-mode');
+  const hint = document.getElementById('set-storage-hint');
+  if (!select || !hint) return;
+  if (window.location.protocol === 'file:') {
+    storageMode = STORAGE_MODE_LOCAL;
+    select.value = STORAGE_MODE_LOCAL;
+    select.disabled = true;
+    hint.textContent = 'Direct file mode is locked to Local JSON mode because server APIs are unavailable from file:// URLs.';
+    return;
+  }
+  select.disabled = false;
+  select.value = storageMode;
+  hint.textContent = storageMode === STORAGE_MODE_SERVER
+    ? 'Online SQLite mode uses the authenticated server/database.'
+    : 'Local JSON mode stores planner data in your browser and supports export/import JSON backups.';
 }
 const GRID_YEAR_KEY = 'teamManagerGridYear';
 const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
@@ -706,6 +785,37 @@ function applyTheme() {
   if (toggle) toggle.innerHTML = `${svgIcon(appSettings.darkMode ? 'sun' : 'moon')} ${appSettings.darkMode ? 'Light mode' : 'Dark mode'}`;
 }
 function toggleTheme() { appSettings.darkMode = !appSettings.darkMode; persistSettings(); applyTheme(); renderPage(); }
+function updateAutoSaveButton() {
+  const button = document.getElementById('autosave-btn');
+  if (!button) return;
+  const enabled = appSettings.autoSaveEnabled !== false;
+  button.innerHTML = `${svgIcon('save')} Auto-save: ${enabled ? 'On' : 'Off'}`;
+}
+async function toggleAutoSave() {
+  appSettings.autoSaveEnabled = appSettings.autoSaveEnabled === false;
+  if (appSettings.autoSaveEnabled === false && autoSaveTimer) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+  }
+  persistSettings();
+  updateAutoSaveButton();
+  updateSaveButton();
+  updateSbStatus();
+  if (appSettings.autoSaveEnabled && hasUnsavedChanges) {
+    try {
+      await saveState(true);
+    } catch (err) {
+      appSettings.autoSaveEnabled = false;
+      persistSettings();
+      updateAutoSaveButton();
+      updateSaveButton();
+      updateSbStatus();
+      alert(storageMode === STORAGE_MODE_LOCAL
+        ? 'Could not enable auto-save because local save failed.'
+        : 'Could not enable auto-save because server save failed.');
+    }
+  }
+}
 function applyAppName() {
   document.getElementById('sb-app-name').textContent = appSettings.appName;
   document.title = appSettings.appName;
@@ -751,10 +861,16 @@ async function changePassword() {
 
 function openSettings() {
   document.getElementById('set-app-name').value = appSettings.appName;
-  document.getElementById('set-core-hours').value = String(appSettings.coreHoursPerDay);
+  document.getElementById('set-core-time').value = appSettings.coreWorkdayRange || '0730-1500';
+  document.getElementById('set-core-time').oninput = updateCoreHoursDisplayFromRangeInput;
+  document.getElementById('set-core-time').onchange = updateCoreHoursDisplayFromRangeInput;
+  updateCoreHoursDisplayFromRangeInput();
   document.getElementById('set-light-max').value = String(appSettings.lightMax);
   document.getElementById('set-normal-max').value = String(appSettings.normalMax);
   document.getElementById('set-high-max').value = String(appSettings.highMax);
+  const storageSelect = document.getElementById('set-storage-mode');
+  if (storageSelect) storageSelect.value = storageMode;
+  applyStorageModeControls();
   renderHolidaySettings();
   document.getElementById('settings-modal').classList.add('open');
 }
@@ -939,15 +1055,67 @@ function openHolidayImportModal() {
 function closeHolidayAddMenu() {
   const menu = document.getElementById('holiday-add-menu');
   if (menu) menu.classList.remove('open');
+  const popover = document.getElementById('holiday-add-popover');
+  if (!popover) return;
+  popover.classList.remove('open');
+  popover.style.left = '';
+  popover.style.top = '';
+}
+function positionHolidayAddMenu(trigger, popover) {
+  if (!trigger || !popover) return;
+  const rect = trigger.getBoundingClientRect();
+  const margin = 8;
+  const menuWidth = Math.max(214, popover.offsetWidth || 214);
+  let left = rect.right - menuWidth;
+  let top = rect.bottom + 6;
+  left = Math.max(margin, Math.min(left, window.innerWidth - menuWidth - margin));
+  const menuHeight = popover.offsetHeight || 80;
+  if (top + menuHeight > window.innerHeight - margin) top = Math.max(margin, rect.top - menuHeight - 6);
+  popover.style.left = `${Math.round(left)}px`;
+  popover.style.top = `${Math.round(top)}px`;
 }
 function toggleHolidayAddMenu(event) {
   event.stopPropagation();
   const menu = document.getElementById('holiday-add-menu');
-  if (!menu) return;
-  const nextOpen = !menu.classList.contains('open');
+  const popover = document.getElementById('holiday-add-popover');
+  const trigger = menu ? menu.querySelector('button.icon-btn') : null;
+  if (!menu || !popover || !trigger) return;
+  const nextOpen = !popover.classList.contains('open');
   closeHolidayAddMenu();
-  if (nextOpen) menu.classList.add('open');
+  if (nextOpen) {
+    menu.classList.add('open');
+    popover.classList.add('open');
+    positionHolidayAddMenu(trigger, popover);
+  }
 }
+function holidayPopoverContains(target) {
+  const popover = document.getElementById('holiday-add-popover');
+  return !!(popover && popover.contains(target));
+}
+function holidayTriggerContains(target) {
+  const menu = document.getElementById('holiday-add-menu');
+  return !!(menu && menu.contains(target));
+}
+window.addEventListener('resize', () => {
+  const popover = document.getElementById('holiday-add-popover');
+  if (!popover || !popover.classList.contains('open')) return;
+  const trigger = document.querySelector('#holiday-add-menu button.icon-btn');
+  if (trigger) {
+    positionHolidayAddMenu(trigger, popover);
+  } else {
+    closeHolidayAddMenu();
+  }
+});
+window.addEventListener('scroll', () => {
+  const popover = document.getElementById('holiday-add-popover');
+  if (!popover || !popover.classList.contains('open')) return;
+  const trigger = document.querySelector('#holiday-add-menu button.icon-btn');
+  if (trigger) {
+    positionHolidayAddMenu(trigger, popover);
+  } else {
+    closeHolidayAddMenu();
+  }
+}, true);
 function openHolidayAddAction(action) {
   closeHolidayAddMenu();
   if (action === 'import') openHolidayImportModal();
@@ -991,8 +1159,13 @@ function confirmHolidayImport() {
 function saveSettings() {
   const name = document.getElementById('set-app-name').value.trim();
   if (name) appSettings.appName = name;
-  const hours = parseFloat(document.getElementById('set-core-hours').value);
-  if (!isNaN(hours) && hours > 0 && hours <= 24) appSettings.coreHoursPerDay = hours;
+  const coreTime = normalizeCoreWorkdayRange(document.getElementById('set-core-time').value, '');
+  if (!coreTime) {
+    alert('Core workday time range must be valid, for example 0730-1500 or 08:00-16:00.');
+    return;
+  }
+  appSettings.coreWorkdayRange = coreTime;
+  appSettings.coreHoursPerDay = timeRangeHours(coreTime) || appSettings.coreHoursPerDay;
   const lightMax = parseFloat(document.getElementById('set-light-max').value);
   const normalMax = parseFloat(document.getElementById('set-normal-max').value);
   const highMax = parseFloat(document.getElementById('set-high-max').value);
@@ -1003,15 +1176,72 @@ function saveSettings() {
   appSettings.lightMax = lightMax;
   appSettings.normalMax = normalMax;
   appSettings.highMax = highMax;
-  persistSettings(); applyAppName(); closeModal('settings-modal'); renderPage();
+  if (window.location.protocol !== 'file:') {
+    const selectedMode = document.getElementById('set-storage-mode')?.value;
+    if (selectedMode === STORAGE_MODE_LOCAL || selectedMode === STORAGE_MODE_SERVER) storageMode = selectedMode;
+  } else {
+    storageMode = STORAGE_MODE_LOCAL;
+  }
+  persistSettings();
+  persistStorageMode();
+  if (storageMode === STORAGE_MODE_LOCAL) lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()));
+  applyAppName();
+  updateSaveButton();
+  updateSbStatus();
+  closeModal('settings-modal');
+  renderPage();
+}
+
+function exportData() {
+  const payload = JSON.stringify(snapshotData(), null, 2);
+  const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `team-manager-backup-${todayStr()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importData() {
+  const input = document.getElementById('import-json-file');
+  if (!input) return;
+  input.click();
+}
+
+async function handleImportDataFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    loadFromData(parsed);
+    hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
+    saveGridPreferences();
+    await saveState(true);
+    closeModal('settings-modal');
+    renderPage();
+  } catch (err) {
+    alert('Could not import JSON backup. Verify the file format and try again.');
+  } finally {
+    event.target.value = '';
+  }
 }
 
 // ═══ DATA STATE ══════════════════════════════════════════════════════════════
 let currentPage = 'grid';
 let gridYear = new Date().getFullYear();
 let summaryYear = new Date().getFullYear();
+let summaryPeriod = 'year';
+let summaryMonthValue = `${summaryYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+let summaryWeekValue = isoWeekStringFromDate(new Date());
+let workloadPeriod = 'year';
+let workloadAnchorDate = fmt(new Date());
 let summarySortKey = 'name', summarySortDir = 'asc';
 let empSearch = '', empFilterDept = '', empFilterCatId = null;
+let deptColorsExpanded = false;
 let hiddenEmployees = new Set();
 let hiddenEmployeesDraft = null;
 let pastActivitiesExpanded = false;
@@ -1022,8 +1252,11 @@ let nextEmpId = 1, nextActId = 1, nextStatusId = 1, nextCatId = 1;
 
 let pickerEmpId = null, pickerDate = null, pickerSelectedStatus = null;
 let pickerDates = [];
+let pendingActivityPreset = null;
 let cellSelection = { active: false, empId: null, startDate: null, endDate: null, dates: [] };
+let activityRangeSelection = { active: false, rowKey: null, startDate: null, endDate: null, dates: [] };
 let suppressCellClick = false;
+let suppressActivityCellClick = false;
 let pendingRangeSelection = null;
 let editingEmpId = null, editingActId = null, editingStatusId = null, editingCatId = null;
 let selectedActColor = PALETTE[0], selectedParticipants = [], selectedStatusColor = PALETTE[0], selectedCatColor = PALETTE[7], selectedEmpCatIds = [];
@@ -1064,20 +1297,24 @@ async function undoLastChange() {
 function updateSaveButton() {
   const button = document.getElementById('save-btn');
   if (!button) return;
-  button.innerHTML = hasUnsavedChanges
-    ? `${svgIcon('save')} Save to Server (Unsaved!)`
-    : `${svgIcon('save')} Save to Server`;
-  button.style.background = hasUnsavedChanges ? '#dc2626' : '';
-  button.style.color = hasUnsavedChanges ? '#fff' : '';
-  button.style.fontWeight = hasUnsavedChanges ? '700' : '';
+  const manualSaveVisible = appSettings.autoSaveEnabled === false;
+  button.style.display = manualSaveVisible ? '' : 'none';
+  if (!manualSaveVisible) return;
+  const baseLabel = storageMode === STORAGE_MODE_LOCAL ? 'Save Local Copy' : 'Save to Server';
+  button.innerHTML = `${svgIcon('save')} ${baseLabel}`;
+  button.style.background = '';
+  button.style.color = '';
+  button.style.fontWeight = '';
 }
 function markUnsaved() {
   hasUnsavedChanges = true;
   updateSaveButton();
+  updateSbStatus();
 }
 function scheduleAutoSave() {
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
   markUnsaved();
+  if (appSettings.autoSaveEnabled === false) return;
   autoSaveTimer = setTimeout(() => {
     saveState(true).catch(err => console.warn('Auto-save failed:', err.message));
   }, 800);
@@ -1181,8 +1418,21 @@ function loadFromData(data) {
 function updateSbStatus() {
   const dot = document.getElementById('db-dot');
   const text = document.getElementById('db-status-text');
-  dot.className = 'db-indicator connected'; 
-  text.textContent = `Connected to server · ${employees.length} employees`;
+  const autoSaveOn = appSettings.autoSaveEnabled !== false;
+  if (storageMode === STORAGE_MODE_LOCAL) {
+    dot.className = 'db-indicator';
+    if (autoSaveOn) text.textContent = 'Local synced';
+    else text.textContent = 'Manual save';
+  } else {
+    dot.className = 'db-indicator connected';
+    if (autoSaveOn) {
+      text.textContent = hasUnsavedChanges
+        ? 'Syncing changes...'
+        : 'All data synced';
+    } else {
+      text.textContent = 'Manual sync';
+    }
+  }
   renderSbToday();
 }
 function renderSbToday() {
@@ -1236,6 +1486,23 @@ function snapshotData() {
 }
 
 async function saveState(force = false) {
+  if (!force && appSettings.autoSaveEnabled === false) {
+    markUnsaved();
+    return;
+  }
+  if (storageMode === STORAGE_MODE_LOCAL) {
+    try {
+      lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()));
+      hasUnsavedChanges = false;
+      updateSaveButton();
+      updateSbStatus();
+      if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+    } catch (err) {
+      console.warn('Local JSON save failed:', err.message);
+      throw err;
+    }
+    return;
+  }
   if (!force) {
     scheduleAutoSave();
     return;
@@ -1262,13 +1529,9 @@ async function saveData() {
     await saveState(true);
     btn.innerHTML = originalText;
   } catch (err) { 
-    alert('Kunne ikke lagre til server.'); 
+    alert(storageMode === STORAGE_MODE_LOCAL ? 'Could not save local JSON data.' : 'Could not save to server.'); 
     updateSaveButton();
   }
-}
-
-async function importData() {
-  alert('Backup function to be implemented. Currently autosaving to server.');
 }
 
 // ═══ HELPERS ═════════════════════════════════════════════════════════════════
@@ -1279,11 +1542,31 @@ function fmtShort(ds) { return new Date(ds + 'T00:00:00').toLocaleDateString('en
 function fmtMed(ds) { return new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 function daysOfYear(y) { const days = [], d = new Date(y, 0, 1); while (d.getFullYear() === y) { days.push(new Date(d)); d.setDate(d.getDate()+1); } return days; }
 function isWknd(d) { const g = d.getDay(); return g === 0 || g === 6; }
-function isoWeek(d) {
+function isoWeekInfo(d) {
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
-  return Math.ceil((((t - yearStart) / 86400000) + 1) / 7);
+  const year = t.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(year, 0, 1));
+  const week = Math.ceil((((t - yearStart) / 86400000) + 1) / 7);
+  return { year, week };
+}
+function isoWeek(d) {
+  return isoWeekInfo(d).week;
+}
+function isoWeekStringFromDate(date) {
+  const info = isoWeekInfo(date);
+  return `${info.year}-W${String(info.week).padStart(2, '0')}`;
+}
+function isoWeekStartDate(weekValue) {
+  const match = /^(\d{4})-W(\d{2})$/.exec(String(weekValue || ''));
+  if (!match) return null;
+  const year = +match[1];
+  const week = +match[2];
+  const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
+  const dow = simple.getUTCDay() || 7;
+  if (dow <= 4) simple.setUTCDate(simple.getUTCDate() - dow + 1);
+  else simple.setUTCDate(simple.getUTCDate() + 8 - dow);
+  return new Date(simple.getUTCFullYear(), simple.getUTCMonth(), simple.getUTCDate());
 }
 function siFor(key) { return statuses.find(s => s.key === key) || null; }
 function catById(id) { return categories.find(c => c.id === id) || null; }
@@ -1318,12 +1601,46 @@ function timeRangeHours(str) {
   if (diff <= 0) diff += 24;
   return diff;
 }
+function timeRangeInterval(str) {
+  const m = String(str || '').trim().match(/^(\d{1,2}):?(\d{2})\s*[-–]\s*(\d{1,2}):?(\d{2})$/);
+  if (!m) return null;
+  const start = (+m[1]) + (+m[2]) / 60;
+  let end = (+m[3]) + (+m[4]) / 60;
+  if (end <= start) end += 24;
+  return { start, end };
+}
+function intervalOverlapHours(a, b) {
+  const start = Math.max(a.start, b.start);
+  const end = Math.min(a.end, b.end);
+  return Math.max(0, end - start);
+}
+function mergeIntervals(intervals) {
+  if (!intervals.length) return [];
+  const sorted = [...intervals].sort((a, b) => a.start - b.start);
+  const merged = [sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    const cur = sorted[i];
+    const prev = merged[merged.length - 1];
+    if (cur.start <= prev.end) prev.end = Math.max(prev.end, cur.end);
+    else merged.push({ ...cur });
+  }
+  return merged;
+}
+function activityExtraHoursOutsideBaseline(shiftIntervals, baselineShift) {
+  if (!shiftIntervals.length) return 0;
+  const baseInterval = timeRangeInterval(baselineShift);
+  const merged = mergeIntervals(shiftIntervals);
+  const activityHours = merged.reduce((sum, intv) => sum + Math.max(0, intv.end - intv.start), 0);
+  if (!baseInterval) return activityHours;
+  const overlap = merged.reduce((sum, intv) => sum + intervalOverlapHours(intv, baseInterval), 0);
+  return Math.max(0, activityHours - overlap);
+}
 function shiftHours(shift) {
   if (!shift || shift === 'fullday') return appSettings.coreHoursPerDay;
   return timeRangeHours(shift) ?? appSettings.coreHoursPerDay;
 }
 function activityDefaultShift(shiftType, act = null) {
-  if (shiftType === 'normal') return act?.normalShift || '0730-1500';
+  if (shiftType === 'normal') return act?.normalShift || appSettings.coreWorkdayRange || '0730-1500';
   return shiftType === 'night' ? (act?.nightShift || '0000-0730') : (act?.dayShift || '0730-2400');
 }
 function activityShiftHours(act, empId, shift) {
@@ -1386,6 +1703,9 @@ function deptGroups() {
   }
   return order.map(dept => ({ dept, emps: byDept.get(dept) }));
 }
+function normalizeDepartmentName(value) {
+  return String(value || '').trim().toLowerCase();
+}
 function toggleEmployeeVisibility(empId, forceState) {
   const targetSet = hiddenEmployeesDraft || hiddenEmployees;
   if (typeof forceState === 'boolean') {
@@ -1401,7 +1721,10 @@ function toggleEmployeeVisibility(empId, forceState) {
 }
 function toggleEmployeeDepartment(deptName, forceState) {
   const targetSet = hiddenEmployeesDraft || hiddenEmployees;
-  const deptEmployees = employees.filter(emp => emp.department === deptName).map(emp => emp.id);
+  const normalizedDept = normalizeDepartmentName(deptName);
+  const deptEmployees = employees
+    .filter(emp => normalizeDepartmentName(emp.department) === normalizedDept)
+    .map(emp => emp.id);
   if (!deptEmployees.length) return;
   if (typeof forceState === 'boolean') {
     deptEmployees.forEach(id => forceState ? targetSet.delete(id) : targetSet.add(id));
@@ -1412,17 +1735,26 @@ function toggleEmployeeDepartment(deptName, forceState) {
       else targetSet.delete(id);
     });
   }
-  if (hiddenEmployeesDraft) { rebuildEmployeePicker(); return; }
+  if (hiddenEmployeesDraft) { setTimeout(rebuildEmployeePicker, 0); return; }
   saveGridPreferences();
   renderPage();
+}
+function setEmployeeDepartmentVisibility(deptName, shouldShow) {
+  toggleEmployeeDepartment(deptName, shouldShow === true);
 }
 function rebuildEmployeePicker() {
   const picker = document.getElementById('employee-picker');
   if (!picker) return;
   const hiddenSet = hiddenEmployeesDraft || hiddenEmployees;
-  const departments = [...new Set(employees.map(emp => emp.department).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  const deptMarkup = departments.length ? departments.map(dept => {
-    const deptEmployees = employees.filter(emp => emp.department === dept);
+  const departmentMap = new Map();
+  employees.forEach(emp => {
+    const key = normalizeDepartmentName(emp.department);
+    if (!key) return;
+    if (!departmentMap.has(key)) departmentMap.set(key, String(emp.department || '').trim());
+  });
+  const departments = [...departmentMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const deptMarkup = departments.length ? departments.map(([deptKey, deptLabel]) => {
+    const deptEmployees = employees.filter(emp => normalizeDepartmentName(emp.department) === deptKey);
     const visible = deptEmployees.filter(emp => !hiddenSet.has(emp.id)).length;
     const allChecked = deptEmployees.length && visible === deptEmployees.length;
     const someChecked = visible > 0 && visible < deptEmployees.length;
@@ -1434,8 +1766,8 @@ function rebuildEmployeePicker() {
     return `
       <div style="border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface)">
         <label class="picker-row" style="display:flex;align-items:center;gap:8px;padding:0 0 6px;font-weight:600;color:var(--text)">
-          <input type="checkbox" ${allChecked ? 'checked' : ''} ${someChecked ? 'data-indeterminate="true"' : ''} onchange="toggleEmployeeDepartment(${JSON.stringify(dept)}, this.checked); return false;">
-          <span>${esc(dept)}</span>
+          <input type="checkbox" ${allChecked ? 'checked' : ''} ${someChecked ? 'data-indeterminate="true"' : ''} onchange="setEmployeeDepartmentVisibility(${esc(JSON.stringify(deptKey))}, this.checked); return false;">
+          <span>${esc(deptLabel)}</span>
         </label>
         <div style="display:flex;flex-direction:column;gap:2px;margin-left:18px">${employeeMarkup}</div>
       </div>`;
@@ -1615,6 +1947,10 @@ function renderGrid() {
           <tbody id="gtbody"></tbody>
         </table>
       </div>
+      <div id="holiday-add-popover" class="holiday-add-popover">
+        <button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday or red-day period</button>
+        <button class="holiday-add-option" type="button" onclick="openHolidayAddAction('import')">Import .ics holidays</button>
+      </div>
       <div style="padding:6px 24px;border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;color:var(--muted)">
         <span style="font-weight:600">Legend:</span>
         ${statuses.map(s => `<span class="flex items-center" style="gap:4px"><span class="badge-status" style="${statusStyle(s.color)};padding:0 6px;font-size:10px">${esc(s.abbr)}</span> ${esc(s.label)}</span>`).join('')}
@@ -1635,7 +1971,7 @@ function renderGridBody(days, today) {
   const pastActs = yearActs.filter(a => a.endDate < today);
 
   // ── Activities section ────────────────────────────────────────
-  html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
+  html += `<tr class="sect-row"><td class="sticky-left" style="z-index:60">
       <span class="flex items-center justify-between">
         <span>Activities (${yearActs.length})</span>
         <button class="icon-btn" title="Add activity" onclick="openActModal()">${svgIcon('plus')}</button>
@@ -1662,17 +1998,21 @@ function renderGridBody(days, today) {
       </div>
       <div class="act-dates muted">${fmtShort(act.startDate)} – ${fmtShort(act.endDate)} · ${attendCount} attending</div>
     </td>`;
+    const startIdx = days.findIndex(day => fmt(day) === act.startDate);
+    const endIdx = days.findIndex(day => fmt(day) === act.endDate);
+    const spanCols = startIdx >= 0 && endIdx >= startIdx ? (endIdx - startIdx + 1) : 1;
+    const labelWidth = Math.min(420, Math.max(68, spanCols * 36 - 8));
     for (const d of days) {
       const ds = fmt(d), inR = ds >= act.startDate && ds <= act.endDate;
       const isS = ds === act.startDate, isE = ds === act.endDate;
       if (inR) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
-        row += `<td class="gday act-bar-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" style="height:28px" onclick="openActModal(${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
+        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
           <div class="act-bar" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${act.color};opacity:${dim ? '.16' : '.28'};border-radius:${brl} ${brr}"></div>
-          ${isS ? `<span style="position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;white-space:nowrap;z-index:1;pointer-events:none;color:${act.color};${dim ? 'opacity:.6' : ''}">${esc(act.name)}</span>` : ''}
+          ${isS ? `<span style="position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;white-space:nowrap;z-index:2;pointer-events:none;color:${act.color};width:${labelWidth}px;overflow:hidden;text-overflow:ellipsis;${dim ? 'opacity:.6' : ''}">${esc(act.name)}</span>` : ''}
         </td>`;
       } else {
-        row += `<td class="gday${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" style="height:28px"></td>`;
+        row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
       }
     }
     return row + '</tr>';
@@ -1691,7 +2031,7 @@ function renderGridBody(days, today) {
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
       <span class="flex items-center justify-between"><span>Holidays / Red days (${currentHolidays.length})</span>
-        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button><div class="holiday-add-options"><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday or red-day period</button><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('import')">Import .ics holidays</button></div></span>
+        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
         </span>
       </span></td><td colspan="${days.length}"></td></tr>`;
   if (!showHolidays) {
@@ -1772,8 +2112,6 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const si = entry ? siFor(entry.status) : null;
   const isPartial = entry?.durationType === 'time';
   const acts = cellActivities(emp.id, ds);
-  const activityStatus = acts.map(act => siFor(act.type)).find(Boolean);
-  const activityText = acts.length ? [acts[0].abbreviation, !si && activityStatus?.abbr].filter(Boolean).filter((value, index, values) => values.indexOf(value) === index).join('/') : '';
   const birthday = isEmployeeBirthday(emp, ds);
 
   const tipParts = [];
@@ -1794,20 +2132,16 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
 
   let cellText = '', cellStyleStr = '';
   if (!isPartial && si) {
-    cellText = activityText ? `${activityText}/${si.abbr}` : si.abbr;
+    cellText = si.abbr;
     cellStyleStr = statusStyle(si.color);
   } else if (isPartial && si) {
     cellText = si.abbr;
     cellStyleStr = `color:${si.color}`;
-    if (activityText) cellText = `${activityText}/${si.abbr}`;
   } else if (acts.length) {
-    cellText = activityText;
-    cellStyleStr = `color:${acts[0].color}`;
+    cellText = '';
+    cellStyleStr = '';
   }
 
-  const BAR_H = 4;
-  const bars = acts.map((act, i) =>
-    `<div style="position:absolute;bottom:${1 + i * (BAR_H + 1)}px;height:${BAR_H}px;left:0;right:0;background:${act.color};filter:${act.shiftType === 'night' ? 'brightness(.72)' : 'none'};pointer-events:none;z-index:0"></div>`).join('');
   const primaryActivity = acts[0];
   const primaryShiftType = primaryActivity && primaryActivity.shift === activityDefaultShift('day', primaryActivity) && primaryActivity.shiftType === 'day'
     ? 'day'
@@ -1815,7 +2149,6 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const hasNight = acts.some(a => a.shiftType === 'night');
   const symbol = primaryShiftType === 'day' ? `<span class="shift-symbol" title="Day shift">${svgIcon('sun')}</span>` : (primaryShiftType === 'night' ? `<span class="shift-symbol" title="Night shift">${svgIcon('moon')}</span>` : '');
   const dot = (isPartial && si) ? `<div class="status-dot" style="background:${si.color}"></div>` : '';
-  const durTag = (entry && entry.durationType === '24hours' && si && !acts.length) ? `<span class="dur-tag" style="color:${si.color}">24</span>` : '';
   const activityTint = acts.length && !si ? `background:${acts[0].color}18;` : '';
   const activityUnderline = acts.length && primaryActivity ? `box-shadow: inset 0 -2px 0 ${primaryActivity.color};` : '';
   const holidayTint = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
@@ -1826,13 +2159,13 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
 
   const effectiveStatusColor = si ? si.color : (acts.length ? primaryActivity?.color : null);
   const finalCellStyle = holiday
-    ? `${dayBackground}${cellStyleStr}${activityUnderline}${dayTextColor}${holidayTint}`
-    : `${activityTint}${effectiveStatusColor && !si ? `color:${effectiveStatusColor};` : ''}${cellStyleStr}${activityUnderline}`;
+    ? `${dayBackground}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${dayTextColor}${holidayTint}`
+    : `${activityTint}${effectiveStatusColor && !si ? `color:${effectiveStatusColor};` : ''}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}`;
 
   return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${hasNight ? ' night-shift-cell' : ''}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
-    onclick="openPicker(event,${emp.id},'${ds}')">${bars}${dot}${durTag}${symbol}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
+    onclick="openPicker(event,${emp.id},'${ds}')">${dot}${symbol}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
@@ -1872,6 +2205,67 @@ function datesBetween(a, b) {
   const result = [];
   for (const d = new Date(start + 'T00:00:00'); fmt(d) <= end; d.setDate(d.getDate() + 1)) result.push(fmt(d));
   return result;
+}
+function activityCellFromEl(el) {
+  return el?.closest?.('td.activity-select-cell') || null;
+}
+function paintActivityRangeSelection() {
+  document.querySelectorAll('td.activity-select-cell').forEach(cell => {
+    const isSelected = activityRangeSelection.rowKey &&
+      cell.dataset.rowKey === activityRangeSelection.rowKey &&
+      activityRangeSelection.dates.includes(cell.dataset.date);
+    cell.classList.toggle('cell-selected', isSelected);
+  });
+}
+function clearActivityRangeSelection() {
+  activityRangeSelection = { active: false, rowKey: null, startDate: null, endDate: null, dates: [] };
+  document.querySelectorAll('td.activity-select-cell.cell-selected').forEach(cell => cell.classList.remove('cell-selected'));
+}
+function onActivityRangeDragMove(event) {
+  if (!activityRangeSelection.active) return;
+  const el = document.elementFromPoint(event.clientX, event.clientY);
+  const cell = activityCellFromEl(el);
+  if (!cell) return;
+  const rowKey = cell.dataset.rowKey;
+  const date = cell.dataset.date;
+  if (!rowKey || !date || rowKey !== activityRangeSelection.rowKey) return;
+  if (date === activityRangeSelection.endDate) return;
+  activityRangeSelection.endDate = date;
+  activityRangeSelection.dates = datesBetween(activityRangeSelection.startDate, date);
+  paintActivityRangeSelection();
+}
+function finishActivityRangeSelection(event) {
+  document.removeEventListener('pointermove', onActivityRangeDragMove);
+  document.removeEventListener('pointerup', finishActivityRangeSelection);
+  document.removeEventListener('pointercancel', finishActivityRangeSelection);
+  if (!activityRangeSelection.active) return;
+  activityRangeSelection.active = false;
+  if (event.type === 'pointercancel' || activityRangeSelection.dates.length < 2) {
+    clearActivityRangeSelection();
+    return;
+  }
+  suppressActivityCellClick = true;
+  openActivityFromRange(activityRangeSelection.dates);
+  clearActivityRangeSelection();
+}
+function startActivityRangeSelection(event, rowKey, date) {
+  if (event.button !== 0) return;
+  event.stopPropagation();
+  event.currentTarget.setPointerCapture(event.pointerId);
+  suppressActivityCellClick = false;
+  activityRangeSelection = { active: true, rowKey, startDate: date, endDate: date, dates: [date] };
+  paintActivityRangeSelection();
+  document.addEventListener('pointermove', onActivityRangeDragMove);
+  document.addEventListener('pointerup', finishActivityRangeSelection);
+  document.addEventListener('pointercancel', finishActivityRangeSelection);
+}
+function handleActivityCellClick(event, actId) {
+  if (suppressActivityCellClick) {
+    suppressActivityCellClick = false;
+    event.stopPropagation();
+    return;
+  }
+  openActModal(actId);
 }
 function paintCellSelection() {
   document.querySelectorAll('.gday.status-cell').forEach(cell => {
@@ -1943,6 +2337,7 @@ function _showPicker(event, empId, dates) {
   document.getElementById('pk-duration-section').style.display = 'none';
   document.getElementById('pk-time').value = (entry?.durationType === 'time' && entry.time) ? entry.time : '';
   document.getElementById('pk-clear-btn').style.display = entry ? 'block' : 'none';
+  document.getElementById('pk-add-activity-btn').style.display = pickerDates.length > 1 ? 'flex' : 'none';
 
   const acts = activities.filter(act => actParticipantIds(act).includes(empId) && pickerDate >= act.startDate && pickerDate <= act.endDate);
   const sect = document.getElementById('pk-shift-section');
@@ -1978,6 +2373,27 @@ function _showPicker(event, empId, dates) {
   const pw = picker.offsetWidth, ph = picker.offsetHeight;
   picker.style.left = Math.min(rect.x, window.innerWidth - pw - pad) + 'px';
   picker.style.top = Math.min(rect.y, window.innerHeight - ph - pad) + 'px';
+}
+function openActivityFromSelection() {
+  if (!pickerDates.length) return;
+  const sorted = [...pickerDates].sort();
+  pendingActivityPreset = {
+    startDate: sorted[0],
+    endDate: sorted[sorted.length - 1],
+    participantId: pickerEmpId,
+  };
+  closePicker();
+  openActModal();
+}
+function openActivityFromRange(dates) {
+  if (!dates || !dates.length) return;
+  const sorted = [...dates].sort();
+  pendingActivityPreset = {
+    startDate: sorted[0],
+    endDate: sorted[sorted.length - 1],
+    participantId: null,
+  };
+  openActModal();
 }
 function openPicker(event, empId, date) {
   if (suppressCellClick) { suppressCellClick = false; event.stopPropagation(); return; }
@@ -2055,8 +2471,7 @@ function closePicker() {
 document.addEventListener('click', e => {
   const picker = document.getElementById('picker');
   if (picker.classList.contains('open') && !picker.contains(e.target)) closePicker();
-  const holidayAddMenu = document.getElementById('holiday-add-menu');
-  if (holidayAddMenu && !holidayAddMenu.contains(e.target)) closeHolidayAddMenu();
+  if (!holidayTriggerContains(e.target) && !holidayPopoverContains(e.target)) closeHolidayAddMenu();
   const sortTh = e.target.closest && e.target.closest('th[data-sort]');
   if (sortTh) setSummarySort(sortTh.dataset.sort);
 });
@@ -2200,6 +2615,10 @@ function setParticipantShiftType(id, t) {
 function openActModal(id) {
   editingActId = id || null;
   const act = id ? activities.find(a => a.id === id) : null;
+  const preset = !act ? pendingActivityPreset : null;
+  const today = todayStr();
+  const defaultStart = preset?.startDate || (today.startsWith(`${gridYear}-`) ? today : `${gridYear}-01-01`);
+  const defaultEnd = preset?.endDate || defaultStart;
   document.getElementById('act-modal-title').textContent = act ? 'Edit Activity' : 'Add Activity';
   document.getElementById('af-delete-btn').style.display = act ? 'inline-block' : 'none';
   document.getElementById('af-name').value = act?.name || '';
@@ -2212,12 +2631,16 @@ function openActModal(id) {
   document.getElementById('af-day-shift').value = act?.dayShift || '0730-2400';
   document.getElementById('af-night-shift').value = act?.nightShift || '0000-0730';
   document.getElementById('af-include-weekends').checked = act?.includeWeekends === true;
-  document.getElementById('af-start').value = act?.startDate || `${gridYear}-01-01`;
-  document.getElementById('af-end').value = act?.endDate || `${gridYear}-01-07`;
+  document.getElementById('af-start').value = act?.startDate || defaultStart;
+  document.getElementById('af-end').value = act?.endDate || defaultEnd;
   updateActivityWeekLabels();
   document.getElementById('af-notes').value = act?.notes || '';
   selectedActColor = act?.color || PALETTE[0];
   selectedParticipants = act ? act.participants.map(p => ({ ...p })) : [];
+  if (!act && preset?.participantId && employees.some(emp => emp.id === preset.participantId)) {
+    selectedParticipants = [{ id: preset.participantId, shift: '', shiftType: 'day' }];
+  }
+  pendingActivityPreset = null;
   buildSwatchRow('af-swatches', selectedActColor, c => { selectedActColor = c; markSwatch('af-swatches', c); });
   buildParticipantPicker();
   document.getElementById('act-modal').classList.add('open');
@@ -2229,7 +2652,10 @@ function updateActivityWeekLabels() {
     const out = document.getElementById(outputId);
     if (!el || !out) return;
     const value = el.value;
-    out.textContent = value ? `Week ${isoWeek(new Date(value + 'T00:00:00'))}` : '';
+    if (!value) { out.textContent = ''; return; }
+    const date = new Date(value + 'T00:00:00');
+    const dow = date.toLocaleDateString('en-US', { weekday: 'short' });
+    out.textContent = `W${isoWeek(date)} · ${dow}`;
   };
   update('af-start', 'af-start-week');
   update('af-end', 'af-end-week');
@@ -2249,6 +2675,7 @@ async function saveActivity() {
   const nightShift = document.getElementById('af-night-shift').value.trim() || '0000-0730';
   const includeWeekends = document.getElementById('af-include-weekends').checked;
   if (!name) { alert('Activity name is required.'); return; }
+  if (abbr.length > 4) { alert('Activity abbreviation can be at most 4 characters.'); return; }
   if (project && !/^[A-Za-z0-9]+$/.test(project)) { alert('Cost Center must contain only letters and numbers.'); return; }
   if (order && !/^[A-Za-z0-9]{1,9}$/.test(order)) { alert('Order must contain up to 9 alphanumeric characters.'); return; }
   if (!start || !end) { alert('Start date and end date are required.'); return; }
@@ -2583,13 +3010,19 @@ function renderEmployees() {
     return { department, list: sorted, minOrder: sorted[0]?.sortOrder ?? 99 };
   }).sort((a, b) => (a.minOrder - b.minOrder) || a.department.localeCompare(b.department));
   const allDepts = [...new Set(employees.map(e => e.department).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  const deptSwatches = allDepts.map(dept => {
-    const color = resolveDeptColor(dept) || PALETTE[allDepts.indexOf(dept) % PALETTE.length];
-    return `<label style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:12px;cursor:pointer">
-      <span class="chip-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%"></span>
-      <span>${esc(dept)}</span>
-      <input type="color" value="${color}" data-dept="${esc(dept)}" onchange="setDepartmentColor(this.dataset.dept, this.value)" style="width:20px;height:20px;border:none;background:transparent;padding:0;cursor:pointer" />
-    </label>`;
+  const deptSwatches = allDepts.map((dept, idx) => {
+    const color = resolveDeptColor(dept) || PALETTE[idx % PALETTE.length];
+    const paletteButtons = PALETTE.map(option => `
+      <button type="button" class="swatch${option === color ? ' sel' : ''}" title="${option}"
+        style="background:${option};width:18px;height:18px"
+        onclick="setDepartmentColor(${esc(JSON.stringify(dept))}, '${option}')"></button>`).join('');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:12px">
+      <span style="min-width:120px;display:inline-flex;align-items:center;gap:6px">
+        <span class="chip-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%"></span>
+        <span>${esc(dept)}</span>
+      </span>
+      <div class="swatches" style="gap:5px">${paletteButtons}</div>
+    </div>`;
   }).join('');
 
   const catChip = cat => `<span class="chip" style="${chipStyle(cat.color)}"><span class="chip-dot" style="background:${cat.color}"></span>${esc(cat.name)}</span>`;
@@ -2648,8 +3081,12 @@ function renderEmployees() {
       ${categories.map(c => `<button class="filter-chip${empFilterCatId === c.id ? ' active' : ''}" onclick="empFilterCatId=${c.id};renderEmployees()"><span class="chip-dot" style="background:${c.color};display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px"></span>${esc(c.name)}</button>`).join('')}
     </div>` : ''}
     <div class="card mb-4" style="padding:12px">
-      <div class="card-title" style="margin-bottom:8px">Department colors</div>
-      <div class="flex items-center gap-2" style="flex-wrap:wrap">${deptSwatches || '<span class="muted text-sm">No departments yet.</span>'}</div>
+      <button class="btn btn-sm" type="button" onclick="deptColorsExpanded=!deptColorsExpanded;renderEmployees()" style="display:flex;align-items:center;gap:6px">
+        ${svgIcon(deptColorsExpanded ? 'chevronDown' : 'chevronRight')} Department colors
+      </button>
+      ${deptColorsExpanded
+        ? `<div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:10px">${deptSwatches || '<span class="muted text-sm">No departments yet.</span>'}</div>`
+        : ''}
     </div>
     <div class="card" style="padding:0;overflow:hidden">
       <div style="overflow:auto">
@@ -2878,7 +3315,9 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
         dayUnavailable = true;
         dayBaselineHours = Math.max(0, appSettings.coreHoursPerDay - hrs);
       } else if (st && st.isOutOfOffice && isNormalWorkDate(ds)) {
-        dayUnavailable = true;
+        dayBaselineHours = appSettings.coreHoursPerDay;
+        baselineHours += dayBaselineHours;
+        scheduledDays += 1;
       } else if (isNormalWorkDate(ds)) {
         dayBaselineHours = appSettings.coreHoursPerDay;
         baselineHours += dayBaselineHours;
@@ -2891,16 +3330,24 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
     }
 
     let dayActivityHours = 0;
+    const dayActivityIntervals = [];
     Object.entries(activityShiftsMap).forEach(([key, shift]) => {
       if (dayUnavailable) return;
       if (!key.startsWith(`${emp.id}_${ds}_`)) return;
       const activityId = +key.split('_')[2];
       const activity = activities.find(act => act.id === activityId);
       if (activity && !activityCountsTowardLoad(activity)) return;
+      const shiftRange = shift !== 'fullday'
+        ? shift
+        : activityDefaultShift(participantFor(activity, emp.id)?.shiftType, activity);
+      const interval = timeRangeInterval(shiftRange);
+      if (interval) dayActivityIntervals.push(interval);
       dayActivityHours += activityShiftHours(activity, emp.id, shift);
     });
     activityHours += dayActivityHours;
-    loadHours += Math.max(dayBaselineHours, dayActivityHours);
+    const dayExtraHours = activityExtraHoursOutsideBaseline(dayActivityIntervals, appSettings.coreWorkdayRange || '0730-1500');
+    const dayPlannedHours = dayBaselineHours + dayExtraHours;
+    loadHours += dayPlannedHours;
   });
 
   const totalHours = loadHours;
@@ -2922,6 +3369,75 @@ function workloadUtilClass(util) {
   if (util >= appSettings.lightMax) return { label: 'Normal', color: '#22c55e' };
   return { label: 'Light', color: '#3b82f6' };
 }
+function datesInRange(startDate, endDate) {
+  const dates = [];
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+  for (const day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) dates.push(fmt(day));
+  return dates;
+}
+function workloadRange() {
+  const anchor = new Date(`${workloadAnchorDate}T00:00:00`);
+  if (workloadPeriod === 'month') {
+    const start = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const end = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+    return {
+      start: fmt(start),
+      end: fmt(end),
+      label: start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      subtitle: `${fmtShort(fmt(start))} – ${fmtShort(fmt(end))}`,
+      anchorYear: anchor.getFullYear(),
+    };
+  }
+  if (workloadPeriod === 'week') {
+    const day = anchor.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const start = new Date(anchor);
+    start.setDate(anchor.getDate() + diffToMonday);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    const info = isoWeekInfo(start);
+    return {
+      start: fmt(start),
+      end: fmt(end),
+      label: `Week ${info.week}, ${info.year}`,
+      subtitle: `${fmtShort(fmt(start))} – ${fmtShort(fmt(end))}`,
+      anchorYear: info.year,
+    };
+  }
+  const start = new Date(anchor.getFullYear(), 0, 1);
+  const end = new Date(anchor.getFullYear(), 11, 31);
+  return {
+    start: fmt(start),
+    end: fmt(end),
+    label: String(anchor.getFullYear()),
+    subtitle: `${anchor.getFullYear()} full year`,
+    anchorYear: anchor.getFullYear(),
+  };
+}
+function shiftWorkloadPeriod(step) {
+  const anchor = new Date(`${workloadAnchorDate}T00:00:00`);
+  if (workloadPeriod === 'month') anchor.setMonth(anchor.getMonth() + step);
+  else if (workloadPeriod === 'week') anchor.setDate(anchor.getDate() + (step * 7));
+  else anchor.setFullYear(anchor.getFullYear() + step);
+  workloadAnchorDate = fmt(anchor);
+  renderDashboard();
+}
+function setWorkloadPeriod(period) {
+  workloadPeriod = period === 'month' || period === 'week' ? period : 'year';
+  renderDashboard();
+}
+function teamWorkloadForDates(dateStrings) {
+  return employees.reduce((acc, emp) => {
+    const row = getEmployeeWorkload(emp, dateStrings);
+    acc.totalHours += row.totalHours;
+    acc.capacityHours += row.capacityHours;
+    acc.absenceHours += row.absenceHours;
+    return acc;
+  }, { totalHours: 0, capacityHours: 0, absenceHours: 0 });
+}
 
 // ═══ DASHBOARD ═══════════════════════════════════════════════════════════════
 function renderDashboard() {
@@ -2932,6 +3448,7 @@ function renderDashboard() {
   let availableToday = 0;
   let oooToday = 0;
   let absentToday = 0;
+  const unavailableTodayPeople = [];
   for (const emp of employees) {
     const entry = getEntryObj(`${emp.id}_${today}`);
     if (entry && counts[entry.status] !== undefined) counts[entry.status]++;
@@ -2939,12 +3456,18 @@ function renderDashboard() {
     if (!entry || !status || (!status.isAbsence && !status.isOutOfOffice)) {
       availableToday++;
     }
+    if (status && (status.isAbsence || status.isOutOfOffice)) {
+      unavailableTodayPeople.push({ name: emp.name, status: status.label });
+    }
     if (status && status.isOutOfOffice) oooToday++;
     if (status && status.isAbsence) absentToday++;
   }
+  const unavailableTodayInline = unavailableTodayPeople.length
+    ? `Unavailable today: ${unavailableTodayPeople.map(item => `${item.name} (${item.status})`).join(', ')}`
+    : 'Everyone is available today.';
 
   const trendDays = [];
-  for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); trendDays.push(d); }
+  for (let i = 0; i < 14; i++) { const d = new Date(); d.setDate(d.getDate() + i); trendDays.push(d); }
   const totalEmployees = employees.length || 1;
   const trendData = trendDays.map(d => {
     const ds = fmt(d), dayCounts = {};
@@ -2988,9 +3511,32 @@ function renderDashboard() {
     return `<span class="badge-status" style="${statusStyle(color)}">${esc(label)}</span>`;
   };
 
-  const workloadDates = rollingDatesFor(new Date(), 30);
+  const wlRange = workloadRange();
+  const workloadDates = datesInRange(new Date(`${wlRange.start}T00:00:00`), new Date(`${wlRange.end}T00:00:00`));
   const workloadRows = employees.map(emp => ({ emp, ...getEmployeeWorkload(emp, workloadDates) }))
     .sort((a, b) => b.totalHours - a.totalHours);
+  const workloadTeamTotals = teamWorkloadForDates(workloadDates);
+  const workloadTeamUtil = workloadTeamTotals.capacityHours > 0 ? (workloadTeamTotals.totalHours / workloadTeamTotals.capacityHours) * 100 : 0;
+
+  const yearlyWorkload = [];
+  for (let month = 0; month < 12; month++) {
+    const start = new Date(wlRange.anchorYear, month, 1);
+    const end = new Date(wlRange.anchorYear, month + 1, 0);
+    const dates = datesInRange(start, end);
+    const totals = teamWorkloadForDates(dates);
+    const util = totals.capacityHours > 0 ? (totals.totalHours / totals.capacityHours) * 100 : 0;
+    yearlyWorkload.push({
+      month,
+      label: start.toLocaleDateString('en-US', { month: 'short' }),
+      totalHours: totals.totalHours,
+      baselineHours: totals.capacityHours,
+      utilization: util,
+      utilClass: workloadUtilClass(util),
+    });
+  }
+  const yearPeak = yearlyWorkload.length ? yearlyWorkload.reduce((best, cur) => cur.utilization > best.utilization ? cur : best, yearlyWorkload[0]) : null;
+  const yearLow = yearlyWorkload.length ? yearlyWorkload.reduce((best, cur) => cur.utilization < best.utilization ? cur : best, yearlyWorkload[0]) : null;
+  const yearMaxUtil = Math.max(1, ...yearlyWorkload.map(m => m.utilization));
 
   const workloadOverview = workloadRows.length
     ? workloadRows.map(row => {
@@ -3008,8 +3554,8 @@ function renderDashboard() {
                 <div style="width:${barWidth}%;height:100%;background:${util.color};border-radius:999px;"></div>
               </div>
               <div class="muted text-sm" style="margin-top:4px;display:flex;gap:10px;flex-wrap:wrap">
-                <span>${fmtDaysHours(row.totalHours)} planned</span>
-                <span>${fmtDaysHours(row.capacityHours)} capacity</span>
+                <span>${fmtDaysHours(row.totalHours)} load</span>
+                <span>${fmtDaysHours(row.capacityHours)} baseline</span>
                 <span>${row.absenceHours > 0 ? `${fmtDaysHours(row.absenceHours)} absent` : 'No absence'}</span>
               </div>
             </div>
@@ -3024,11 +3570,13 @@ function renderDashboard() {
     <div class="mb-6">
       <div class="page-title">Dashboard</div>
       <div class="page-sub">Staffing overview for today and upcoming absences.</div>
+      <div class="muted text-sm" style="margin-top:6px">Today: <b style="color:var(--text)">${fmtMed(today)}</b></div>
     </div>
     <div class="dash-grid-4 mb-6">
       <div class="card">
         <div class="card-title-muted">Available</div>
         <div class="card-value" style="margin-top:6px">${availableToday} / ${employees.length}</div>
+        <div class="muted text-sm" style="margin-top:6px">${esc(unavailableTodayInline)}</div>
       </div>
       <div class="card">
         <div class="card-title-muted">Total employed</div>
@@ -3054,7 +3602,7 @@ function renderDashboard() {
     </div>
     <div class="card mb-6" style="padding:20px 18px 12px;">
       <div class="flex items-center justify-between mb-3" style="gap:12px;flex-wrap:wrap;">
-        <div class="card-title" style="font-size:15px;margin:0;">14-day availability</div>
+        <div class="card-title" style="font-size:15px;margin:0;">14-day availability (from today)</div>
         <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--muted);">
           <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:#22c55e"></span>Available</span>
           <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:#ef4444"></span>OOO</span>
@@ -3078,9 +3626,10 @@ function renderDashboard() {
               tipLines.push(`<div><span class="dot" style="width:7px;height:7px;border-radius:50%;display:inline-block;background:${s.color};margin-right:4px"></span>${esc(s.label)}: <b>${t.counts[s.key]}</b></div>`);
             });
             const tip = tipLines.join('') || '<div class="muted">No status entries</div>';
-            return `<div style="flex:1;display:flex;flex-direction:column;align-items:stretch;min-width:0;height:240px">
+            const isTodayCol = t.ds === today;
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:stretch;min-width:0;height:240px;${isTodayCol ? 'background:color-mix(in srgb, var(--accent-blue) 8%, transparent);border:1px solid color-mix(in srgb, var(--accent-blue) 45%, transparent);border-radius:6px;padding:2px 2px 0;' : ''}">
               <div class="trend-col">${segs.join('')}<div class="trend-tip"><b>${t.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</b>${tip}</div></div>
-              <div class="trend-x">${t.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+              <div class="trend-x" style="${isTodayCol ? 'color:var(--accent-blue);font-weight:700;' : ''}">${isTodayCol ? 'Today' : t.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
             </div>`;
           }).join('')}</div>`}
     </div>
@@ -3099,9 +3648,45 @@ function renderDashboard() {
           : '<div class="empty-note" style="height:250px;display:flex;align-items:center;justify-content:center">No upcoming absences scheduled.</div>'}
       </div>
       <div class="card">
-        <div class="card-title" style="font-size:15px">30-day Staffing Load (Rolling)</div>
-        <div class="muted text-sm" style="margin-top:4px;">Period: ${fmtShort(workloadDates[0])} – ${fmtShort(workloadDates[workloadDates.length - 1])}</div>
+        <div class="flex items-center justify-between" style="gap:8px;flex-wrap:wrap">
+          <div>
+            <div class="card-title" style="font-size:15px">Staffing Load</div>
+            <div class="muted text-sm" style="margin-top:4px;">Period: ${wlRange.subtitle}</div>
+          </div>
+          <div class="year-nav" style="gap:8px">
+            <select class="plain-select" onchange="setWorkloadPeriod(this.value)" aria-label="Workload period">
+              <option value="year" ${workloadPeriod === 'year' ? 'selected' : ''}>Full year</option>
+              <option value="month" ${workloadPeriod === 'month' ? 'selected' : ''}>Month</option>
+              <option value="week" ${workloadPeriod === 'week' ? 'selected' : ''}>Week</option>
+            </select>
+            <button class="btn btn-icon" onclick="shiftWorkloadPeriod(-1)" aria-label="Previous workload period">${svgIcon('chevronLeft')}</button>
+            <span class="year-label" style="min-width:120px">${esc(wlRange.label)}</span>
+            <button class="btn btn-icon" onclick="shiftWorkloadPeriod(1)" aria-label="Next workload period">${svgIcon('chevronRight')}</button>
+          </div>
+        </div>
+        <div class="muted text-sm" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap">
+          <span>${fmtDaysHours(workloadTeamTotals.totalHours)} team load</span>
+          <span>${fmtDaysHours(workloadTeamTotals.capacityHours)} team baseline</span>
+          <span style="font-weight:600;color:${workloadUtilClass(workloadTeamUtil).color}">${Math.round(workloadTeamUtil)}% utilization</span>
+        </div>
         <div style="display:flex;flex-direction:column;gap:0;margin-top:12px;max-height:300px;overflow:auto;padding-right:6px">${workloadOverview}</div>
+        <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
+          <div class="flex items-center justify-between" style="gap:8px;flex-wrap:wrap">
+            <div class="card-title" style="font-size:13px">Yearly load trend (${wlRange.anchorYear})</div>
+            ${yearPeak ? `<div class="muted text-sm">Peak: <b style="color:${yearPeak.utilClass.color}">${yearPeak.label} (${Math.round(yearPeak.utilization)}%)</b> · Lowest: <b style="color:${yearLow.utilClass.color}">${yearLow.label} (${Math.round(yearLow.utilization)}%)</b></div>` : ''}
+          </div>
+          <div class="trend-wrap" style="height:160px;margin-top:8px;gap:5px">
+            ${yearlyWorkload.map(m => `
+              <div style="flex:1;display:flex;flex-direction:column;align-items:stretch;min-width:0;height:160px">
+                <div class="trend-col">
+                  <div class="trend-seg" style="height:${Math.max(2, (m.utilization / yearMaxUtil) * 100)}%;background:${m.utilClass.color};opacity:.92;border-radius:3px 3px 0 0"></div>
+                  <div class="trend-tip"><b>${m.label} ${wlRange.anchorYear}</b><div>Utilization: <b>${Math.round(m.utilization)}%</b></div><div>Load: <b>${fmtDaysHours(m.totalHours)}</b></div><div>Baseline: <b>${fmtDaysHours(m.baselineHours)}</b></div></div>
+                </div>
+                <div class="trend-x">${m.label}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
       </div>
     </div>
     <div class="dash-grid-roster">
@@ -3126,18 +3711,96 @@ function renderDashboard() {
     </div>`;
 }
 
-// ═══ ANNUAL SUMMARY ══════════════════════════════════════════════════════════
-function computeSummaryRows(year) {
-  const prefix = `${year}-`;
+// ═══ SUMMARY ═════════════════════════════════════════════════════════════════
+function summaryRange() {
+  if (summaryPeriod === 'month') {
+    const [yearStr, monthStr] = String(summaryMonthValue || '').split('-');
+    const year = +yearStr || summaryYear;
+    const month = +monthStr || 1;
+    const start = fmt(new Date(year, month - 1, 1));
+    const end = fmt(new Date(year, month, 0));
+    return {
+      start,
+      end,
+      label: new Date(`${start}T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      subtitle: `${fmtShort(start)} – ${fmtShort(end)}`,
+    };
+  }
+  if (summaryPeriod === 'week') {
+    const weekStart = isoWeekStartDate(summaryWeekValue) || isoWeekStartDate(isoWeekStringFromDate(new Date()));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const start = fmt(weekStart);
+    const end = fmt(weekEnd);
+    const info = isoWeekInfo(weekStart);
+    return {
+      start,
+      end,
+      label: `Week ${info.week}, ${info.year}`,
+      subtitle: `${fmtShort(start)} – ${fmtShort(end)}`,
+    };
+  }
+  const start = `${summaryYear}-01-01`;
+  const end = `${summaryYear}-12-31`;
+  return {
+    start,
+    end,
+    label: String(summaryYear),
+    subtitle: `${summaryYear} full year`,
+  };
+}
+function shiftSummaryPeriod(step) {
+  if (summaryPeriod === 'month') {
+    const [yearStr, monthStr] = String(summaryMonthValue || '').split('-');
+    const base = new Date((+yearStr || summaryYear), ((+monthStr || 1) - 1), 1);
+    base.setMonth(base.getMonth() + step);
+    summaryMonthValue = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}`;
+    summaryYear = base.getFullYear();
+  } else if (summaryPeriod === 'week') {
+    const base = isoWeekStartDate(summaryWeekValue) || new Date();
+    base.setDate(base.getDate() + (step * 7));
+    summaryWeekValue = isoWeekStringFromDate(base);
+    summaryYear = isoWeekInfo(base).year;
+  } else {
+    summaryYear += step;
+    summaryMonthValue = `${summaryYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    summaryWeekValue = isoWeekStringFromDate(new Date(summaryYear, 0, 4));
+  }
+  renderSummary();
+}
+function setSummaryPeriod(period) {
+  const next = period === 'month' || period === 'week' ? period : 'year';
+  summaryPeriod = next;
+  if (summaryPeriod === 'month' && !/^\d{4}-\d{2}$/.test(String(summaryMonthValue || ''))) {
+    summaryMonthValue = `${summaryYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  }
+  if (summaryPeriod === 'week' && !/^\d{4}-W\d{2}$/.test(String(summaryWeekValue || ''))) {
+    summaryWeekValue = isoWeekStringFromDate(new Date());
+  }
+  renderSummary();
+}
+function setSummaryMonth(value) {
+  if (!/^\d{4}-\d{2}$/.test(String(value || ''))) return;
+  summaryMonthValue = value;
+  summaryYear = +value.slice(0, 4);
+  renderSummary();
+}
+function setSummaryWeek(value) {
+  if (!/^\d{4}-W\d{2}$/.test(String(value || ''))) return;
+  summaryWeekValue = value;
+  const start = isoWeekStartDate(value);
+  if (start) summaryYear = isoWeekInfo(start).year;
+  renderSummary();
+}
+function computeSummaryRows(startDate, endDate) {
   const rows = employees.map(emp => ({ emp, counts: {}, activityHours: {}, absenceTotal: 0, oooTotal: 0, total: 0 }));
   const rowByEmp = new Map(rows.map(r => [r.emp.id, r]));
   const statusKeySet = new Set(statuses.map(s => s.key));
-  const unavailableDates = new Set();
 
   for (const [key, raw] of Object.entries(entriesMap)) {
     const idx = key.indexOf('_');
     const empId = +key.slice(0, idx), date = key.slice(idx + 1);
-    if (!date.startsWith(prefix)) continue;
+    if (date < startDate || date > endDate) continue;
     const row = rowByEmp.get(empId);
     if (!row) continue;
     const entry = getEntryObj(key);
@@ -3145,15 +3808,13 @@ function computeSummaryRows(year) {
     const hrs = entryHours(entry);
     row.counts[entry.status] = (row.counts[entry.status] || 0) + hrs;
     row.total += hrs;
-    const status = siFor(entry.status);
-    if (status && (status.isAbsence || status.isOutOfOffice)) unavailableDates.add(`${empId}_${date}`);
   }
 
   for (const [key, shift] of Object.entries(activityShiftsMap)) {
     const parts = key.split('_');
     if (parts.length !== 3) continue;
     const [empIdStr, date, actIdStr] = parts;
-    if (!date.startsWith(prefix)) continue;
+    if (date < startDate || date > endDate) continue;
     const empId = +empIdStr;
     const row = rowByEmp.get(empId);
     const act = activities.find(a => a.id === +actIdStr);
@@ -3176,11 +3837,11 @@ function computeSummaryRows(year) {
   }
   return rows;
 }
-function summaryActivityGroups(year) {
+function summaryActivityGroups(startDate, endDate) {
   const statusKeySet = new Set(statuses.map(s => s.key));
   const groups = new Map();
   for (const act of activities) {
-    if (act.startDate > `${year}-12-31` || act.endDate < `${year}-01-01`) continue;
+    if (act.startDate > endDate || act.endDate < startDate) continue;
     const typeKey = (act.type || '').trim();
     if (typeKey && statusKeySet.has(typeKey)) continue;
     const gk = typeKey || '__other__';
@@ -3196,9 +3857,9 @@ function setSummarySort(key) {
   renderSummary();
 }
 function renderSummary() {
-  const year = summaryYear;
-  const rows = computeSummaryRows(year);
-  const groups = summaryActivityGroups(year);
+  const range = summaryRange();
+  const rows = computeSummaryRows(range.start, range.end);
+  const groups = summaryActivityGroups(range.start, range.end);
   const groupHours = (row, g) => g.actIds.reduce((s, id) => s + (row.activityHours[id] || 0), 0);
 
   const flagTotalOf = (row, flag) => statuses.reduce((s, st) => s + (st[flag] ? (row.counts[st.key] || 0) : 0), 0);
@@ -3230,7 +3891,7 @@ function renderSummary() {
     ${hasAbsence ? `<th class="num" data-sort="__absence" title="Total hours of absence-flagged statuses">Absence <span style="opacity:.55">${sortIcon('__absence')}</span></th>` : ''}
     ${hasOoo ? `<th class="num" data-sort="__ooo" title="Total hours of Out of Office statuses">OOO <span style="opacity:.55">${sortIcon('__ooo')}</span></th>` : ''}
     ${groups.map(g => `<th class="num" style="color:${g.color}" title="${esc(g.names.join(', '))}" data-sort="act:${esc(g.typeKey)}">${esc(g.label)} <span style="opacity:.55">${sortIcon('act:' + g.typeKey)}</span></th>`).join('')}
-    <th class="num" data-sort="total">Total <span style="opacity:.55">${sortIcon('total')}</span></th>
+    <th class="num" data-sort="total" title="Total planned hours in selected period">Total <span style="opacity:.55">${sortIcon('total')}</span></th>
   </tr>`;
 
   const totalCols = 2 + statuses.length + groups.length + (hasAbsence ? 1 : 0) + (hasOoo ? 1 : 0);
@@ -3255,7 +3916,24 @@ function renderSummary() {
       ${groups.map(g => `<td class="num" title="${esc(g.names.join(', '))}">${pill(groupHours(row, g), g.color)}</td>`).join('')}
       <td class="num">${row.total > 0 ? `<span class="sum-pill" style="background:color-mix(in srgb,var(--text) 10%,transparent);color:var(--text);font-weight:700">${fmtDaysHours(row.total)}</span>` : '<span class="sum-dash">—</span>'}</td>
     </tr>`;
-  }).join('') : `<tr><td colspan="${totalCols}" class="empty-note">No data found for ${year}.</td></tr>`;
+  }).join('') : `<tr><td colspan="${totalCols}" class="empty-note">No data found for ${range.label}.</td></tr>`;
+
+  const totals = sorted.reduce((acc, row) => {
+    statuses.forEach(st => { acc.status[st.key] = (acc.status[st.key] || 0) + (row.counts[st.key] || 0); });
+    groups.forEach(g => { acc.groups[g.typeKey] = (acc.groups[g.typeKey] || 0) + groupHours(row, g); });
+    acc.total += row.total;
+    return acc;
+  }, { status: {}, groups: {}, total: 0 });
+  const footerHtml = sorted.length ? `<tfoot>
+    <tr>
+      <td style="font-weight:700">Total (${sorted.length} employees)</td>
+      ${statuses.map(st => `<td class="num">${pill(totals.status[st.key] || 0, st.color)}</td>`).join('')}
+      ${hasAbsence ? `<td class="num">${pill(statuses.reduce((s, st) => s + (st.isAbsence ? (totals.status[st.key] || 0) : 0), 0), '#dc2626')}</td>` : ''}
+      ${hasOoo ? `<td class="num">${pill(statuses.reduce((s, st) => s + (st.isOutOfOffice ? (totals.status[st.key] || 0) : 0), 0), '#7c3aed')}</td>` : ''}
+      ${groups.map(g => `<td class="num">${pill(totals.groups[g.typeKey] || 0, g.color)}</td>`).join('')}
+      <td class="num"><span class="sum-pill" style="background:color-mix(in srgb,var(--text) 10%,transparent);color:var(--text);font-weight:700">${fmtDaysHours(totals.total)}</span></td>
+    </tr>
+  </tfoot>` : '';
 
   const legend = statuses.map(st => {
     const total = sorted.reduce((s, r) => s + (r.counts[st.key] || 0), 0);
@@ -3265,23 +3943,28 @@ function renderSummary() {
     return `<span><span class="dot" style="background:${g.color}"></span>${esc(g.label)}: <b style="color:var(--text)">${fmtDaysHours(total)}</b></span>`;
   }).join('') : '');
 
-  const currentYear = new Date().getFullYear();
   document.getElementById('content').innerHTML = `
     <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:12px">
       <div>
         <div class="page-title">Summary</div>
-        <div class="page-sub">Status day counts and activity hours per employee for ${year}. Activity hours are derived from shift time ranges (e.g. 0800–1600 = 8h), grouped by type.</div>
+        <div class="page-sub">Status day counts and activity hours per employee for ${range.label}. Period: ${range.subtitle}. Activity hours are derived from shift time ranges (e.g. 0800–1600 = 8h), grouped by type.</div>
       </div>
-      <div class="year-nav">
-        <button class="btn btn-icon" onclick="summaryYear--;renderSummary()" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
-        <span class="year-label">${year}</span>
-        <button class="btn btn-icon" ${year >= currentYear ? 'disabled style="opacity:.45;cursor:default"' : ''} onclick="summaryYear++;renderSummary()" aria-label="Next year">${svgIcon('chevronRight')}</button>
+      <div class="year-nav" style="gap:8px">
+        <select class="plain-select" onchange="setSummaryPeriod(this.value)" aria-label="Summary period">
+          <option value="year" ${summaryPeriod === 'year' ? 'selected' : ''}>Full year</option>
+          <option value="month" ${summaryPeriod === 'month' ? 'selected' : ''}>Month</option>
+          <option value="week" ${summaryPeriod === 'week' ? 'selected' : ''}>Week</option>
+        </select>
+        <button class="btn btn-icon" onclick="shiftSummaryPeriod(-1)" aria-label="Previous period">${svgIcon('chevronLeft')}</button>
+        <span class="year-label" style="min-width:120px">${esc(range.label)}</span>
+        <button class="btn btn-icon" onclick="shiftSummaryPeriod(1)" aria-label="Next period">${svgIcon('chevronRight')}</button>
       </div>
     </div>
     <div class="sum-wrap">
       <table class="sum-table">
         <thead>${headHtml}</thead>
         <tbody>${bodyHtml}</tbody>
+        ${footerHtml}
       </table>
     </div>
     ${(statuses.length || groups.length) ? `<div class="legend-row">${legend}</div>` : ''}`;
@@ -3301,24 +3984,40 @@ document.addEventListener('keydown', e => {
 
 // ═══ BOOT ════════════════════════════════════════════════════════════════════
 async function bootApp() {
+  loadSettings();
+  loadGridPreferences();
+  loadStorageMode();
+  applyStorageModeControls();
   try {
-    const res = await fetch('/api/state');
-    if (res.status === 401) {
-      document.getElementById('login-modal').classList.add('open');
-      return;
+    if (storageMode === STORAGE_MODE_LOCAL) {
+      const rawLocalState = lsGet(LOCAL_STATE_KEY);
+      if (rawLocalState) {
+        const parsedLocalState = JSON.parse(rawLocalState);
+        if (parsedLocalState && typeof parsedLocalState === 'object') loadFromData(parsedLocalState);
+      }
+    } else {
+      const res = await fetch('/api/state');
+      if (res.status === 401) {
+        document.getElementById('login-modal').classList.add('open');
+        return;
+      }
+      const data = await res.json();
+      if (Object.keys(data).length > 0) loadFromData(data);
     }
-    const data = await res.json();
-    if (Object.keys(data).length > 0) loadFromData(data);
   } catch (err) {
-    console.warn("Could not load from server. If running locally without backend, data will remain empty.");
+    console.warn(storageMode === STORAGE_MODE_LOCAL
+      ? 'Could not load local JSON data.'
+      : 'Could not load from server. If running locally without backend, switch to Local JSON mode in Settings.');
   }
-  
-  loadSettings(); loadGridPreferences();
+
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
-  applyTheme(); applyAppName(); updateSaveButton(); updateUndoButton();
+  persistStorageMode();
+  applyTheme(); applyAppName(); updateSaveButton(); updateAutoSaveButton(); updateUndoButton();
   document.getElementById('af-start').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-end').addEventListener('change', updateActivityWeekLabels);
+  document.getElementById('af-start').addEventListener('input', updateActivityWeekLabels);
+  document.getElementById('af-end').addEventListener('input', updateActivityWeekLabels);
   
   updateSbStatus();
   nav('grid');
