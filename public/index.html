@@ -498,6 +498,33 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   </div>
 </div>
 
+<!-- Holiday import modal -->
+<div class="modal-bg" id="holiday-import-modal">
+  <div class="modal" style="width:520px;max-height:80vh;display:flex;flex-direction:column">
+    <div class="flex items-center justify-between" style="gap:12px">
+      <h3 style="margin:0">Import holidays from .ics</h3>
+      <button class="icon-btn" title="Close" onclick="closeHolidayImportModal()">&times;</button>
+    </div>
+    <p class="modal-desc">Select an .ics file and review the holiday entries for the current planner year.</p>
+    <div class="form-row">
+      <label>Import file</label>
+      <input type="file" accept=".ics,text/calendar" onchange="handleHolidayImportFile(event)">
+    </div>
+    <div class="form-row" style="margin-top:0">
+      <div class="flex gap-2" style="justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn btn-sm" type="button" onclick="setHolidayImportSelection('all')">Select all</button>
+        <button class="btn btn-sm" type="button" onclick="setHolidayImportSelection('future')">Future only</button>
+        <button class="btn btn-sm" type="button" onclick="setHolidayImportSelection('none')">Clear</button>
+      </div>
+    </div>
+    <div id="holiday-import-list" style="display:flex;flex-direction:column;gap:8px;overflow:auto;padding-right:4px"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeHolidayImportModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmHolidayImport()">Import selected</button>
+    </div>
+  </div>
+</div>
+
 <!-- Settings modal -->
 <div class="modal-bg" id="settings-modal">
   <div class="modal" style="width:400px">
@@ -814,6 +841,130 @@ function deleteHolidayFromModal() {
   appSettings.holidays = appSettings.holidays.filter((_, index) => !editingHolidayIndexes.includes(index));
   persistSettings();
   closeModal('holiday-modal');
+  renderPage();
+}
+
+let importedHolidayEvents = [];
+
+function parseIcsDateValue(value) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  if (/^\d{8}$/i.test(raw)) {
+    const yyyy = raw.slice(0, 4), mm = raw.slice(4, 6), dd = raw.slice(6, 8);
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  const matched = raw.match(/^(\d{4})(\d{2})(\d{2})T?\d{0,6}Z?$/i);
+  if (matched) return `${matched[1]}-${matched[2]}-${matched[3]}`;
+  const iso = raw.replace(/Z$/i, '');
+  const dt = new Date(iso);
+  if (!Number.isNaN(dt.getTime())) return fmt(dt);
+  return null;
+}
+function parseHolidayIcsFile(fileText) {
+  const blocks = String(fileText || '').split(/BEGIN:VEVENT/i).filter(Boolean);
+  const valid = [];
+  for (const block of blocks) {
+    const section = block.split(/END:VEVENT/i)[0] || block;
+    const match = section.match(/DTSTART[^:]*:(.+)/i);
+    const endMatch = section.match(/DTEND[^:]*:(.+)/i);
+    if (!match) continue;
+    const startDate = parseIcsDateValue(match[1]);
+    if (!startDate) continue;
+    const endDate = parseIcsDateValue(endMatch ? endMatch[1] : match[1]);
+    const summaryLine = (section.match(/SUMMARY(?:;[^\r\n]*)?:([^\r\n]+)/i) || [])[1];
+    const summary = summaryLine ? summaryLine.replace(/\\,|\\;/g, c => c === '\\,' ? ',' : ';').replace(/\\n/g, ' ').trim() : 'Holiday';
+    const start = new Date(`${startDate}T00:00:00`);
+    const end = new Date(`${(endDate || startDate)}T00:00:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
+    valid.push({
+      id: `${startDate}-${summary}`,
+      name: summary || 'Holiday',
+      startDate,
+      endDate: endDate || startDate,
+      selected: true,
+      color: '#ef4444',
+    });
+  }
+  const yearStart = `${gridYear}-01-01`;
+  const yearEnd = `${gridYear}-12-31`;
+  return valid.filter(item => item.startDate <= yearEnd && item.endDate >= yearStart).map(item => ({
+    ...item,
+    endDate: item.endDate < item.startDate ? item.startDate : item.endDate,
+  }));
+}
+async function handleHolidayImportFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    importedHolidayEvents = parseHolidayIcsFile(text);
+    renderHolidayImportModal();
+  } catch (err) {
+    console.warn('Holiday ICS import failed:', err);
+    importedHolidayEvents = [];
+    renderHolidayImportModal('No supported holiday events were found in the selected file.');
+  }
+  event.target.value = '';
+}
+function renderHolidayImportModal(message = '') {
+  const list = document.getElementById('holiday-import-list');
+  const modal = document.getElementById('holiday-import-modal');
+  if (!list || !modal) return;
+  if (!importedHolidayEvents.length) {
+    list.innerHTML = message ? `<div class="muted text-sm">${esc(message)}</div>` : '<div class="muted text-sm">No holiday events found yet. Select an .ics file to review holiday entries.</div>';
+    return;
+  }
+  list.innerHTML = importedHolidayEvents.map((item, index) => `
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface)">
+      <input type="checkbox" ${item.selected ? 'checked' : ''} onchange="importedHolidayEvents[${index}].selected = this.checked; renderHolidayImportModal();">
+      <span style="flex:1">
+        <span style="display:block;font-weight:600">${esc(item.name)}</span>
+        <span class="muted text-sm">${esc(item.startDate)}${item.startDate !== item.endDate ? ` → ${esc(item.endDate)}` : ''}</span>
+      </span>
+    </label>
+  `).join('');
+}
+function openHolidayImportModal() {
+  const modal = document.getElementById('holiday-import-modal');
+  if (!modal) return;
+  importedHolidayEvents = [];
+  renderHolidayImportModal();
+  modal.classList.add('open');
+}
+function closeHolidayImportModal() {
+  const modal = document.getElementById('holiday-import-modal');
+  if (modal) modal.classList.remove('open');
+}
+function setHolidayImportSelection(mode) {
+  if (!importedHolidayEvents.length) return;
+  if (mode === 'all') importedHolidayEvents.forEach(item => item.selected = true);
+  else if (mode === 'future') importedHolidayEvents.forEach(item => item.selected = item.startDate >= todayStr());
+  else importedHolidayEvents.forEach(item => item.selected = false);
+  renderHolidayImportModal();
+}
+function confirmHolidayImport() {
+  if (!importedHolidayEvents.length) return;
+  recordUndo();
+  const selected = importedHolidayEvents.filter(item => item.selected);
+  const existingMap = new Map();
+  appSettings.holidays.forEach((holiday, index) => {
+    const key = `${holiday.startDate}|${holiday.endDate}|${holiday.name || 'Holiday'}`;
+    if (!existingMap.has(key)) existingMap.set(key, index);
+  });
+  for (const item of selected) {
+    const key = `${item.startDate}|${item.endDate}|${item.name}`;
+    const matchIndex = existingMap.get(key);
+    const holiday = { name: item.name, startDate: item.startDate, endDate: item.endDate, nonWorking: true, color: item.color || '#ef4444' };
+    if (matchIndex !== undefined) {
+      appSettings.holidays[matchIndex] = { ...appSettings.holidays[matchIndex], ...holiday };
+    } else {
+      appSettings.holidays.push(holiday);
+    }
+  }
+  appSettings.holidays.sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
+  persistSettings();
+  closeHolidayImportModal();
   renderPage();
 }
 function saveSettings() {
@@ -1213,6 +1364,90 @@ function deptGroups() {
   }
   return order.map(dept => ({ dept, emps: byDept.get(dept) }));
 }
+function toggleEmployeeVisibility(empId, forceState) {
+  if (typeof forceState === 'boolean') {
+    if (forceState) hiddenEmployees.delete(empId); else hiddenEmployees.add(empId);
+  } else if (hiddenEmployees.has(empId)) {
+    hiddenEmployees.delete(empId);
+  } else {
+    hiddenEmployees.add(empId);
+  }
+  saveGridPreferences();
+  renderPage();
+}
+function toggleEmployeeDepartment(deptName, forceState) {
+  const deptEmployees = employees.filter(emp => emp.department === deptName).map(emp => emp.id);
+  if (!deptEmployees.length) return;
+  if (typeof forceState === 'boolean') {
+    deptEmployees.forEach(id => forceState ? hiddenEmployees.delete(id) : hiddenEmployees.add(id));
+  } else {
+    const deptVisible = deptEmployees.some(id => !hiddenEmployees.has(id));
+    deptEmployees.forEach(id => {
+      if (deptVisible) hiddenEmployees.add(id);
+      else hiddenEmployees.delete(id);
+    });
+  }
+  saveGridPreferences();
+  renderPage();
+}
+function rebuildEmployeePicker() {
+  const picker = document.getElementById('employee-picker');
+  if (!picker) return;
+  const departments = [...new Set(employees.map(emp => emp.department).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const deptMarkup = departments.length ? departments.map(dept => {
+    const deptEmployees = employees.filter(emp => emp.department === dept);
+    const visible = deptEmployees.filter(emp => !hiddenEmployees.has(emp.id)).length;
+    const allChecked = deptEmployees.length && visible === deptEmployees.length;
+    const someChecked = visible > 0 && visible < deptEmployees.length;
+    const employeeMarkup = deptEmployees.map(emp => `
+      <label class="picker-row" style="display:flex;align-items:center;gap:8px;padding:5px 0">
+        <input type="checkbox" ${hiddenEmployees.has(emp.id) ? '' : 'checked'} onchange="toggleEmployeeVisibility(${emp.id}, this.checked); return false;">
+        <span>${esc(emp.name)}</span>
+      </label>`).join('');
+    return `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface)">
+        <label class="picker-row" style="display:flex;align-items:center;gap:8px;padding:0 0 6px;font-weight:600;color:var(--text)">
+          <input type="checkbox" ${allChecked ? 'checked' : ''} ${someChecked ? 'data-indeterminate="true"' : ''} onchange="toggleEmployeeDepartment(${JSON.stringify(dept)}, this.checked); return false;">
+          <span>${esc(dept)}</span>
+        </label>
+        <div style="display:flex;flex-direction:column;gap:2px;margin-left:18px">${employeeMarkup}</div>
+      </div>`;
+  }).join('') : '<div class="muted text-sm">No departments available.</div>';
+  picker.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+      <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">Select employees</strong>
+      <button class="icon-btn" type="button" onclick="closeEmployeePicker()" aria-label="Close">&times;</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;max-height:330px;overflow:auto">${deptMarkup}</div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn btn-sm" type="button" onclick="showAllEmployees(); closeEmployeePicker();">Show all</button>
+      <button class="btn btn-sm" type="button" onclick="closeEmployeePicker()">Cancel</button>
+    </div>`;
+  picker.querySelectorAll('input[data-indeterminate="true"]').forEach(input => { input.indeterminate = true; });
+}
+function openEmployeePicker(button) {
+  const picker = document.getElementById('employee-picker');
+  if (!picker) return;
+  rebuildEmployeePicker();
+  picker.style.display = 'block';
+  const rect = button.getBoundingClientRect();
+  const gap = 8;
+  picker.style.position = 'absolute';
+  picker.style.left = `${Math.min(window.innerWidth - 290, rect.left + rect.width + gap)}px`;
+  picker.style.top = `${Math.max(8, rect.top + rect.height + gap)}px`;
+  picker.style.zIndex = '120';
+  picker.style.width = '260px';
+  picker.style.maxWidth = 'calc(100vw - 24px)';
+  picker.style.background = 'var(--surface)';
+  picker.style.border = '1px solid var(--border)';
+  picker.style.borderRadius = '10px';
+  picker.style.padding = '10px';
+  picker.style.boxShadow = '0 12px 32px rgba(0,0,0,.15)';
+}
+function closeEmployeePicker() {
+  const picker = document.getElementById('employee-picker');
+  if (picker) picker.style.display = 'none';
+}
 
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
 function nav(page) {
@@ -1314,10 +1549,16 @@ function renderGrid() {
           </div>
         </div>
       </div>
-      <div id="grid-scroll">
+      <div id="grid-scroll" style="position:relative">
+        <div id="employee-picker" style="display:none"></div>
         <table class="gtable">
           <thead>
-            <tr><th class="gh-emp sticky-left" rowspan="3" style="width:240px;min-width:240px;top:0">Employee / Activity</th>${monthCells}</tr>
+            <tr><th class="gh-emp sticky-left" rowspan="3" style="width:240px;min-width:240px;top:0">
+              <div class="flex items-center justify-between gap-2" style="width:100%">
+                <span>Employee / Activity</span>
+                <button class="btn btn-sm" type="button" onclick="openEmployeePicker(this)">Select...</button>
+              </div>
+            </th>${monthCells}</tr>
             <tr>${weekCells}</tr>
             <tr>${dayCells}</tr>
           </thead>
@@ -1400,7 +1641,7 @@ function renderGridBody(days, today) {
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
       <span class="flex items-center justify-between"><span>Holidays / Red days (${currentHolidays.length})</span>
-        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><button class="icon-btn" title="Add holiday or red-day period" onclick="openHolidayModal()">${svgIcon('plus')}</button>
+        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><button class="icon-btn" title="Import .ics holidays" onclick="openHolidayImportModal()">${svgIcon('plus')}</button><button class="icon-btn" title="Add holiday or red-day period" onclick="openHolidayModal()">${svgIcon('plus')}</button>
         </span>
       </span></td><td colspan="${days.length}"></td></tr>`;
   if (!showHolidays) {
@@ -1414,7 +1655,7 @@ function renderGridBody(days, today) {
       html += `<tr><td class="gempl sticky-left" style="cursor:pointer" onclick="openHolidayModal(${holiday.sourceIndexes[0]},[${holiday.sourceIndexes.join(',')}])" title="Edit ${esc(holiday.name || 'Holiday')}"><div class="act-cell-name"><span class="act-name" style="color:${color}">${esc(holiday.name || 'Holiday')}</span><span class="act-cell-actions"><button class="icon-btn" title="Edit" onclick="event.stopPropagation();openHolidayModal(${holiday.sourceIndexes[0]},[${holiday.sourceIndexes.join(',')}])">${svgIcon('edit')}</button></span></div><div class="act-dates muted">${fmtShort(start)} – ${fmtShort(end)}${holiday.nonWorking ? ' · non-working' : ' · highlight only'}</div></td>`;
       days.forEach(day => {
         const ds = fmt(day), active = ds >= start && ds <= end;
-        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${active ? ' holiday-col' : ''}" style="${active ? `background:${color}28 !important;color:${color}` : ''}" title="${active ? esc(holiday.name || 'Holiday') : ''}"></td>`;
+        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${active ? ' holiday-col' : ''}" style="${active ? `background:${color}28 !important;color:${color};border-color:${color}55;` : ''}" title="${active ? esc(holiday.name || 'Holiday') : ''}"></td>`;
       });
       html += '</tr>';
     };
@@ -1440,7 +1681,7 @@ function renderGridBody(days, today) {
       </td><td colspan="${days.length}" style="background:${colors.bg};opacity:.45;border-bottom:2px solid ${colors.accent}"></td></tr>`;
     for (const emp of group.emps) {
       html += `<tr><td class="gempl sticky-left" style="background:${colors.bg};border-right:2px solid ${colors.accent} !important">
-        <div class="flex items-center justify-between gap-2"><div class="emp-name">${esc(emp.name)}</div><button class="icon-btn" title="Solo ${esc(emp.name)}" onclick="event.stopPropagation();soloEmployee(${emp.id})">Solo</button></div>
+        <div class="flex items-center justify-between gap-2"><div class="emp-name">${esc(emp.name)}</div></div>
         <div class="emp-sub">${esc(emp.role)}</div>
       </td>`;
       for (const d of days) {
@@ -1526,11 +1767,20 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const dot = (isPartial && si) ? `<div class="status-dot" style="background:${si.color}"></div>` : '';
   const durTag = (entry && entry.durationType === '24hours' && si && !acts.length) ? `<span class="dur-tag" style="color:${si.color}">24</span>` : '';
   const activityTint = acts.length && !si ? `background:${acts[0].color}18;` : '';
+  const activityUnderline = acts.length && primaryActivity ? `box-shadow: inset 0 -2px 0 ${primaryActivity.color};` : '';
   const holidayTint = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
   const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">🎂</span>` : '';
 
+  const dayBackground = holiday ? `background:${holiday.color || '#ef4444'}28 !important;` : '';
+  const dayTextColor = holiday ? `color:${holiday.color || '#ef4444'} !important;` : '';
+
+  const effectiveStatusColor = si ? si.color : (acts.length ? primaryActivity?.color : null);
+  const finalCellStyle = holiday
+    ? `${dayBackground}${cellStyleStr}${activityUnderline}${dayTextColor}${holidayTint}`
+    : `${activityTint}${effectiveStatusColor && !si ? `color:${effectiveStatusColor};` : ''}${cellStyleStr}${activityUnderline}`;
+
   return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${hasNight ? ' night-shift-cell' : ''}"
-    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${activityTint}${cellStyleStr}${holidayTint}"
+    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="openPicker(event,${emp.id},'${ds}')">${bars}${dot}${durTag}${symbol}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
 }
@@ -1557,16 +1807,6 @@ function goToday() {
 }
 function changeGridYear(delta) {
   gridYear += delta;
-  saveGridPreferences();
-  renderPage();
-}
-function soloEmployee(empId) {
-  const currentlySolo = employees.filter(emp => emp.id !== empId).every(emp => hiddenEmployees.has(emp.id));
-  if (currentlySolo) {
-    hiddenEmployees.clear();
-  } else {
-    hiddenEmployees = new Set(employees.filter(emp => emp.id !== empId).map(emp => emp.id));
-  }
   saveGridPreferences();
   renderPage();
 }
