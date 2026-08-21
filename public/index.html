@@ -83,8 +83,16 @@ body.dark .gh-day.holiday-col, body.dark .gday.holiday-col { background: #451a1a
 .cell-selected { box-shadow: inset 0 0 0 2px var(--primary); z-index: 10; }
 .gday-inner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 1; pointer-events: none; }
 .shift-symbol { position: absolute; left: 3px; top: 2px; z-index: 2; font-size: 10px; line-height: 1; pointer-events: none; }
-.gday.night-shift-cell { box-shadow: inset 0 0 0 999px rgba(15,23,42,.14); }
-body.dark .gday.night-shift-cell { box-shadow: inset 0 0 0 999px rgba(0,0,0,.34); }
+.activity-tag { position: absolute; left: 3px; bottom: 2px; z-index: 2; font-size: 8px; line-height: 1; font-weight: 700; padding: 1px 3px; border-radius: 4px; pointer-events: none; background: color-mix(in srgb, var(--muted-bg) 70%, transparent); color: var(--muted); }
+.gday.shift-change-cell { position: relative; overflow: hidden; }
+.gday.shift-change-cell::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--shift-change-color, #22c55e) 10%, transparent) 0 50%, color-mix(in srgb, var(--shift-change-color, #22c55e) 18%, transparent) 50% 100%); pointer-events: none; z-index: 0; }
+.gday.shift-change-cell::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--shift-change-underline, #f97316); pointer-events: none; z-index: 2; }
+.gday.night-shift-cell:not(.shift-change-cell)::before { content: ''; position: absolute; inset: 0; background: color-mix(in srgb, var(--night-shift-color, #22c55e) 18%, var(--surface)); pointer-events: none; z-index: 0; }
+.gday.night-shift-cell:not(.shift-change-cell)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--night-shift-underline, #f97316); pointer-events: none; z-index: 2; }
+.gday.shift-change-cell > .gday-inner,
+.gday.shift-change-cell > .shift-symbol,
+.gday.shift-change-cell > .activity-tag,
+.gday.shift-change-cell > .status-dot { z-index: 3; }
 .status-dot { position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; z-index: 3; pointer-events: none; border: 1px solid rgba(255,255,255,.6); }
 .birthday-cake { position: absolute; right: 5px; bottom: 4px; font-size: 9px; line-height: 1; z-index: 3; pointer-events: none; filter: drop-shadow(0 0 2px rgba(0,0,0,.2)); }
 .dur-tag { position: absolute; top: 1px; right: 2px; font-size: 5px; font-weight: 900; z-index: 3; pointer-events: none; opacity: .9; }
@@ -568,7 +576,9 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
         <button class="btn btn-sm" type="button" onclick="exportData()">Export JSON</button>
         <button class="btn btn-sm" type="button" onclick="importData()">Import JSON</button>
+        <button class="btn btn-sm" id="upload-server-btn" type="button" onclick="uploadCurrentDataToServer()">Upload current data to server</button>
       </div>
+      <div class="form-hint" id="upload-server-hint" style="margin-top:6px">Uploads the currently loaded offline/local data snapshot to the server and replaces the server copy.</div>
       <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
     </div>
     <div style="height:1px;background:var(--border);margin:16px 0;"></div>
@@ -647,6 +657,9 @@ function svgIcon(name, title = '') {
     save: '<path d="M5 4h12l3 3v13H4V4z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/>',
   };
   return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="${title ? 'false' : 'true'}"${title ? ` role="img"><title>${esc(title)}</title>` : '>'}${paths[name] || ''}</svg>`;
+}
+function shiftChangeIcon(title = 'Night shift change') {
+  return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="${title ? 'false' : 'true'}"${title ? ` role="img"><title>${esc(title)}</title>` : '>'}<circle cx="12" cy="12" r="7"/><path d="M12 8v4l3 2"/><path d="M17 6a7 7 0 0 1 1.5 10.5"/><path d="M16 6h3v3"/></svg>`;
 }
 
 // ═══ SAFE STORAGE ════════════════════════════════════════════════════════════
@@ -755,12 +768,16 @@ function persistStorageMode() {
 function applyStorageModeControls() {
   const select = document.getElementById('set-storage-mode');
   const hint = document.getElementById('set-storage-hint');
+  const uploadButton = document.getElementById('upload-server-btn');
+  const uploadHint = document.getElementById('upload-server-hint');
   if (!select || !hint) return;
   if (window.location.protocol === 'file:') {
     storageMode = STORAGE_MODE_LOCAL;
     select.value = STORAGE_MODE_LOCAL;
     select.disabled = true;
     hint.textContent = 'Direct file mode is locked to Local JSON mode because server APIs are unavailable from file:// URLs.';
+    if (uploadButton) uploadButton.style.display = 'none';
+    if (uploadHint) uploadHint.style.display = 'none';
     return;
   }
   select.disabled = false;
@@ -768,6 +785,8 @@ function applyStorageModeControls() {
   hint.textContent = storageMode === STORAGE_MODE_SERVER
     ? 'Online SQLite mode uses the authenticated server/database.'
     : 'Local JSON mode stores planner data in your browser and supports export/import JSON backups.';
+  if (uploadButton) uploadButton.style.display = '';
+  if (uploadHint) uploadHint.style.display = '';
 }
 const GRID_YEAR_KEY = 'teamManagerGridYear';
 const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
@@ -1217,6 +1236,15 @@ function importData() {
   input.click();
 }
 
+async function saveSnapshotToServer(payload) {
+  const res = await fetch('/api/state', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('Failed to save to server');
+}
+
 async function handleImportDataFile(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
@@ -1233,6 +1261,39 @@ async function handleImportDataFile(event) {
     alert('Could not import JSON backup. Verify the file format and try again.');
   } finally {
     event.target.value = '';
+  }
+}
+
+async function uploadCurrentDataToServer() {
+  if (window.location.protocol === 'file:') {
+    alert('Server upload is not available in direct file mode.');
+    return;
+  }
+  const confirmed = window.confirm('Upload the currently loaded local/offline data to the server? This replaces the server copy with your current planner data.');
+  if (!confirmed) return;
+  const button = document.getElementById('upload-server-btn');
+  const originalLabel = button ? button.textContent : '';
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Uploading...';
+    }
+    await saveSnapshotToServer(snapshotData());
+    storageMode = STORAGE_MODE_SERVER;
+    persistStorageMode();
+    hasUnsavedChanges = false;
+    updateSaveButton();
+    updateSbStatus();
+    applyStorageModeControls();
+    alert('Current data uploaded to server.');
+  } catch (err) {
+    alert('Could not upload current data to server.');
+    console.warn('Manual server upload failed:', err.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
   }
 }
 
@@ -1371,6 +1432,7 @@ function loadFromData(data) {
     a.participants = (a.participants || []).map(p => ({
       id: +p.id, shift: p.shift || '',
       shiftType: p.shiftType === 'none' ? 'none' : (p.shiftType === 'night' ? 'night' : (p.shiftType === 'normal' ? 'normal' : 'day')),
+      hasScheduledShifts: p.hasScheduledShifts === true,
     })).filter(p => Number.isFinite(p.id));
     a.abbreviation = a.abbreviation || '';
     a.project = a.project || '';
@@ -1418,6 +1480,7 @@ function loadFromData(data) {
   nextActId    = Math.max(normalized.nextActId    || 1, maxId(activities) + 1);
   nextStatusId = Math.max(normalized.nextStatusId || 1, maxId(statuses) + 1);
   nextCatId    = Math.max(normalized.nextCatId    || 1, maxId(categories) + 1);
+  pruneImplicitDefaultActivityShifts();
   employees.sort((a, b) => a.name.localeCompare(b.name));
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
 }
@@ -1514,11 +1577,7 @@ async function saveState(force = false) {
     return;
   }
   try {
-    const res = await fetch('/api/state', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(snapshotData())
-    });
-    if (!res.ok) throw new Error('Failed to save to server');
+    await saveSnapshotToServer(snapshotData());
     hasUnsavedChanges = false;
     updateSaveButton();
     updateSbStatus();
@@ -1634,12 +1693,9 @@ function mergeIntervals(intervals) {
 }
 function activityExtraHoursOutsideBaseline(shiftIntervals, baselineShift) {
   if (!shiftIntervals.length) return 0;
-  const baseInterval = timeRangeInterval(baselineShift);
   const merged = mergeIntervals(shiftIntervals);
   const activityHours = merged.reduce((sum, intv) => sum + Math.max(0, intv.end - intv.start), 0);
-  if (!baseInterval) return activityHours;
-  const overlap = merged.reduce((sum, intv) => sum + intervalOverlapHours(intv, baseInterval), 0);
-  return Math.max(0, activityHours - overlap);
+  return Math.max(0, activityHours - appSettings.coreHoursPerDay);
 }
 function shiftHours(shift) {
   if (!shift || shift === 'fullday') return appSettings.coreHoursPerDay;
@@ -1650,11 +1706,61 @@ function activityDefaultShift(shiftType, act = null) {
   return shiftType === 'night' ? (act?.nightShift || '0000-0730') : (act?.dayShift || '0730-2400');
 }
 function activityShiftHours(act, empId, shift) {
+  if (shift === 'turn') return 0;
   if (shift !== 'fullday') return shiftHours(shift);
   return timeRangeHours(activityDefaultShift(participantFor(act, empId)?.shiftType, act));
 }
 function activityCountsTowardLoad(act) {
   return act?.countsTowardLoad !== false;
+}
+function activityTypeMeta(act) {
+  const typeKey = (act?.type || '').trim();
+  if (!typeKey) return null;
+  return siFor(typeKey) || statuses.find(s => s.key === typeKey) || null;
+}
+function participantActivityShift(act, empId, dateString) {
+  const participant = participantFor(act, empId);
+  if (!participant) return '';
+  return dateString ? (activityShiftsMap[`${empId}_${dateString}_${act.id}`] || '') : '';
+}
+function activityHasScheduledShift(act, empId, start, end) {
+  const prefix = `${empId}_`;
+  const suffix = `_${act.id}`;
+  return Object.keys(activityShiftsMap).some(key => {
+    if (!key.startsWith(prefix) || !key.endsWith(suffix)) return false;
+    const [, date] = key.split('_', 3);
+    return date >= start && date <= end;
+  });
+}
+function teamReportShiftHours(act, participant, shift) {
+  const shiftType = participant?.shiftType === 'night' ? 'night' : (participant?.shiftType === 'day' ? 'day' : 'normal');
+  const range = shift === 'fullday' ? activityDefaultShift(shiftType, act) : shift;
+  return timeRangeHours(range) ?? activityShiftHours(act, participant?.id, shift);
+}
+function syncParticipantScheduledState(actId, empId) {
+  const activity = activities.find(act => act.id === actId);
+  const participant = activity ? participantFor(activity, empId) : null;
+  if (!participant) return;
+  const prefix = `${empId}_`;
+  const suffix = `_${actId}`;
+  participant.hasScheduledShifts = Object.keys(activityShiftsMap).some(key => key.startsWith(prefix) && key.endsWith(suffix));
+}
+function pruneImplicitDefaultActivityShifts() {
+  for (const act of activities) {
+    for (const participant of act.participants || []) {
+      if (participant.hasScheduledShifts === true) continue;
+      if ((participant.shift || '').trim()) continue;
+      const prefix = `${participant.id}_`;
+      const suffix = `_${act.id}`;
+      const participantShiftKeys = Object.keys(activityShiftsMap).filter(key => key.startsWith(prefix) && key.endsWith(suffix));
+      if (!participantShiftKeys.length) continue;
+      const hasOnlyFulldayEntries = participantShiftKeys.every(key => activityShiftsMap[key] === 'fullday');
+      if (!hasOnlyFulldayEntries) continue;
+      participantShiftKeys.forEach(key => delete activityShiftsMap[key]);
+      participant.shiftType = 'none';
+      participant.hasScheduledShifts = false;
+    }
+  }
 }
 function entryHours(entry) {
   if (!entry) return 0;
@@ -1961,7 +2067,7 @@ function renderGrid() {
         <span style="font-weight:600">Legend:</span>
         ${statuses.map(s => `<span class="flex items-center" style="gap:4px"><span class="badge-status" style="${statusStyle(s.color)};padding:0 6px;font-size:10px">${esc(s.abbr)}</span> ${esc(s.label)}</span>`).join('')}
         <span class="flex items-center" style="gap:4px">${svgIcon('sun')} Day shift</span>
-        <span class="flex items-center" style="gap:4px">${svgIcon('moon')} Night shift</span>
+        <span class="flex items-center" style="gap:4px">${shiftChangeIcon('Night shift change')} Night shift</span>
       </div>
     </div>`;
   renderGridBody(days, today);
@@ -2092,15 +2198,22 @@ function renderGridBody(days, today) {
 
 function cellActivities(empId, ds) {
   return activities
-    .filter(act => ds >= act.startDate && ds <= act.endDate && participantFor(act, empId) && activityShiftsMap[`${empId}_${ds}_${act.id}`])
+    .filter(act => ds >= act.startDate && ds <= act.endDate && participantFor(act, empId))
     .map(act => {
       const participant = participantFor(act, empId);
+      const shift = participantActivityShift(act, empId, ds);
       return {
         ...act,
         isStart: ds === act.startDate, isEnd: ds === act.endDate,
-        shift: activityShiftsMap[`${empId}_${ds}_${act.id}`],
+        shift,
         shiftType: participant && participant.shiftType === 'night' ? 'night' : (participant && participant.shiftType === 'normal' ? 'normal' : 'day'),
       };
+    })
+    .sort((a, b) => {
+      const aHasShift = !!a.shift;
+      const bHasShift = !!b.shift;
+      if (aHasShift !== bHasShift) return aHasShift ? -1 : 1;
+      return a.id - b.id;
     });
 }
 
@@ -2119,12 +2232,13 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const isPartial = entry?.durationType === 'time';
   const acts = cellActivities(emp.id, ds);
   const birthday = isEmployeeBirthday(emp, ds);
+  const hasNightShift = acts.some(act => act.shift === activityDefaultShift('night', act));
 
   const tipParts = [];
   acts.forEach(act => {
     let detail = `Activity: ${act.abbreviation || act.name}`;
     if (act.order) detail += ` [Order: ${act.order}]`;
-    detail += ` | Shift: ${act.shift} | Type: ${act.shiftType === 'night' ? 'Night' : (act.shiftType === 'normal' ? 'Normal Day' : 'Day')}`;
+    detail += ` | Shift: ${act.shift ? act.shift : 'Not scheduled'} | Type: ${act.shiftType === 'night' ? 'Night' : (act.shiftType === 'normal' ? 'Normal Day' : 'Day')}`;
     tipParts.push(detail);
   });
   if (si) {
@@ -2136,6 +2250,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   if (birthday) tipParts.push(`Birthday: ${emp.name}`);
   if (!tipParts.length) tipParts.push('Click to set status');
 
+  const primaryActivity = acts.find(act => act.shift) || acts[0];
   let cellText = '', cellStyleStr = '';
   if (!isPartial && si) {
     cellText = si.abbr;
@@ -2144,18 +2259,36 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     cellText = si.abbr;
     cellStyleStr = `color:${si.color}`;
   } else if (acts.length) {
-    cellText = '';
-    cellStyleStr = '';
+    const primaryType = activityTypeMeta(primaryActivity || acts[0]);
+    cellText = primaryType?.abbr || (primaryActivity?.abbreviation || primaryActivity?.name || '').slice(0, 2).toUpperCase();
+    if (primaryType) cellStyleStr = statusStyle(primaryType.color);
+    else if (primaryActivity) cellStyleStr = `color:${primaryActivity.color}`;
   }
 
-  const primaryActivity = acts[0];
-  const primaryShiftType = primaryActivity && primaryActivity.shift === activityDefaultShift('day', primaryActivity) && primaryActivity.shiftType === 'day'
-    ? 'day'
-    : (primaryActivity && primaryActivity.shift === activityDefaultShift('night', primaryActivity) && primaryActivity.shiftType === 'night' ? 'night' : '');
-  const hasNight = acts.some(a => a.shiftType === 'night');
-  const symbol = primaryShiftType === 'day' ? `<span class="shift-symbol" title="Day shift">${svgIcon('sun')}</span>` : (primaryShiftType === 'night' ? `<span class="shift-symbol" title="Night shift">${svgIcon('moon')}</span>` : '');
+  const hasShiftChange = acts.some(act => act.shift === 'turn');
+  const primaryShiftType = hasShiftChange
+    ? 'change'
+    : (primaryActivity && primaryActivity.shift === activityDefaultShift('day', primaryActivity)
+      ? 'day'
+      : (primaryActivity && primaryActivity.shift === activityDefaultShift('night', primaryActivity) ? 'night' : ''));
+  const symbol = primaryShiftType === 'change'
+    ? `<span class="shift-symbol" title="Shift change">${shiftChangeIcon('Shift change')}</span>`
+    : (primaryShiftType === 'night'
+      ? `<span class="shift-symbol" title="Night shift">${svgIcon('moon')}</span>`
+      : (primaryShiftType === 'day'
+        ? `<span class="shift-symbol" title="Day shift">${svgIcon('sun')}</span>`
+        : ''));
   const dot = (isPartial && si) ? `<div class="status-dot" style="background:${si.color}"></div>` : '';
-  const activityTint = acts.length && !si ? `background:${acts[0].color}18;` : '';
+  const activityBadge = (acts.length && si?.key === 'syk' && (activityTypeMeta(primaryActivity || acts[0]) || primaryActivity))
+    ? `<span class="activity-tag" title="Activity">${esc((activityTypeMeta(primaryActivity || acts[0])?.abbr || (primaryActivity?.abbreviation || primaryActivity?.name || '').slice(0, 2).toUpperCase()))}</span>`
+    : '';
+  const activityTint = acts.length && primaryActivity?.color
+    ? (primaryShiftType === 'change'
+      ? `background: linear-gradient(90deg, color-mix(in srgb, ${primaryActivity.color} 60%, transparent) 0 50%, rgba(15,23,42,.9) 50% 100%);`
+      : (si
+        ? `box-shadow: inset 0 0 0 999px color-mix(in srgb, ${primaryActivity.color} ${hasNightShift ? 18 : 8}%, transparent);`
+        : `background: color-mix(in srgb, ${primaryActivity.color} ${hasNightShift ? 18 : 10}%, transparent);`))
+    : '';
   const activityUnderline = acts.length && primaryActivity ? `box-shadow: inset 0 -2px 0 ${primaryActivity.color};` : '';
   const holidayTint = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
   const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">🎂</span>` : '';
@@ -2164,14 +2297,17 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const dayTextColor = holiday ? `color:${holiday.color || '#ef4444'} !important;` : '';
 
   const effectiveStatusColor = si ? si.color : (acts.length ? primaryActivity?.color : null);
+  const nightShiftStyle = hasNightShift ? `--night-shift-color:${si?.color || primaryActivity?.color || '#22c55e'};--night-shift-underline:${primaryActivity?.color || '#f97316'};` : '';
   const finalCellStyle = holiday
     ? `${dayBackground}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${dayTextColor}${holidayTint}`
-    : `${activityTint}${effectiveStatusColor && !si ? `color:${effectiveStatusColor};` : ''}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}`;
+    : (primaryShiftType === 'change'
+      ? `--shift-change-color:#22c55e;--shift-change-underline:${primaryActivity?.color || '#f97316'};color:${effectiveStatusColor || 'var(--text)'};`
+      : `${activityTint}${effectiveStatusColor && !si ? `color:${effectiveStatusColor};` : ''}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}`);
 
-  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${hasNight ? ' night-shift-cell' : ''}"
-    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${finalCellStyle}"
+  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${hasNightShift || primaryShiftType === 'night' ? ' night-shift-cell' : ''}${primaryShiftType === 'change' ? ' shift-change-cell' : ''}"
+    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${nightShiftStyle}${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
-    onclick="openPicker(event,${emp.id},'${ds}')">${dot}${symbol}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
+    onclick="openPicker(event,${emp.id},'${ds}')">${dot}${symbol}${activityBadge}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
@@ -2355,6 +2491,7 @@ function _showPicker(event, empId, dates) {
         { value: activityDefaultShift('normal', act), label: `Normal Day (${activityDefaultShift('normal', act)})` },
         { value: activityDefaultShift('day', act), label: `Day shift (${activityDefaultShift('day', act)})` },
         { value: activityDefaultShift('night', act), label: `Night shift (${activityDefaultShift('night', act)})` },
+        { value: 'turn', label: `Shift change` },
       ];
       const chips = shiftOptions.map(option => {
         const selected = option.value === 'none' ? !cur : cur === option.value;
@@ -2458,6 +2595,7 @@ async function saveShift(empId, date, actId, shift) {
     if (shift === null) delete activityShiftsMap[key];
     else activityShiftsMap[key] = shift;
   }
+  syncParticipantScheduledState(actId, empId);
   markUnsaved();
   await saveState();
   dates.forEach(selectedDate => updateCell(empId, selectedDate));
@@ -2606,7 +2744,7 @@ function buildParticipantPicker() {
   }).join('') + `<datalist id="shift-presets-dl">${SHIFT_PRESETS.map(p => `<option value="${p}"></option>`).join('')}</datalist>`;
 }
 function toggleParticipant(id, checked) {
-  if (checked) { if (!selectedParticipants.find(p => p.id === id)) selectedParticipants.push({ id, shift: '', shiftType: 'day' }); }
+  if (checked) { if (!selectedParticipants.find(p => p.id === id)) selectedParticipants.push({ id, shift: '', shiftType: 'none', hasScheduledShifts: false }); }
   else selectedParticipants = selectedParticipants.filter(p => p.id !== id);
   buildParticipantPicker();
 }
@@ -2644,7 +2782,7 @@ function openActModal(id) {
   selectedActColor = act?.color || PALETTE[0];
   selectedParticipants = act ? act.participants.map(p => ({ ...p })) : [];
   if (!act && preset?.participantId && employees.some(emp => emp.id === preset.participantId)) {
-    selectedParticipants = [{ id: preset.participantId, shift: '', shiftType: 'day' }];
+    selectedParticipants = [{ id: preset.participantId, shift: '', shiftType: 'none', hasScheduledShifts: false }];
   }
   pendingActivityPreset = null;
   buildSwatchRow('af-swatches', selectedActColor, c => { selectedActColor = c; markSwatch('af-swatches', c); });
@@ -2710,14 +2848,12 @@ async function saveActivity() {
   }
   const endD = new Date(rec.endDate + 'T00:00:00');
   for (const p of rec.participants) {
-    const previousParticipant = previousAct?.participants?.find(previous => previous.id === p.id);
     for (const d = new Date(rec.startDate + 'T00:00:00'); d <= endD; d.setDate(d.getDate() + 1)) {
       const key = `${p.id}_${fmt(d)}_${rec.id}`;
       if (p.shiftType === 'none') delete activityShiftsMap[key];
-      else if (!activityShiftsMap[key] && (!previousAct || !previousParticipant || previousParticipant.shiftType === 'none' || fmt(d) < previousAct.startDate || fmt(d) > previousAct.endDate)) {
-        activityShiftsMap[key] = 'fullday';
-      }
     }
+    if (p.shiftType === 'none') p.hasScheduledShifts = false;
+    else syncParticipantScheduledState(rec.id, p.id);
   }
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
   markUnsaved();
@@ -2748,13 +2884,13 @@ function activityReportRows(act) {
     const emp = empById(participant.id);
     if (!emp) return;
     dates.forEach(date => {
-      const shift = activityShiftsMap[`${emp.id}_${date}_${act.id}`] || '';
+      const shift = participantActivityShift(act, emp.id, date);
       rows.push({
         employee: emp.name,
         department: emp.department,
         date,
         shiftType: shift ? (participant.shiftType === 'night' ? 'Night' : (participant.shiftType === 'normal' ? 'Normal Day' : 'Day')) : '',
-        shift: shift ? (shift === 'fullday' ? activityDefaultShift(participant.shiftType, act) : shift) : 'Not scheduled',
+        shift: shift || 'Not scheduled',
         hours: shift ? activityShiftHours(act, emp.id, shift) : 0,
       });
     });
@@ -2785,10 +2921,10 @@ function openActivityReport(id) {
         const emp = empById(participant.id);
         if (!emp) return '';
         return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${esc(emp.name)}<div class="muted" style="font-size:11px;margin-top:2px">${esc(emp.department)}</div></td>${dates.map(date => {
-          const shift = activityShiftsMap[`${emp.id}_${date}_${act.id}`] || '';
+          const shift = participantActivityShift(act, emp.id, date);
           const shiftType = participant.shiftType === 'night' ? 'Night' : (participant.shiftType === 'normal' ? 'Normal Day' : 'Day');
           const label = shift ? `${shiftType} shift` : '—';
-          const shiftLabel = shift === 'fullday' ? activityDefaultShift(participant.shiftType, act) : shift;
+          const shiftLabel = shift || activityDefaultShift(participant.shiftType, act);
           const hours = shift ? `<div style="font-size:11px;margin-top:2px">${esc(shiftLabel)}</div><div class="muted" style="font-size:10px;margin-top:2px">${activityShiftHours(act, emp.id, shift)} h</div>` : '';
           const weekendBackground = isWknd(new Date(`${date}T00:00:00`)) ? '#fff7ed' : 'transparent';
           const cellBackground = shift ? `${act.color}14` : weekendBackground;
@@ -2832,25 +2968,40 @@ function teamReportDates(start, end) {
 function teamReportEntries(start, end) {
   const entries = [];
   sortedEmployees().forEach(emp => {
-    const employeeActivities = activities.filter(act => act.startDate <= end && act.endDate >= start && actParticipantIds(act).includes(emp.id))
+    const employeeActivities = activities.filter(act => {
+      const participant = participantFor(act, emp.id);
+      return act.startDate <= end && act.endDate >= start && participant && participant.shiftType !== 'normal' && activityHasScheduledShift(act, emp.id, start, end);
+    })
       .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name))
     if (employeeActivities.length) employeeActivities.forEach(act => entries.push({ emp, act }));
     else entries.push({ emp, act: null });
   });
   return entries;
 }
-function teamReportCell(emp, act, date) {
+function teamReportCellInfo(emp, act, date, isFirstDay) {
   if (!act) return '';
   if (date < act.startDate || date > act.endDate) return '';
   const day = new Date(`${date}T00:00:00`);
   if (isWknd(day) && !act.includeWeekends) return '';
-  const shift = activityShiftsMap[`${emp.id}_${date}_${act.id}`];
-  if (!shift) return '';
+  const shift = participantActivityShift(act, emp.id, date);
   const participant = participantFor(act, emp.id);
-  const type = participant?.shiftType === 'night' ? 'Night' : (participant?.shiftType === 'normal' ? 'Normal' : 'Day');
+  if (!shift) return null;
+  const shiftType = participant?.shiftType === 'night' ? 'night' : (participant?.shiftType === 'normal' ? 'normal' : 'day');
+  const type = shiftType === 'night' ? 'Night' : (shiftType === 'normal' ? 'Normal' : 'Day');
   const range = shift === 'fullday' ? activityDefaultShift(participant?.shiftType, act) : shift;
-  const hours = activityShiftHours(act, emp.id, shift);
-  return `<div style="font-weight:600">${esc(act.abbreviation || act.name)}</div><div style="font-size:10px;margin-top:2px">${type} · ${esc(range)}</div><div class="muted" style="font-size:10px">${hours} h</div>`;
+  const hours = isFirstDay ? (24 - appSettings.coreHoursPerDay) : 24;
+  const days = hours / 24;
+  const tint = shiftType === 'night' ? 0.22 : 0.12;
+  return {
+    html: `<div style="font-weight:600">${esc(act.abbreviation || act.name)}</div><div style="font-size:10px;margin-top:2px">${type} · ${esc(range)}</div><div class="muted" style="font-size:10px">${hours} h</div>`,
+    hours,
+    days,
+    tint,
+  };
+}
+function teamReportCell(emp, act, date) {
+  const info = teamReportCellInfo(emp, act, date, false);
+  return info ? info.html : '';
 }
 function openTeamScheduleReport() {
   const start = new Date();
@@ -2870,14 +3021,18 @@ function renderTeamScheduleReport() {
   const entries = teamReportEntries(start, end);
   content.innerHTML = `
     <div style="margin-bottom:14px"><div style="font-weight:600;font-size:14px">Team Work Schedule</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div></div>
-    <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:${220 + dates.length * 92}px">
-      <thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="padding:7px 8px;min-width:210px;position:sticky;left:0;background:var(--surface);z-index:1">Employee / Activity</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 6px;min-width:92px;background:${weekend ? '#fff7ed' : 'var(--surface)'};color:${weekend ? '#c2410c' : 'inherit'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}</tr></thead>
+    <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:${220 + dates.length * 92 + 150}px">
+      <thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="padding:7px 8px;min-width:210px;position:sticky;left:0;background:var(--surface);z-index:1">Employee / Activity</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 6px;min-width:92px;background:${weekend ? '#fff7ed' : 'var(--surface)'};color:${weekend ? '#c2410c' : 'inherit'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}<th style="padding:7px 8px;min-width:70px">Days</th><th style="padding:7px 8px;min-width:70px">Hours</th></tr></thead>
       <tbody>${entries.map(({ emp, act }) => {
         const metaParts = [];
-        if (act?.project) metaParts.push(act.project);
-        if (act?.order) metaParts.push(`Ord: ${act.order}`);
-        const metaStr = metaParts.length ? ` · ${metaParts.join(' · ')}` : '';
-        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 8px;position:sticky;left:0;background:var(--surface);z-index:1"><div style="font-weight:600">${esc(emp.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${act ? `${esc(act.name)}${esc(metaStr)}` : 'No activities in this period'}</div></td>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); const cell = teamReportCell(emp, act, date); return `<td style="padding:7px 6px;vertical-align:top;background:${cell ? `${act.color}14` : (weekend ? '#fff7ed' : 'transparent')};border-left:${weekend ? '1px solid #fed7aa' : '0'}">${cell}</td>`; }).join('')}</tr>`;
+        if (act?.project) metaParts.push(`Cost Center: ${esc(act.project)}`);
+        if (act?.order) metaParts.push(`Order: ${esc(act.order)}`);
+        if (act?.billing) metaParts.push(`Billing: ${esc(act.billing)}`);
+        if (act?.notes) metaParts.push(`Notes: ${esc(act.notes)}`);
+        const firstVisibleDate = act ? dates.find(date => participantActivityShift(act, emp.id, date)) : null;
+        const totalHours = act ? dates.reduce((sum, date) => sum + (teamReportCellInfo(emp, act, date, date === firstVisibleDate)?.hours || 0), 0) : 0;
+        const totalDays = totalHours / 24;
+        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 8px;position:sticky;left:0;background:var(--surface);z-index:1"><div style="font-weight:600">${esc(emp.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${act ? esc(act.name) : 'No activities in this period'}</div>${metaParts.length ? `<div class="muted" style="font-size:10px;margin-top:2px">${metaParts.join(' · ')}</div>` : ''}</td>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); const cellInfo = teamReportCellInfo(emp, act, date, date === firstVisibleDate); return `<td style="padding:7px 6px;vertical-align:top;background:${cellInfo ? `color-mix(in srgb, ${act.color} ${cellInfo.tint * 100}%, transparent)` : (weekend ? '#fff7ed' : 'transparent')};border-left:${weekend ? '1px solid #fed7aa' : '0'}">${cellInfo ? cellInfo.html : ''}</td>`; }).join('')}<td style="padding:7px 8px;white-space:nowrap;font-weight:600">${act ? totalDays.toFixed(2) : ''}</td><td style="padding:7px 8px;white-space:nowrap;font-weight:600">${act ? totalHours.toFixed(1) : ''}</td></tr>`;
       }).join('')}</tbody>
     </table></div>`;
 }
@@ -3343,13 +3498,11 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
       const activityId = +key.split('_')[2];
       const activity = activities.find(act => act.id === activityId);
       if (activity && !activityCountsTowardLoad(activity)) return;
-      const shiftRange = shift !== 'fullday'
-        ? shift
-        : activityDefaultShift(participantFor(activity, emp.id)?.shiftType, activity);
-      const interval = timeRangeInterval(shiftRange);
-      if (interval) dayActivityIntervals.push(interval);
-      dayActivityHours += activityShiftHours(activity, emp.id, shift);
-    });
+          const shiftRange = participantActivityShift(activity, emp.id, ds);
+          const interval = timeRangeInterval(shiftRange);
+          if (interval) dayActivityIntervals.push(interval);
+          dayActivityHours += activityShiftHours(activity, emp.id, shiftRange || '');
+        });
     activityHours += dayActivityHours;
     const dayExtraHours = activityExtraHoursOutsideBaseline(dayActivityIntervals, appSettings.coreWorkdayRange || '0730-1500');
     const dayPlannedHours = dayBaselineHours + dayExtraHours;
@@ -3357,6 +3510,7 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
   });
 
   const totalHours = loadHours;
+  const extraHours = Math.max(0, totalHours - baselineHours);
   const utilization = capacityHours > 0 ? (totalHours / capacityHours) * 100 : 0;
   return {
     capacityHours,
@@ -3364,10 +3518,22 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
     statusHours,
     activityHours,
     absenceHours,
+    extraHours,
+    balanceHours: extraHours - absenceHours,
+    pressureHours: extraHours + absenceHours,
     totalHours,
     utilization,
     scheduledDays,
   };
+}
+function workloadBalanceMeta(extraHours, absenceHours) {
+  const extra = Math.max(0, extraHours || 0);
+  const absence = Math.max(0, absenceHours || 0);
+  const balanceHours = extra - absence;
+  if (extra === 0 && absence === 0) return { label: 'Net 0', color: '#22c55e', summary: 'No extra load or absence', balanceHours };
+  if (balanceHours > 0) return { label: 'Net +', color: '#ef4444', summary: `+${fmtDaysHours(balanceHours)} net extra`, balanceHours };
+  if (balanceHours < 0) return { label: 'Net -', color: '#f59e0b', summary: `-${fmtDaysHours(-balanceHours)} net absence`, balanceHours };
+  return { label: 'Net 0', color: '#3b82f6', summary: 'Extra load matches absence', balanceHours };
 }
 function workloadUtilClass(util) {
   if (util > appSettings.highMax) return { label: 'Overloaded', color: '#ef4444' };
@@ -3441,8 +3607,11 @@ function teamWorkloadForDates(dateStrings) {
     acc.totalHours += row.totalHours;
     acc.capacityHours += row.capacityHours;
     acc.absenceHours += row.absenceHours;
+    acc.extraHours += row.extraHours;
+    acc.balanceHours += row.balanceHours;
+    acc.pressureHours += row.pressureHours;
     return acc;
-  }, { totalHours: 0, capacityHours: 0, absenceHours: 0 });
+  }, { totalHours: 0, capacityHours: 0, absenceHours: 0, extraHours: 0, balanceHours: 0, pressureHours: 0 });
 }
 
 // ═══ DASHBOARD ═══════════════════════════════════════════════════════════════
@@ -3520,9 +3689,9 @@ function renderDashboard() {
   const wlRange = workloadRange();
   const workloadDates = datesInRange(new Date(`${wlRange.start}T00:00:00`), new Date(`${wlRange.end}T00:00:00`));
   const workloadRows = employees.map(emp => ({ emp, ...getEmployeeWorkload(emp, workloadDates) }))
-    .sort((a, b) => b.totalHours - a.totalHours);
+    .sort((a, b) => b.pressureHours - a.pressureHours || b.extraHours - a.extraHours || b.absenceHours - a.absenceHours);
   const workloadTeamTotals = teamWorkloadForDates(workloadDates);
-  const workloadTeamUtil = workloadTeamTotals.capacityHours > 0 ? (workloadTeamTotals.totalHours / workloadTeamTotals.capacityHours) * 100 : 0;
+  const workloadTeamBalance = workloadBalanceMeta(workloadTeamTotals.extraHours, workloadTeamTotals.absenceHours);
 
   const yearlyWorkload = [];
   for (let month = 0; month < 12; month++) {
@@ -3530,43 +3699,39 @@ function renderDashboard() {
     const end = new Date(wlRange.anchorYear, month + 1, 0);
     const dates = datesInRange(start, end);
     const totals = teamWorkloadForDates(dates);
-    const util = totals.capacityHours > 0 ? (totals.totalHours / totals.capacityHours) * 100 : 0;
+    const balanceMeta = workloadBalanceMeta(totals.extraHours, totals.absenceHours);
     yearlyWorkload.push({
       month,
       label: start.toLocaleDateString('en-US', { month: 'short' }),
-      totalHours: totals.totalHours,
-      baselineHours: totals.capacityHours,
-      utilization: util,
-      utilClass: workloadUtilClass(util),
+      extraHours: totals.extraHours,
+      absenceHours: totals.absenceHours,
+      pressureHours: totals.pressureHours,
+      balanceHours: totals.balanceHours,
+      balanceMeta,
     });
   }
-  const yearPeak = yearlyWorkload.length ? yearlyWorkload.reduce((best, cur) => cur.utilization > best.utilization ? cur : best, yearlyWorkload[0]) : null;
-  const yearLow = yearlyWorkload.length ? yearlyWorkload.reduce((best, cur) => cur.utilization < best.utilization ? cur : best, yearlyWorkload[0]) : null;
-  const yearMaxUtil = Math.max(1, ...yearlyWorkload.map(m => m.utilization));
+  const yearPeak = yearlyWorkload.length ? yearlyWorkload.reduce((best, cur) => cur.pressureHours > best.pressureHours ? cur : best, yearlyWorkload[0]) : null;
+  const yearLow = yearlyWorkload.length ? yearlyWorkload.reduce((best, cur) => cur.pressureHours < best.pressureHours ? cur : best, yearlyWorkload[0]) : null;
+  const yearMaxPressure = Math.max(1, ...yearlyWorkload.map(m => m.pressureHours));
 
   const workloadOverview = workloadRows.length
     ? workloadRows.map(row => {
-        const util = workloadUtilClass(row.utilization);
-        const barWidth = Math.min(100, Math.round(row.utilization));
+        const balance = workloadBalanceMeta(row.extraHours, row.absenceHours);
         return `
           <div class="absence-row" style="padding:10px 0;">
             <div style="min-width:0;flex:1;margin-right:12px;">
               <div style="display:flex;align-items:center;justify-content:space-between;">
                 <div style="font-size:13.5px;font-weight:500">${esc(row.emp.name)}</div>
-                <div class="muted" style="font-size:11.5px;font-variant-numeric:tabular-nums">${Math.round(row.utilization)}%</div>
+                <div style="font-size:11.5px;font-weight:600;color:${balance.color};font-variant-numeric:tabular-nums">${esc(balance.summary)}</div>
               </div>
               <div class="muted text-sm">${esc(row.emp.role)} · ${esc(row.emp.department)}</div>
-              <div style="width:100%;height:6px;background:var(--muted-bg);border-radius:999px;margin-top:6px;overflow:hidden">
-                <div style="width:${barWidth}%;height:100%;background:${util.color};border-radius:999px;"></div>
-              </div>
-              <div class="muted text-sm" style="margin-top:4px;display:flex;gap:10px;flex-wrap:wrap">
-                <span>${fmtDaysHours(row.totalHours)} load</span>
-                <span>${fmtDaysHours(row.capacityHours)} baseline</span>
+              <div class="muted text-sm" style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap">
+                <span>${row.extraHours > 0 ? `${fmtDaysHours(row.extraHours)} extra load` : 'No extra load'}</span>
                 <span>${row.absenceHours > 0 ? `${fmtDaysHours(row.absenceHours)} absent` : 'No absence'}</span>
               </div>
             </div>
             <div style="text-align:right;min-width:90px">
-              <div class="badge-status" style="border-color:${util.color}40;color:${util.color};background:${util.color}16;display:inline-flex;">${util.label}</div>
+              <div class="badge-status" style="border-color:${balance.color}40;color:${balance.color};background:${balance.color}16;display:inline-flex;">${balance.label}</div>
             </div>
           </div>`;
       }).join('')
@@ -3671,22 +3836,22 @@ function renderDashboard() {
           </div>
         </div>
         <div class="muted text-sm" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap">
-          <span>${fmtDaysHours(workloadTeamTotals.totalHours)} team load</span>
-          <span>${fmtDaysHours(workloadTeamTotals.capacityHours)} team baseline</span>
-          <span style="font-weight:600;color:${workloadUtilClass(workloadTeamUtil).color}">${Math.round(workloadTeamUtil)}% utilization</span>
+          <span>${workloadTeamTotals.extraHours > 0 ? `${fmtDaysHours(workloadTeamTotals.extraHours)} team extra load` : 'No team extra load'}</span>
+          <span>${workloadTeamTotals.absenceHours > 0 ? `${fmtDaysHours(workloadTeamTotals.absenceHours)} team absence` : 'No team absence'}</span>
+          <span style="font-weight:600;color:${workloadTeamBalance.color}">${esc(workloadTeamBalance.label)} · ${esc(workloadTeamBalance.summary)}</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:0;margin-top:12px;max-height:300px;overflow:auto;padding-right:6px">${workloadOverview}</div>
         <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
           <div class="flex items-center justify-between" style="gap:8px;flex-wrap:wrap">
-            <div class="card-title" style="font-size:13px">Yearly load trend (${wlRange.anchorYear})</div>
-            ${yearPeak ? `<div class="muted text-sm">Peak: <b style="color:${yearPeak.utilClass.color}">${yearPeak.label} (${Math.round(yearPeak.utilization)}%)</b> · Lowest: <b style="color:${yearLow.utilClass.color}">${yearLow.label} (${Math.round(yearLow.utilization)}%)</b></div>` : ''}
+            <div class="card-title" style="font-size:13px">Yearly load balance (${wlRange.anchorYear})</div>
+            ${yearPeak ? `<div class="muted text-sm">Peak: <b style="color:${yearPeak.balanceMeta.color}">${yearPeak.label} (${fmtDaysHours(yearPeak.pressureHours)})</b> · Lowest: <b style="color:${yearLow.balanceMeta.color}">${yearLow.label} (${fmtDaysHours(yearLow.pressureHours)})</b></div>` : ''}
           </div>
           <div class="trend-wrap" style="height:160px;margin-top:8px;gap:5px">
             ${yearlyWorkload.map(m => `
               <div style="flex:1;display:flex;flex-direction:column;align-items:stretch;min-width:0;height:160px">
                 <div class="trend-col">
-                  <div class="trend-seg" style="height:${Math.max(2, (m.utilization / yearMaxUtil) * 100)}%;background:${m.utilClass.color};opacity:.92;border-radius:3px 3px 0 0"></div>
-                  <div class="trend-tip"><b>${m.label} ${wlRange.anchorYear}</b><div>Utilization: <b>${Math.round(m.utilization)}%</b></div><div>Load: <b>${fmtDaysHours(m.totalHours)}</b></div><div>Baseline: <b>${fmtDaysHours(m.baselineHours)}</b></div></div>
+                  <div class="trend-seg" style="height:${m.pressureHours > 0 ? Math.max(2, (m.pressureHours / yearMaxPressure) * 100) : 0}%;background:${m.balanceMeta.color};opacity:.92;border-radius:3px 3px 0 0"></div>
+                  <div class="trend-tip"><b>${m.label} ${wlRange.anchorYear}</b><div>Extra load: <b>${fmtDaysHours(m.extraHours)}</b></div><div>Absence: <b>${fmtDaysHours(m.absenceHours)}</b></div><div>Balance: <b>${esc(m.balanceMeta.summary)}</b></div></div>
                 </div>
                 <div class="trend-x">${m.label}</div>
               </div>
@@ -3802,6 +3967,7 @@ function computeSummaryRows(startDate, endDate) {
   const rows = employees.map(emp => ({ emp, counts: {}, activityHours: {}, absenceTotal: 0, oooTotal: 0, total: 0 }));
   const rowByEmp = new Map(rows.map(r => [r.emp.id, r]));
   const statusKeySet = new Set(statuses.map(s => s.key));
+  const rangeDates = datesInRange(startDate, endDate);
 
   for (const [key, raw] of Object.entries(entriesMap)) {
     const idx = key.indexOf('_');
@@ -3841,6 +4007,9 @@ function computeSummaryRows(startDate, endDate) {
       row.total += hrs;
     }
   }
+  rows.forEach(row => {
+    row.total = getEmployeeWorkload(row.emp, rangeDates).extraHours;
+  });
   return rows;
 }
 function summaryActivityGroups(startDate, endDate) {
@@ -3897,7 +4066,7 @@ function renderSummary() {
     ${hasAbsence ? `<th class="num" data-sort="__absence" title="Total hours of absence-flagged statuses">Absence <span style="opacity:.55">${sortIcon('__absence')}</span></th>` : ''}
     ${hasOoo ? `<th class="num" data-sort="__ooo" title="Total hours of Out of Office statuses">OOO <span style="opacity:.55">${sortIcon('__ooo')}</span></th>` : ''}
     ${groups.map(g => `<th class="num" style="color:${g.color}" title="${esc(g.names.join(', '))}" data-sort="act:${esc(g.typeKey)}">${esc(g.label)} <span style="opacity:.55">${sortIcon('act:' + g.typeKey)}</span></th>`).join('')}
-    <th class="num" data-sort="total" title="Total planned hours in selected period">Total <span style="opacity:.55">${sortIcon('total')}</span></th>
+    <th class="num" data-sort="total" title="Extra work above scheduled 7.5 hours">Total <span style="opacity:.55">${sortIcon('total')}</span></th>
   </tr>`;
 
   const totalCols = 2 + statuses.length + groups.length + (hasAbsence ? 1 : 0) + (hasOoo ? 1 : 0);
