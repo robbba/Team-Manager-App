@@ -549,18 +549,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       </div>
       <div class="form-hint">Values above the High limit are Overloaded. Limits must increase from Light to High.</div>
     </div>
-    <div class="form-row">
-      <label>Red dates / holidays</label>
-      <div style="display:flex;gap:8px;align-items:end">
-        <div style="flex:0 0 140px"><label class="muted text-sm">From</label><input id="set-holiday-date" type="date"></div>
-        <div style="flex:0 0 140px"><label class="muted text-sm">To</label><input id="set-holiday-end" type="date"></div>
-        <div style="flex:1"><label class="muted text-sm">Name</label><input id="set-holiday-name" placeholder="Christmas Day"></div>
-        <button class="btn btn-sm" type="button" onclick="addHolidaySetting()">Add</button>
-      </div>
-      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:8px"><input id="set-holiday-nonworking" type="checkbox" checked> Subtract from normal capacity</label>
-      <div class="form-hint">Use the same date for one day, or From/To for a holiday week or longer non-working period.</div>
-      <div id="set-holiday-list" style="display:flex;flex-direction:column;gap:4px;margin-top:8px"></div>
-    </div>
     <div style="height:1px;background:var(--border);margin:16px 0;"></div>
     <div class="form-row">
       <label>Endre passord</label>
@@ -603,8 +591,10 @@ const DEPT_BG_LIGHT  = ['#f0fdf4','#eff6ff','#fdf4ff','#fff7ed','#f0f9ff','#fefc
 const DEPT_ACC_LIGHT = ['#86efac','#93c5fd','#d8b4fe','#fdba74','#7dd3fc','#fde047','#f9a8d4','#a3e635','#fda4af','#c4b5fd','#6ee7b7','#7dd3fc'];
 const DEPT_BG_DARK   = ['#052e16','#1e3a5f','#2e1065','#431407','#082f49','#422006','#500724','#1a2e05','#4c0519','#1e1b4b','#064e3b','#0c2340'];
 const DEPT_ACC_DARK  = ['#166534','#1d4ed8','#6d28d9','#c2410c','#0369a1','#a16207','#be185d','#4d7c0f','#be123c','#4c1d95','#065f46','#0e7490'];
-const SETTINGS_KEY = 'team-status-app-settings';
+const SETTINGS_KEY = 'team-manager-app-settings';
+const LEGACY_SETTINGS_KEY = 'team-status-app-settings';
 const LEGACY_THEME_KEY = 'team-status-theme';
+function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 function svgIcon(name, title = '') {
   const paths = {
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -663,7 +653,9 @@ function normalizeStateVersion(data) {
 
 function loadSettings() {
   try {
-    const raw = lsGet(SETTINGS_KEY);
+    const newRaw = lsGet(SETTINGS_KEY);
+    const legacyRaw = newRaw ? null : lsGet(LEGACY_SETTINGS_KEY);
+    const raw = newRaw || legacyRaw;
     if (raw) {
       const parsed = JSON.parse(raw);
       appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
@@ -676,12 +668,19 @@ function loadSettings() {
       appSettings.departmentColors = parsed.departmentColors && typeof parsed.departmentColors === 'object'
         ? Object.fromEntries(Object.entries(parsed.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
         : {};
+      if (legacyRaw) {
+        lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
+        lsRemove(LEGACY_SETTINGS_KEY);
+      }
       return;
     }
     appSettings.darkMode = lsGet(LEGACY_THEME_KEY) === 'dark';
   } catch (err) { }
 }
-function persistSettings() { lsSet(SETTINGS_KEY, JSON.stringify(appSettings)); }
+function persistSettings() {
+  lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
+  lsRemove(LEGACY_SETTINGS_KEY);
+}
 const GRID_YEAR_KEY = 'teamManagerGridYear';
 const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
 function loadGridPreferences() {
