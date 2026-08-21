@@ -583,6 +583,10 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
         <span id="set-pass-msg" style="font-size:12px;font-weight:500"></span>
       </div>
     </div>
+    <div class="form-row" style="margin-top:2px">
+      <label>About</label>
+      <div class="form-hint" id="set-about-version"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('settings-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveSettings()">Save</button>
@@ -872,6 +876,8 @@ function openSettings() {
   if (storageSelect) storageSelect.value = storageMode;
   applyStorageModeControls();
   renderHolidaySettings();
+  const about = document.getElementById('set-about-version');
+  if (about) about.textContent = `Team Manager v${APP_VERSION} · Data format v${DATA_VERSION}`;
   document.getElementById('settings-modal').classList.add('open');
 }
 function renderHolidaySettings() {
