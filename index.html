@@ -93,6 +93,12 @@ tr:hover .act-cell-actions { opacity: 1; }
 .icon-btn { border: none; background: none; cursor: pointer; padding: 3px; border-radius: 4px; color: var(--muted); line-height: 1; font-size: 11px; }
 .icon-btn:hover { background: var(--muted-bg); color: var(--text); }
 .icon-btn.danger:hover { color: var(--destructive); background: color-mix(in srgb, var(--destructive) 12%, transparent); }
+.holiday-add-menu { position: relative; display: inline-block; }
+.holiday-add-menu summary { list-style: none; }
+.holiday-add-menu summary::-webkit-details-marker { display: none; }
+.holiday-add-options { position: absolute; right: 0; top: calc(100% + 6px); min-width: 214px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.16); padding: 4px; display: flex; flex-direction: column; gap: 2px; z-index: 80; }
+.holiday-add-option { border: none; background: none; text-align: left; padding: 7px 9px; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--text); font-family: inherit; }
+.holiday-add-option:hover { background: var(--muted-bg); }
 .act-bar-cell { cursor: pointer; }
 .act-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .act-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -493,6 +499,33 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   </div>
 </div>
 
+<!-- Holiday import modal -->
+<div class="modal-bg" id="holiday-import-modal">
+  <div class="modal" style="width:520px;max-height:80vh;display:flex;flex-direction:column">
+    <div class="flex items-center justify-between" style="gap:12px">
+      <h3 style="margin:0">Import holidays from .ics</h3>
+      <button class="icon-btn" title="Close" onclick="closeHolidayImportModal()">&times;</button>
+    </div>
+    <p class="modal-desc">Select an .ics file and review the holiday entries for the current planner year.</p>
+    <div class="form-row">
+      <label>Import file</label>
+      <input type="file" accept=".ics,text/calendar" onchange="handleHolidayImportFile(event)">
+    </div>
+    <div class="form-row" style="margin-top:0">
+      <div class="flex gap-2" style="justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn btn-sm" type="button" onclick="setHolidayImportSelection('all')">Select all</button>
+        <button class="btn btn-sm" type="button" onclick="setHolidayImportSelection('future')">Future only</button>
+        <button class="btn btn-sm" type="button" onclick="setHolidayImportSelection('none')">Clear</button>
+      </div>
+    </div>
+    <div id="holiday-import-list" style="display:flex;flex-direction:column;gap:8px;overflow:auto;padding-right:4px"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeHolidayImportModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmHolidayImport()">Import selected</button>
+    </div>
+  </div>
+</div>
+
 <!-- Settings modal -->
 <div class="modal-bg" id="settings-modal">
   <div class="modal" style="width:400px">
@@ -770,6 +803,135 @@ function deleteHolidayFromModal() {
   appSettings.holidays = appSettings.holidays.filter((_, index) => !editingHolidayIndexes.includes(index));
   persistSettings();
   closeModal('holiday-modal');
+  renderPage();
+}
+let importedHolidayEvents = [];
+
+function parseIcsDateValue(value) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  if (/^\d{8}$/i.test(raw)) {
+    const yyyy = raw.slice(0, 4), mm = raw.slice(4, 6), dd = raw.slice(6, 8);
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  const matched = raw.match(/^(\d{4})(\d{2})(\d{2})T?\d{0,6}Z?$/i);
+  if (matched) return `${matched[1]}-${matched[2]}-${matched[3]}`;
+  const iso = raw.replace(/Z$/i, '');
+  const dt = new Date(iso);
+  if (!Number.isNaN(dt.getTime())) return fmt(dt);
+  return null;
+}
+function parseHolidayIcsFile(fileText) {
+  const blocks = String(fileText || '').split(/BEGIN:VEVENT/i).filter(Boolean);
+  const valid = [];
+  for (const block of blocks) {
+    const section = block.split(/END:VEVENT/i)[0] || block;
+    const match = section.match(/DTSTART[^:]*:(.+)/i);
+    const endMatch = section.match(/DTEND[^:]*:(.+)/i);
+    if (!match) continue;
+    const startDate = parseIcsDateValue(match[1]);
+    if (!startDate) continue;
+    const endDate = parseIcsDateValue(endMatch ? endMatch[1] : match[1]);
+    const summaryLine = (section.match(/SUMMARY(?:;[^\r\n]*)?:([^\r\n]+)/i) || [])[1];
+    const summary = summaryLine ? summaryLine.replace(/\\,|\\;/g, c => c === '\\,' ? ',' : ';').replace(/\\n/g, ' ').trim() : 'Holiday';
+    const start = new Date(`${startDate}T00:00:00`);
+    const end = new Date(`${(endDate || startDate)}T00:00:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
+    valid.push({
+      id: `${startDate}-${summary}`,
+      name: summary || 'Holiday',
+      startDate,
+      endDate: endDate || startDate,
+      selected: true,
+      color: '#ef4444',
+    });
+  }
+  const yearStart = `${gridYear}-01-01`;
+  const yearEnd = `${gridYear}-12-31`;
+  return valid.filter(item => item.startDate <= yearEnd && item.endDate >= yearStart).map(item => ({
+    ...item,
+    endDate: item.endDate < item.startDate ? item.startDate : item.endDate,
+  }));
+}
+async function handleHolidayImportFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    importedHolidayEvents = parseHolidayIcsFile(text);
+    renderHolidayImportModal();
+  } catch (err) {
+    console.warn('Holiday ICS import failed:', err);
+    importedHolidayEvents = [];
+    renderHolidayImportModal('No supported holiday events were found in the selected file.');
+  }
+  event.target.value = '';
+}
+function renderHolidayImportModal(message = '') {
+  const list = document.getElementById('holiday-import-list');
+  const modal = document.getElementById('holiday-import-modal');
+  if (!list || !modal) return;
+  if (!importedHolidayEvents.length) {
+    list.innerHTML = message ? `<div class="muted text-sm">${esc(message)}</div>` : '<div class="muted text-sm">No holiday events found yet. Select an .ics file to review holiday entries.</div>';
+    return;
+  }
+  list.innerHTML = importedHolidayEvents.map((item, index) => `
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface)">
+      <input type="checkbox" ${item.selected ? 'checked' : ''} onchange="importedHolidayEvents[${index}].selected = this.checked; renderHolidayImportModal();">
+      <span style="flex:1">
+        <span style="display:block;font-weight:600">${esc(item.name)}</span>
+        <span class="muted text-sm">${esc(item.startDate)}${item.startDate !== item.endDate ? ` → ${esc(item.endDate)}` : ''}</span>
+      </span>
+    </label>
+  `).join('');
+}
+function openHolidayImportModal() {
+  const modal = document.getElementById('holiday-import-modal');
+  if (!modal) return;
+  importedHolidayEvents = [];
+  renderHolidayImportModal();
+  modal.classList.add('open');
+}
+function openHolidayAddAction(action) {
+  const menu = document.getElementById('holiday-add-menu');
+  if (menu) menu.removeAttribute('open');
+  if (action === 'import') openHolidayImportModal();
+  else openHolidayModal();
+}
+function closeHolidayImportModal() {
+  const modal = document.getElementById('holiday-import-modal');
+  if (modal) modal.classList.remove('open');
+}
+function setHolidayImportSelection(mode) {
+  if (!importedHolidayEvents.length) return;
+  if (mode === 'all') importedHolidayEvents.forEach(item => item.selected = true);
+  else if (mode === 'future') importedHolidayEvents.forEach(item => item.selected = item.startDate >= todayStr());
+  else importedHolidayEvents.forEach(item => item.selected = false);
+  renderHolidayImportModal();
+}
+function confirmHolidayImport() {
+  if (!importedHolidayEvents.length) return;
+  recordUndo();
+  const selected = importedHolidayEvents.filter(item => item.selected);
+  const existingMap = new Map();
+  appSettings.holidays.forEach((holiday, index) => {
+    const key = `${holiday.startDate}|${holiday.endDate}|${holiday.name || 'Holiday'}`;
+    if (!existingMap.has(key)) existingMap.set(key, index);
+  });
+  for (const item of selected) {
+    const key = `${item.startDate}|${item.endDate}|${item.name}`;
+    const matchIndex = existingMap.get(key);
+    const holiday = { name: item.name, startDate: item.startDate, endDate: item.endDate, nonWorking: true, color: item.color || '#ef4444' };
+    if (matchIndex !== undefined) {
+      appSettings.holidays[matchIndex] = { ...appSettings.holidays[matchIndex], ...holiday };
+    } else {
+      appSettings.holidays.push(holiday);
+    }
+  }
+  appSettings.holidays.sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
+  persistSettings();
+  closeHolidayImportModal();
   renderPage();
 }
 function saveSettings() {
@@ -1307,7 +1469,7 @@ function renderGridBody(days, today) {
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
       <span class="flex items-center justify-between"><span>Holidays / Red days (${currentHolidays.length})</span>
-        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><button class="icon-btn" title="Add holiday or red-day period" onclick="openHolidayModal()">${svgIcon('plus')}</button>
+        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><details class="holiday-add-menu" id="holiday-add-menu"><summary class="icon-btn" title="Add holiday options">${svgIcon('plus')}</summary><div class="holiday-add-options"><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday or red-day period</button><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('import')">Import .ics holidays</button></div></details>
         </span>
       </span></td><td colspan="${days.length}"></td></tr>`;
   if (!showHolidays) {

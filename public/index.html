@@ -94,6 +94,12 @@ tr:hover .act-cell-actions { opacity: 1; }
 .icon-btn { border: none; background: none; cursor: pointer; padding: 3px; border-radius: 4px; color: var(--muted); line-height: 1; font-size: 11px; }
 .icon-btn:hover { background: var(--muted-bg); color: var(--text); }
 .icon-btn.danger:hover { color: var(--destructive); background: color-mix(in srgb, var(--destructive) 12%, transparent); }
+.holiday-add-menu { position: relative; display: inline-block; }
+.holiday-add-menu summary { list-style: none; }
+.holiday-add-menu summary::-webkit-details-marker { display: none; }
+.holiday-add-options { position: absolute; right: 0; top: calc(100% + 6px); min-width: 214px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.16); padding: 4px; display: flex; flex-direction: column; gap: 2px; z-index: 80; }
+.holiday-add-option { border: none; background: none; text-align: left; padding: 7px 9px; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--text); font-family: inherit; }
+.holiday-add-option:hover { background: var(--muted-bg); }
 .act-bar-cell { cursor: pointer; }
 .act-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .act-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -931,6 +937,12 @@ function openHolidayImportModal() {
   renderHolidayImportModal();
   modal.classList.add('open');
 }
+function openHolidayAddAction(action) {
+  const menu = document.getElementById('holiday-add-menu');
+  if (menu) menu.removeAttribute('open');
+  if (action === 'import') openHolidayImportModal();
+  else openHolidayModal();
+}
 function closeHolidayImportModal() {
   const modal = document.getElementById('holiday-import-modal');
   if (modal) modal.classList.remove('open');
@@ -1426,14 +1438,20 @@ function rebuildEmployeePicker() {
 }
 function openEmployeePicker(button) {
   const picker = document.getElementById('employee-picker');
+  const scroll = document.getElementById('grid-scroll');
   if (!picker) return;
+  if (!scroll) return;
   rebuildEmployeePicker();
   picker.style.display = 'block';
   const rect = button.getBoundingClientRect();
+  const scrollRect = scroll.getBoundingClientRect();
   const gap = 8;
   picker.style.position = 'absolute';
-  picker.style.left = `${Math.min(window.innerWidth - 290, rect.left + rect.width + gap)}px`;
-  picker.style.top = `${Math.max(8, rect.top + rect.height + gap)}px`;
+  const desiredLeft = scroll.scrollLeft + (rect.left - scrollRect.left) + rect.width + gap;
+  const maxLeft = scroll.scrollLeft + Math.max(0, scroll.clientWidth - 290);
+  const desiredTop = scroll.scrollTop + (rect.top - scrollRect.top) + rect.height + gap;
+  picker.style.left = `${Math.min(maxLeft, Math.max(scroll.scrollLeft + 8, desiredLeft))}px`;
+  picker.style.top = `${Math.max(scroll.scrollTop + 8, desiredTop)}px`;
   picker.style.zIndex = '120';
   picker.style.width = '260px';
   picker.style.maxWidth = 'calc(100vw - 24px)';
@@ -1640,7 +1658,7 @@ function renderGridBody(days, today) {
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
       <span class="flex items-center justify-between"><span>Holidays / Red days (${currentHolidays.length})</span>
-        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><button class="icon-btn" title="Import .ics holidays" onclick="openHolidayImportModal()">${svgIcon('plus')}</button><button class="icon-btn" title="Add holiday or red-day period" onclick="openHolidayModal()">${svgIcon('plus')}</button>
+        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><details class="holiday-add-menu" id="holiday-add-menu"><summary class="icon-btn" title="Add holiday options">${svgIcon('plus')}</summary><div class="holiday-add-options"><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday or red-day period</button><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('import')">Import .ics holidays</button></div></details>
         </span>
       </span></td><td colspan="${days.length}"></td></tr>`;
   if (!showHolidays) {
