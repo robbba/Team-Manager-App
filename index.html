@@ -94,9 +94,8 @@ tr:hover .act-cell-actions { opacity: 1; }
 .icon-btn:hover { background: var(--muted-bg); color: var(--text); }
 .icon-btn.danger:hover { color: var(--destructive); background: color-mix(in srgb, var(--destructive) 12%, transparent); }
 .holiday-add-menu { position: relative; display: inline-block; }
-.holiday-add-menu summary { list-style: none; }
-.holiday-add-menu summary::-webkit-details-marker { display: none; }
-.holiday-add-options { position: absolute; right: 0; top: calc(100% + 6px); min-width: 214px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.16); padding: 4px; display: flex; flex-direction: column; gap: 2px; z-index: 80; }
+.holiday-add-options { position: absolute; right: 0; top: calc(100% + 6px); min-width: 214px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.16); padding: 4px; display: none; flex-direction: column; gap: 2px; z-index: 80; }
+.holiday-add-menu.open .holiday-add-options { display: flex; }
 .holiday-add-option { border: none; background: none; text-align: left; padding: 7px 9px; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--text); font-family: inherit; }
 .holiday-add-option:hover { background: var(--muted-bg); }
 .act-bar-cell { cursor: pointer; }
@@ -893,9 +892,20 @@ function openHolidayImportModal() {
   renderHolidayImportModal();
   modal.classList.add('open');
 }
-function openHolidayAddAction(action) {
+function closeHolidayAddMenu() {
   const menu = document.getElementById('holiday-add-menu');
-  if (menu) menu.removeAttribute('open');
+  if (menu) menu.classList.remove('open');
+}
+function toggleHolidayAddMenu(event) {
+  event.stopPropagation();
+  const menu = document.getElementById('holiday-add-menu');
+  if (!menu) return;
+  const nextOpen = !menu.classList.contains('open');
+  closeHolidayAddMenu();
+  if (nextOpen) menu.classList.add('open');
+}
+function openHolidayAddAction(action) {
+  closeHolidayAddMenu();
   if (action === 'import') openHolidayImportModal();
   else openHolidayModal();
 }
@@ -1469,7 +1479,7 @@ function renderGridBody(days, today) {
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
       <span class="flex items-center justify-between"><span>Holidays / Red days (${currentHolidays.length})</span>
-        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><details class="holiday-add-menu" id="holiday-add-menu"><summary class="icon-btn" title="Add holiday options">${svgIcon('plus')}</summary><div class="holiday-add-options"><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday or red-day period</button><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('import')">Import .ics holidays</button></div></details>
+        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button><div class="holiday-add-options"><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday or red-day period</button><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('import')">Import .ics holidays</button></div></span>
         </span>
       </span></td><td colspan="${days.length}"></td></tr>`;
   if (!showHolidays) {
@@ -1803,6 +1813,8 @@ function closePicker() {
 document.addEventListener('click', e => {
   const picker = document.getElementById('picker');
   if (picker.classList.contains('open') && !picker.contains(e.target)) closePicker();
+  const holidayAddMenu = document.getElementById('holiday-add-menu');
+  if (holidayAddMenu && !holidayAddMenu.contains(e.target)) closeHolidayAddMenu();
   const sortTh = e.target.closest && e.target.closest('th[data-sort]');
   if (sortTh) setSummarySort(sortTh.dataset.sort);
 });

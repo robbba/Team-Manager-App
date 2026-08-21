@@ -95,9 +95,8 @@ tr:hover .act-cell-actions { opacity: 1; }
 .icon-btn:hover { background: var(--muted-bg); color: var(--text); }
 .icon-btn.danger:hover { color: var(--destructive); background: color-mix(in srgb, var(--destructive) 12%, transparent); }
 .holiday-add-menu { position: relative; display: inline-block; }
-.holiday-add-menu summary { list-style: none; }
-.holiday-add-menu summary::-webkit-details-marker { display: none; }
-.holiday-add-options { position: absolute; right: 0; top: calc(100% + 6px); min-width: 214px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.16); padding: 4px; display: flex; flex-direction: column; gap: 2px; z-index: 80; }
+.holiday-add-options { position: absolute; right: 0; top: calc(100% + 6px); min-width: 214px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.16); padding: 4px; display: none; flex-direction: column; gap: 2px; z-index: 80; }
+.holiday-add-menu.open .holiday-add-options { display: flex; }
 .holiday-add-option { border: none; background: none; text-align: left; padding: 7px 9px; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--text); font-family: inherit; }
 .holiday-add-option:hover { background: var(--muted-bg); }
 .act-bar-cell { cursor: pointer; }
@@ -937,9 +936,20 @@ function openHolidayImportModal() {
   renderHolidayImportModal();
   modal.classList.add('open');
 }
-function openHolidayAddAction(action) {
+function closeHolidayAddMenu() {
   const menu = document.getElementById('holiday-add-menu');
-  if (menu) menu.removeAttribute('open');
+  if (menu) menu.classList.remove('open');
+}
+function toggleHolidayAddMenu(event) {
+  event.stopPropagation();
+  const menu = document.getElementById('holiday-add-menu');
+  if (!menu) return;
+  const nextOpen = !menu.classList.contains('open');
+  closeHolidayAddMenu();
+  if (nextOpen) menu.classList.add('open');
+}
+function openHolidayAddAction(action) {
+  closeHolidayAddMenu();
   if (action === 'import') openHolidayImportModal();
   else openHolidayModal();
 }
@@ -1003,6 +1013,7 @@ let summaryYear = new Date().getFullYear();
 let summarySortKey = 'name', summarySortDir = 'asc';
 let empSearch = '', empFilterDept = '', empFilterCatId = null;
 let hiddenEmployees = new Set();
+let hiddenEmployeesDraft = null;
 let pastActivitiesExpanded = false;
 
 let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, fitnessTests = {};
@@ -1376,43 +1387,48 @@ function deptGroups() {
   return order.map(dept => ({ dept, emps: byDept.get(dept) }));
 }
 function toggleEmployeeVisibility(empId, forceState) {
+  const targetSet = hiddenEmployeesDraft || hiddenEmployees;
   if (typeof forceState === 'boolean') {
-    if (forceState) hiddenEmployees.delete(empId); else hiddenEmployees.add(empId);
-  } else if (hiddenEmployees.has(empId)) {
-    hiddenEmployees.delete(empId);
+    if (forceState) targetSet.delete(empId); else targetSet.add(empId);
+  } else if (targetSet.has(empId)) {
+    targetSet.delete(empId);
   } else {
-    hiddenEmployees.add(empId);
+    targetSet.add(empId);
   }
+  if (hiddenEmployeesDraft) { rebuildEmployeePicker(); return; }
   saveGridPreferences();
   renderPage();
 }
 function toggleEmployeeDepartment(deptName, forceState) {
+  const targetSet = hiddenEmployeesDraft || hiddenEmployees;
   const deptEmployees = employees.filter(emp => emp.department === deptName).map(emp => emp.id);
   if (!deptEmployees.length) return;
   if (typeof forceState === 'boolean') {
-    deptEmployees.forEach(id => forceState ? hiddenEmployees.delete(id) : hiddenEmployees.add(id));
+    deptEmployees.forEach(id => forceState ? targetSet.delete(id) : targetSet.add(id));
   } else {
-    const deptVisible = deptEmployees.some(id => !hiddenEmployees.has(id));
+    const deptVisible = deptEmployees.some(id => !targetSet.has(id));
     deptEmployees.forEach(id => {
-      if (deptVisible) hiddenEmployees.add(id);
-      else hiddenEmployees.delete(id);
+      if (deptVisible) targetSet.add(id);
+      else targetSet.delete(id);
     });
   }
+  if (hiddenEmployeesDraft) { rebuildEmployeePicker(); return; }
   saveGridPreferences();
   renderPage();
 }
 function rebuildEmployeePicker() {
   const picker = document.getElementById('employee-picker');
   if (!picker) return;
+  const hiddenSet = hiddenEmployeesDraft || hiddenEmployees;
   const departments = [...new Set(employees.map(emp => emp.department).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const deptMarkup = departments.length ? departments.map(dept => {
     const deptEmployees = employees.filter(emp => emp.department === dept);
-    const visible = deptEmployees.filter(emp => !hiddenEmployees.has(emp.id)).length;
+    const visible = deptEmployees.filter(emp => !hiddenSet.has(emp.id)).length;
     const allChecked = deptEmployees.length && visible === deptEmployees.length;
     const someChecked = visible > 0 && visible < deptEmployees.length;
     const employeeMarkup = deptEmployees.map(emp => `
       <label class="picker-row" style="display:flex;align-items:center;gap:8px;padding:5px 0">
-        <input type="checkbox" ${hiddenEmployees.has(emp.id) ? '' : 'checked'} onchange="toggleEmployeeVisibility(${emp.id}, this.checked); return false;">
+        <input type="checkbox" ${hiddenSet.has(emp.id) ? '' : 'checked'} onchange="toggleEmployeeVisibility(${emp.id}, this.checked); return false;">
         <span>${esc(emp.name)}</span>
       </label>`).join('');
     return `
@@ -1431,16 +1447,32 @@ function rebuildEmployeePicker() {
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;max-height:330px;overflow:auto">${deptMarkup}</div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
-      <button class="btn btn-sm" type="button" onclick="showAllEmployees(); closeEmployeePicker();">Show all</button>
+      <button class="btn btn-sm" type="button" onclick="resetEmployeePickerSelection()">Show all</button>
       <button class="btn btn-sm" type="button" onclick="closeEmployeePicker()">Cancel</button>
+      <button class="btn btn-sm btn-primary" type="button" onclick="applyEmployeePickerSelection()">Apply</button>
     </div>`;
   picker.querySelectorAll('input[data-indeterminate="true"]').forEach(input => { input.indeterminate = true; });
+}
+function resetEmployeePickerSelection() {
+  if (!hiddenEmployeesDraft) hiddenEmployeesDraft = new Set(hiddenEmployees);
+  hiddenEmployeesDraft.clear();
+  rebuildEmployeePicker();
+}
+function applyEmployeePickerSelection() {
+  if (hiddenEmployeesDraft) {
+    hiddenEmployees = new Set(hiddenEmployeesDraft);
+    hiddenEmployeesDraft = null;
+    saveGridPreferences();
+  }
+  closeEmployeePicker();
+  renderPage();
 }
 function openEmployeePicker(button) {
   const picker = document.getElementById('employee-picker');
   const scroll = document.getElementById('grid-scroll');
   if (!picker) return;
   if (!scroll) return;
+  hiddenEmployeesDraft = new Set(hiddenEmployees);
   rebuildEmployeePicker();
   picker.style.display = 'block';
   const rect = button.getBoundingClientRect();
@@ -1464,6 +1496,7 @@ function openEmployeePicker(button) {
 function closeEmployeePicker() {
   const picker = document.getElementById('employee-picker');
   if (picker) picker.style.display = 'none';
+  hiddenEmployeesDraft = null;
 }
 
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
@@ -1658,7 +1691,7 @@ function renderGridBody(days, today) {
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
       <span class="flex items-center justify-between"><span>Holidays / Red days (${currentHolidays.length})</span>
-        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><details class="holiday-add-menu" id="holiday-add-menu"><summary class="icon-btn" title="Add holiday options">${svgIcon('plus')}</summary><div class="holiday-add-options"><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday or red-day period</button><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('import')">Import .ics holidays</button></div></details>
+        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button><div class="holiday-add-options"><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday or red-day period</button><button class="holiday-add-option" type="button" onclick="openHolidayAddAction('import')">Import .ics holidays</button></div></span>
         </span>
       </span></td><td colspan="${days.length}"></td></tr>`;
   if (!showHolidays) {
@@ -2022,6 +2055,8 @@ function closePicker() {
 document.addEventListener('click', e => {
   const picker = document.getElementById('picker');
   if (picker.classList.contains('open') && !picker.contains(e.target)) closePicker();
+  const holidayAddMenu = document.getElementById('holiday-add-menu');
+  if (holidayAddMenu && !holidayAddMenu.contains(e.target)) closeHolidayAddMenu();
   const sortTh = e.target.closest && e.target.closest('th[data-sort]');
   if (sortTh) setSummarySort(sortTh.dataset.sort);
 });
