@@ -598,7 +598,7 @@ function lsSet(key, value) { try { window.localStorage.setItem(key, value); } ca
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
 let appSettings = { 
-  appName: 'Team Status', 
+  appName: 'Team Manager', 
   darkMode: false, 
   coreHoursPerDay: 7.5, 
   lightMax: 70, 
@@ -612,7 +612,7 @@ function loadSettings() {
     const raw = lsGet(SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Status';
+      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.coreHoursPerDay = typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5;
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;

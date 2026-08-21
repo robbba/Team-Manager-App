@@ -1,0 +1,20 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /workspaces/Team-Manager-App && node - <<'NODE'\nconst fs = require\\('fs'\\);\nconst html = fs\\.readFileSync\\('public/index\\.html', 'utf8'\\);\nconst match = html\\.match\\(/<script>\\(\\[\\\\s\\\\S\\]\\*\\)<\\\\/script>/\\);\nif \\(!match\\) throw new Error\\('No script tag found'\\);\nnew Function\\(match\\[1\\]\\);\nconsole\\.log\\('JavaScript parse OK'\\);\nNODE$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /workspaces/Team-Manager-App && node - <<'NODE'\nconst fs = require\\('fs'\\);\nconst html = fs\\.readFileSync\\('public/index\\.html', 'utf8'\\);\nconst scripts = \\[\\.\\.\\.html\\.matchAll\\(/<script\\[\\^>\\]\\*>\\(\\[\\\\s\\\\S\\]\\*\\?\\)<\\\\/script>/g\\)\\];\nif \\(!scripts\\.length\\) throw new Error\\('No script tags found'\\);\nconst appScript = scripts\\[scripts\\.length - 1\\]\\[1\\];\nnew Function\\(appScript\\);\nconsole\\.log\\('JavaScript parse OK'\\);\nNODE$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /workspaces/Team-Manager-App && node - <<'NODE'\nconst fs = require\\('fs'\\);\nconst html = fs\\.readFileSync\\('public/index\\.html', 'utf8'\\);\nconst match = html\\.match\\(/<script>\\(\\[\\\\s\\\\S\\]\\*\\)<\\\\/script>/i\\);\nif \\(!match\\) throw new Error\\('No script tag found'\\);\nnew Function\\(match\\[1\\]\\);\nconsole\\.log\\('JavaScript parse OK'\\);\nNODE$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /workspaces/Team-Manager-App && node - <<'NODE'\nconst fs = require\\('fs'\\);\nconst html = fs\\.readFileSync\\('public/index\\.html', 'utf8'\\);\nconst start = html\\.indexOf\\(\"'use strict';\"\\);\nif \\(start === -1\\) throw new Error\\('App script start not found'\\);\nconst script = html\\.slice\\(start\\);\nconst end = script\\.indexOf\\('</script>'\\);\nif \\(end === -1\\) throw new Error\\('App script end not found'\\);\nnew Function\\(script\\.slice\\(0, end\\)\\);\nconsole\\.log\\('JavaScript parse OK'\\);\nNODE$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

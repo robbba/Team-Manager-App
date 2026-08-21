@@ -85,6 +85,7 @@ body.dark .gh-day.holiday-col, body.dark .gday.holiday-col { background: #451a1a
 .gday.night-shift-cell { box-shadow: inset 0 0 0 999px rgba(15,23,42,.14); }
 body.dark .gday.night-shift-cell { box-shadow: inset 0 0 0 999px rgba(0,0,0,.34); }
 .status-dot { position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; z-index: 3; pointer-events: none; border: 1px solid rgba(255,255,255,.6); }
+.birthday-cake { position: absolute; right: 5px; bottom: 4px; font-size: 9px; line-height: 1; z-index: 3; pointer-events: none; filter: drop-shadow(0 0 2px rgba(0,0,0,.2)); }
 .dur-tag { position: absolute; top: 1px; right: 2px; font-size: 5px; font-weight: 900; z-index: 3; pointer-events: none; opacity: .9; }
 .sect-row td { background: color-mix(in srgb, var(--muted-bg) 70%, transparent); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 5px 12px; }
 .act-cell-name { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
@@ -567,8 +568,9 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 <script>
 'use strict';
 // ═══ CONSTANTS ═══════════════════════════════════════════════════════════════
-const PALETTE = ['#3b82f6','#6366f1','#8b5cf6','#ec4899','#f43f5e','#ef4444',
-  '#f97316','#f59e0b','#10b981','#14b8a6','#0ea5e9','#64748b'];
+const PALETTE = ['#2563eb','#4f46e5','#7c3aed','#a855f7','#ec4899','#f43f5e',
+  '#e11d48','#f97316','#f59e0b','#facc15','#10b981','#14b8a6',
+  '#0ea5e9','#38bdf8','#64748b','#475569'];
 const SHIFT_PRESETS = ['0000-0800','0800-1600','1600-0000','0600-1800','0700-1900'];
 const DEPT_BG_LIGHT  = ['#f0fdf4','#eff6ff','#fdf4ff','#fff7ed','#f0f9ff','#fefce8','#fdf2f8','#f7fee7','#fff1f2','#f5f3ff','#ecfdf5','#e0f2fe'];
 const DEPT_ACC_LIGHT = ['#86efac','#93c5fd','#d8b4fe','#fdba74','#7dd3fc','#fde047','#f9a8d4','#a3e635','#fda4af','#c4b5fd','#6ee7b7','#7dd3fc'];
@@ -601,28 +603,52 @@ function lsGet(key) { try { return window.localStorage.getItem(key); } catch (er
 function lsSet(key, value) { try { window.localStorage.setItem(key, value); } catch (err) { } }
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
-let appSettings = { 
-  appName: 'Team Status', 
-  darkMode: false, 
-  coreHoursPerDay: 7.5, 
-  lightMax: 70, 
-  normalMax: 100, 
-  highMax: 110, 
-  holidays: [] 
+const APP_VERSION = '1.1.0';
+const DATA_VERSION = 3;
+
+let appSettings = {
+  appName: 'Team Manager',
+  darkMode: false,
+  coreHoursPerDay: 7.5,
+  lightMax: 70,
+  normalMax: 100,
+  highMax: 110,
+  holidays: [],
+  departmentColors: {},
 };
+
+function normalizeHexColor(color, fallback = '#3b82f6') {
+  if (typeof color !== 'string') return fallback;
+  const value = color.trim();
+  return /^#[0-9a-fA-F]{3,8}$/.test(value) ? value : fallback;
+}
+
+function normalizeStateVersion(data) {
+  const raw = data && typeof data === 'object' ? data : {};
+  const normalized = { ...raw };
+  const detectedVersion = Number(raw.dataVersion ?? raw.version ?? 1);
+  normalized.dataVersion = Math.max(DATA_VERSION, detectedVersion);
+  normalized.appVersion = raw.appVersion || APP_VERSION;
+  if (!normalized.departmentColors || typeof normalized.departmentColors !== 'object') normalized.departmentColors = {};
+  normalized.departmentColors = Object.fromEntries(Object.entries(normalized.departmentColors || {}).map(([dept, value]) => [String(dept), normalizeHexColor(value)]));
+  return normalized;
+}
 
 function loadSettings() {
   try {
     const raw = lsGet(SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Status';
+      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.coreHoursPerDay = typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5;
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
       appSettings.normalMax = typeof parsed.normalMax === 'number' ? parsed.normalMax : 100;
       appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 110;
       appSettings.holidays = Array.isArray(parsed.holidays) ? parsed.holidays : [];
+      appSettings.departmentColors = parsed.departmentColors && typeof parsed.departmentColors === 'object'
+        ? Object.fromEntries(Object.entries(parsed.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
+        : {};
       return;
     }
     appSettings.darkMode = lsGet(LEGACY_THEME_KEY) === 'dark';
@@ -830,6 +856,7 @@ let editingEmpId = null, editingActId = null, editingStatusId = null, editingCat
 let selectedActColor = PALETTE[0], selectedParticipants = [], selectedStatusColor = PALETTE[0], selectedCatColor = PALETTE[7], selectedEmpCatIds = [];
 let hasUnsavedChanges = false;
 let undoStack = [];
+let autoSaveTimer = null;
 
 function updateUndoButton() {
   const button = document.getElementById('undo-btn');
@@ -838,14 +865,22 @@ function updateUndoButton() {
   button.style.opacity = button.disabled ? '.5' : '';
 }
 function recordUndo() {
-  undoStack.push(JSON.parse(JSON.stringify({ employees, categories, statuses, activities, courses, courseStatuses, fitnessTests, entriesMap, activityShiftsMap, nextEmpId, nextActId, nextStatusId, nextCatId })));
+  undoStack.push(JSON.parse(JSON.stringify({
+    appSettings: { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } },
+    employees, categories, statuses, activities, courses, courseStatuses, fitnessTests, entriesMap, activityShiftsMap,
+    nextEmpId, nextActId, nextStatusId, nextCatId,
+  })));
   if (undoStack.length > 20) undoStack.shift();
   updateUndoButton();
 }
 async function undoLastChange() {
   const previous = undoStack.pop();
   if (!previous) return;
-  ({ employees, categories, statuses, activities, courses, courseStatuses, fitnessTests, entriesMap, activityShiftsMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
+  ({ appSettings, employees, categories, statuses, activities, courses, courseStatuses, fitnessTests, entriesMap, activityShiftsMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
+  if (appSettings && typeof appSettings === 'object') {
+    const merged = { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } };
+    Object.assign(appSettings, merged);
+  }
   markUnsaved();
   await saveState();
   updateUndoButton();
@@ -867,6 +902,13 @@ function markUnsaved() {
   hasUnsavedChanges = true;
   updateSaveButton();
 }
+function scheduleAutoSave() {
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  markUnsaved();
+  autoSaveTimer = setTimeout(() => {
+    saveState(true).catch(err => console.warn('Auto-save failed:', err.message));
+  }, 800);
+}
 window.addEventListener('beforeunload', event => {
   if (!hasUnsavedChanges) return;
   event.preventDefault();
@@ -875,19 +917,23 @@ window.addEventListener('beforeunload', event => {
 
 function safeColor(c) { return /^#[0-9a-fA-F]{3,8}$/.test(String(c || '')) ? c : PALETTE[0]; }
 function loadFromData(data) {
+  const normalized = normalizeStateVersion(data || {});
   undoStack = [];
   updateUndoButton();
-  courses = (data.courses || []).map(course => ({ ...course, id: +course.id }));
-  courseStatuses = data.courseStatuses && typeof data.courseStatuses === 'object' ? { ...data.courseStatuses } : {};
-  fitnessTests = data.fitnessTests && typeof data.fitnessTests === 'object' ? { ...data.fitnessTests } : {};
+  appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
+    ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
+    : {};
+  courses = (normalized.courses || []).map(course => ({ ...course, id: +course.id }));
+  courseStatuses = normalized.courseStatuses && typeof normalized.courseStatuses === 'object' ? { ...normalized.courseStatuses } : {};
+  fitnessTests = normalized.fitnessTests && typeof normalized.fitnessTests === 'object' ? { ...normalized.fitnessTests } : {};
   const joinCatIds = {};
-  if (Array.isArray(data.employeeCategories)) {
-    for (const ec of data.employeeCategories) {
+  if (Array.isArray(normalized.employeeCategories)) {
+    for (const ec of normalized.employeeCategories) {
       const eid = +ec.employeeId, cid = +ec.categoryId;
       if (Number.isFinite(eid) && Number.isFinite(cid)) (joinCatIds[eid] = joinCatIds[eid] || []).push(cid);
     }
   }
-  employees = (data.employees || []).map(e => ({
+  employees = (normalized.employees || []).map(e => ({
     ...e,
     id: +e.id,
     email: e.email || '',
@@ -900,8 +946,8 @@ function loadFromData(data) {
       : (joinCatIds[+e.id] || []),
     sortOrder: Number.isFinite(e.sortOrder) ? e.sortOrder : undefined,
   }));
-  categories = (data.categories || []).map(c => ({ ...c, id: +c.id, color: safeColor(c.color) }));
-  activities = (data.activities || data.projects || []).map(act => {
+  categories = (normalized.categories || []).map(c => ({ ...c, id: +c.id, color: safeColor(c.color) }));
+  activities = (normalized.activities || normalized.projects || []).map(act => {
     const a = { ...act, id: +act.id, color: safeColor(act.color) };
     if ((!Array.isArray(a.participants) || !a.participants.length) && Array.isArray(a.employeeIds)) {
       a.participants = a.employeeIds.map(id => ({ id, shift: '' }));
@@ -917,13 +963,13 @@ function loadFromData(data) {
     a.type = a.type || '';
     return a;
   });
-  if (data.entriesMap && typeof data.entriesMap === 'object' && !Array.isArray(data.entriesMap)) {
-    entriesMap = { ...data.entriesMap };
-  } else if (Array.isArray(data.entries) && data.entries.length) {
-    entriesMap = {}; data.entries.forEach(e => { entriesMap[e.key] = e.status; });
-  } else if (Array.isArray(data.statusEntries) && data.statusEntries.length) {
+  if (normalized.entriesMap && typeof normalized.entriesMap === 'object' && !Array.isArray(normalized.entriesMap)) {
+    entriesMap = { ...normalized.entriesMap };
+  } else if (Array.isArray(normalized.entries) && normalized.entries.length) {
+    entriesMap = {}; normalized.entries.forEach(e => { entriesMap[e.key] = e.status; });
+  } else if (Array.isArray(normalized.statusEntries) && normalized.statusEntries.length) {
     entriesMap = {};
-    data.statusEntries.forEach(e => {
+    normalized.statusEntries.forEach(e => {
       entriesMap[`${+e.employeeId}_${e.date}`] = {
         status: e.status,
         durationType: e.durationType || 'fullday',
@@ -931,18 +977,18 @@ function loadFromData(data) {
       };
     });
   } else entriesMap = {};
-  if (data.activityShiftsMap && typeof data.activityShiftsMap === 'object' && !Array.isArray(data.activityShiftsMap)) {
-    activityShiftsMap = { ...data.activityShiftsMap };
-  } else if (Array.isArray(data.activityShifts)) {
+  if (normalized.activityShiftsMap && typeof normalized.activityShiftsMap === 'object' && !Array.isArray(normalized.activityShiftsMap)) {
+    activityShiftsMap = { ...normalized.activityShiftsMap };
+  } else if (Array.isArray(normalized.activityShifts)) {
     activityShiftsMap = {};
-    data.activityShifts.forEach(s => {
+    normalized.activityShifts.forEach(s => {
       const eid = +s.employeeId, pid = +s.projectId;
       if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = s.shift || 'fullday';
     });
   } else activityShiftsMap = {};
-  const rawStatuses = Array.isArray(data.statuses) && data.statuses.length
-    ? data.statuses
-    : (Array.isArray(data.statusTypes) ? data.statusTypes.map(st => ({
+  const rawStatuses = Array.isArray(normalized.statuses) && normalized.statuses.length
+    ? normalized.statuses
+    : (Array.isArray(normalized.statusTypes) ? normalized.statusTypes.map(st => ({
         id: st.id, key: st.key, label: st.label, abbr: st.initial || st.abbr,
         color: st.color, isAbsence: st.isAbsence, isOutOfOffice: st.isOutOfOffice,
       })) : []);
@@ -952,10 +998,10 @@ function loadFromData(data) {
     isAbsence: s.isAbsence === true, isOutOfOffice: s.isOutOfOffice === true,
   }));
   const maxId = arr => arr.length ? Math.max(...arr.map(x => x.id || 0)) : 0;
-  nextEmpId    = Math.max(data.nextEmpId    || 1, maxId(employees) + 1);
-  nextActId    = Math.max(data.nextActId    || 1, maxId(activities) + 1);
-  nextStatusId = Math.max(data.nextStatusId || 1, maxId(statuses) + 1);
-  nextCatId    = Math.max(data.nextCatId    || 1, maxId(categories) + 1);
+  nextEmpId    = Math.max(normalized.nextEmpId    || 1, maxId(employees) + 1);
+  nextActId    = Math.max(normalized.nextActId    || 1, maxId(activities) + 1);
+  nextStatusId = Math.max(normalized.nextStatusId || 1, maxId(statuses) + 1);
+  nextCatId    = Math.max(normalized.nextCatId    || 1, maxId(categories) + 1);
   employees.sort((a, b) => a.name.localeCompare(b.name));
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
 }
@@ -1006,19 +1052,31 @@ async function doLogout() {
 
 function snapshotData() {
   return {
-    version: 2, savedAt: new Date().toISOString(),
+    appVersion: APP_VERSION,
+    dataVersion: DATA_VERSION,
+    version: DATA_VERSION,
+    savedAt: new Date().toISOString(),
+    departmentColors: appSettings.departmentColors || {},
     employees, categories, statuses, activities, courses, courseStatuses, fitnessTests, entriesMap, activityShiftsMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   };
 }
 
-async function saveState() {
+async function saveState(force = false) {
+  if (!force) {
+    scheduleAutoSave();
+    return;
+  }
   try {
     const res = await fetch('/api/state', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(snapshotData())
     });
     if (!res.ok) throw new Error('Failed to save to server');
+    hasUnsavedChanges = false;
+    updateSaveButton();
+    updateSbStatus();
+    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
   } catch (err) { console.warn('Auto-save feilet:', err.message); throw err; }
 }
 
@@ -1027,10 +1085,8 @@ async function saveData() {
     const btn = document.getElementById('save-btn');
     const originalText = btn.innerHTML;
     btn.innerHTML = 'Lagrer...';
-    await saveState();
-    hasUnsavedChanges = false;
-    updateSaveButton();
-    updateSbStatus();
+    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+    await saveState(true);
     btn.innerHTML = originalText;
   } catch (err) { 
     alert('Kunne ikke lagre til server.'); 
@@ -1123,11 +1179,21 @@ function deptPalettes() {
   const dark = appSettings.darkMode;
   return { bg: dark ? DEPT_BG_DARK : DEPT_BG_LIGHT, accent: dark ? DEPT_ACC_DARK : DEPT_ACC_LIGHT };
 }
+function resolveDeptColor(dept) {
+  if (!dept) return null;
+  return appSettings.departmentColors && appSettings.departmentColors[dept]
+    ? normalizeHexColor(appSettings.departmentColors[dept])
+    : null;
+}
 function deptColorMap() {
   const { bg, accent } = deptPalettes();
   const map = {};
-  [...new Set(employees.map(e => e.department))].sort().forEach((dept, i) => {
-    map[dept] = { bg: bg[i % bg.length], accent: accent[i % accent.length] };
+  [...new Set(employees.map(e => e.department))].filter(Boolean).sort().forEach((dept, i) => {
+    const custom = resolveDeptColor(dept);
+    const index = i % bg.length;
+    map[dept] = custom
+      ? { bg: `${custom}22`, accent: custom }
+      : { bg: bg[index], accent: accent[index] };
   });
   return map;
 }
@@ -1401,6 +1467,14 @@ function cellActivities(empId, ds) {
     });
 }
 
+function isEmployeeBirthday(emp, dateString) {
+  if (!emp || !emp.birthday || !dateString) return false;
+  const birthday = new Date(`${emp.birthday}T00:00:00`);
+  if (Number.isNaN(birthday.getTime())) return false;
+  const date = new Date(`${dateString}T00:00:00`);
+  return birthday.getMonth() === date.getMonth() && birthday.getDate() === date.getDate();
+}
+
 function buildEmployeeCell(emp, ds, weekend, isToday) {
   const holiday = displayedHolidayFor(ds);
   const entry = getEntryObj(`${emp.id}_${ds}`);
@@ -1409,6 +1483,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const acts = cellActivities(emp.id, ds);
   const activityStatus = acts.map(act => siFor(act.type)).find(Boolean);
   const activityText = acts.length ? [acts[0].abbreviation, !si && activityStatus?.abbr].filter(Boolean).filter((value, index, values) => values.indexOf(value) === index).join('/') : '';
+  const birthday = isEmployeeBirthday(emp, ds);
 
   const tipParts = [];
   acts.forEach(act => {
@@ -1423,6 +1498,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     else if (entry.durationType === '24hours') t += ' (24 hours)';
     tipParts.push(t);
   }
+  if (birthday) tipParts.push(`Birthday: ${emp.name}`);
   if (!tipParts.length) tipParts.push('Click to set status');
 
   let cellText = '', cellStyleStr = '';
@@ -1451,11 +1527,12 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const durTag = (entry && entry.durationType === '24hours' && si && !acts.length) ? `<span class="dur-tag" style="color:${si.color}">24</span>` : '';
   const activityTint = acts.length && !si ? `background:${acts[0].color}18;` : '';
   const holidayTint = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
+  const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">🎂</span>` : '';
 
   return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${hasNight ? ' night-shift-cell' : ''}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${activityTint}${cellStyleStr}${holidayTint}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
-    onclick="openPicker(event,${emp.id},'${ds}')">${bars}${dot}${durTag}${symbol}<div class="gday-inner">${esc(cellText)}</div></td>`;
+    onclick="openPicker(event,${emp.id},'${ds}')">${bars}${dot}${durTag}${symbol}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
@@ -1484,7 +1561,12 @@ function changeGridYear(delta) {
   renderPage();
 }
 function soloEmployee(empId) {
-  hiddenEmployees = new Set(employees.filter(emp => emp.id !== empId).map(emp => emp.id));
+  const currentlySolo = employees.filter(emp => emp.id !== empId).every(emp => hiddenEmployees.has(emp.id));
+  if (currentlySolo) {
+    hiddenEmployees.clear();
+  } else {
+    hiddenEmployees = new Set(employees.filter(emp => emp.id !== empId).map(emp => emp.id));
+  }
   saveGridPreferences();
   renderPage();
 }
@@ -2177,6 +2259,15 @@ function renderStatusBoard() {
 }
 
 // ═══ PERSONNEL ═══════════════════════════════════════════════════════════════
+function setDepartmentColor(dept, color) {
+  if (!dept) return;
+  const safe = normalizeHexColor(color, '#3b82f6');
+  appSettings.departmentColors = appSettings.departmentColors || {};
+  appSettings.departmentColors[dept] = safe;
+  markUnsaved();
+  persistSettings();
+  renderPage();
+}
 function renderEmployees() {
   const searchLower = empSearch.toLowerCase();
   const filtered = employees.filter(emp => {
@@ -2200,6 +2291,14 @@ function renderEmployees() {
     return { department, list: sorted, minOrder: sorted[0]?.sortOrder ?? 99 };
   }).sort((a, b) => (a.minOrder - b.minOrder) || a.department.localeCompare(b.department));
   const allDepts = [...new Set(employees.map(e => e.department).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const deptSwatches = allDepts.map(dept => {
+    const color = resolveDeptColor(dept) || PALETTE[allDepts.indexOf(dept) % PALETTE.length];
+    return `<label style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:12px;cursor:pointer">
+      <span class="chip-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%"></span>
+      <span>${esc(dept)}</span>
+      <input type="color" value="${color}" data-dept="${esc(dept)}" onchange="setDepartmentColor(this.dataset.dept, this.value)" style="width:20px;height:20px;border:none;background:transparent;padding:0;cursor:pointer" />
+    </label>`;
+  }).join('');
 
   const catChip = cat => `<span class="chip" style="${chipStyle(cat.color)}"><span class="chip-dot" style="background:${cat.color}"></span>${esc(cat.name)}</span>`;
   let rowsHtml = '';
@@ -2207,7 +2306,8 @@ function renderEmployees() {
     rowsHtml = `<tr><td colspan="10" class="empty-note">${employees.length ? 'No personnel match the current filters.' : 'No personnel yet. Click "Add Employee" to create the first record.'}</td></tr>`;
   } else {
     for (const group of groups) {
-      rowsHtml += `<tr class="dept-row"><td colspan="10">${esc(group.department)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
+      const deptColor = resolveDeptColor(group.department) || PALETTE[allDepts.indexOf(group.department) % PALETTE.length];
+      rowsHtml += `<tr class="dept-row"><td colspan="10" style="background:${deptColor}22;border-bottom:1px solid ${deptColor};color:var(--text)">${esc(group.department)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
       for (const emp of group.list) {
         const cats = (emp.categoryIds || []).map(catById).filter(Boolean);
         rowsHtml += `<tr>
@@ -2255,6 +2355,10 @@ function renderEmployees() {
       <button class="filter-chip${empFilterCatId === null ? ' active' : ''}" onclick="empFilterCatId=null;renderEmployees()">All categories</button>
       ${categories.map(c => `<button class="filter-chip${empFilterCatId === c.id ? ' active' : ''}" onclick="empFilterCatId=${c.id};renderEmployees()"><span class="chip-dot" style="background:${c.color};display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px"></span>${esc(c.name)}</button>`).join('')}
     </div>` : ''}
+    <div class="card mb-4" style="padding:12px">
+      <div class="card-title" style="margin-bottom:8px">Department colors</div>
+      <div class="flex items-center gap-2" style="flex-wrap:wrap">${deptSwatches || '<span class="muted text-sm">No departments yet.</span>'}</div>
+    </div>
     <div class="card" style="padding:0;overflow:hidden">
       <div style="overflow:auto">
         <table class="list-table">
