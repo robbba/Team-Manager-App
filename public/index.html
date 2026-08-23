@@ -114,7 +114,7 @@ tr:hover .act-cell-actions { opacity: 1; }
 .act-dates { font-size: 10px; }
 
 /* ── Popover picker ──────────────────────────────────────────── */
-#picker { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.16); z-index: 200; display: none; flex-direction: column; gap: 4px; width: 240px; max-height: min(70vh, 460px); overflow: auto; }
+#picker { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.16); z-index: 200; display: none; flex-direction: column; gap: 4px; width: 300px; max-height: min(70vh, 460px); overflow: auto; }
 #picker.open { display: flex; }
 .pk-head { padding: 0 4px 6px; border-bottom: 1px solid var(--border); margin-bottom: 4px; font-size: 11px; color: var(--muted); }
 .pk-head b { display: block; color: var(--text); font-size: 12px; }
@@ -123,15 +123,39 @@ tr:hover .act-cell-actions { opacity: 1; }
 .pk-btn:hover { opacity: .82; }
 .pk-btn .pk-initial { font-size: 11px; font-weight: 800; width: 20px; text-align: center; }
 .pk-btn.pk-sel { outline: 2px solid var(--accent-blue); outline-offset: 1px; }
+#pk-status-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+#pk-status-btns .pk-btn { min-width: 0; padding: 5px 6px; gap: 5px; font-size: 11px; line-height: 1.15; }
+#pk-status-btns .pk-initial { width: 32px; flex: 0 0 32px; }
+#pk-status-btns .pk-status-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pk-clear { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; background: transparent; color: var(--destructive); text-align: left; font-family: inherit; }
 .pk-clear:hover { background: color-mix(in srgb, var(--destructive) 10%, transparent); }
-.pk-cancel { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; background: transparent; color: var(--muted); text-align: left; font-family: inherit; }
+.pk-cancel { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; background: transparent; color: var(--muted); text-align: left; font-family: inherit; display:flex;align-items:center;gap:6px; }
 .pk-cancel:hover { background: var(--muted-bg); color: var(--text); }
 .pk-input { width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 11px; font-family: inherit; outline: none; color: var(--text); background: var(--surface); }
 .pk-input:focus { border-color: var(--accent-blue); }
 .pk-sep { height: 1px; background: var(--border); margin: 4px 0; }
 .pk-shift-box { border: 1px solid var(--border); border-radius: 6px; padding: 6px; display: flex; flex-direction: column; gap: 5px; }
 .pk-shift-title { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; }
+.pk-field { display: flex; flex-direction: column; gap: 3px; }
+.pk-field-label { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.pk-code-menu { border: 1px solid var(--border); border-radius: 5px; background: var(--surface); }
+.pk-code-menu summary { display: flex; align-items: center; gap: 7px; padding: 6px 8px; cursor: pointer; font-size: 11px; list-style: none; }
+.pk-code-menu summary::-webkit-details-marker { display: none; }
+.pk-code-menu summary .ui-icon { margin-left: auto; }
+.pk-code-options { display: flex; flex-direction: column; gap: 2px; padding: 3px; border-top: 1px solid var(--border); }
+.pk-code-option { display: flex; align-items: center; gap: 7px; width: 100%; padding: 6px; border: 0; border-radius: 4px; background: transparent; color: var(--text); cursor: pointer; font: inherit; font-size: 11px; text-align: left; }
+.pk-code-option:hover, .pk-code-option.sel { background: var(--muted-bg); }
+.pk-color-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+.activity-type-menu { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.activity-type-menu summary { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 8px 10px; cursor: pointer; font-size: 13px; list-style: none; }
+.activity-type-menu summary::-webkit-details-marker { display: none; }
+.activity-type-menu summary .ui-icon { margin-left: auto; }
+.activity-type-options { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; padding: 4px; border-top: 1px solid var(--border); }
+.activity-type-option { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px; border: 0; border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; font: inherit; font-size: 13px; text-align: left; }
+.activity-type-option:hover, .activity-type-option.sel { background: var(--muted-bg); }
+.pk-shift-options { display: flex; flex-wrap: wrap; gap: 4px; }
+.pk-shift-options .pk-chip { display: inline-flex; flex: 1 1 calc(50% - 2px); align-items: center; justify-content: center; gap: 4px; min-width: 0; }
+.pk-save-row { display: flex; justify-content: space-between; gap: 6px; margin-top: 2px; }
 .pk-chip { font-size: 10px; border: 1px solid var(--border); border-radius: 5px; padding: 3px 6px; cursor: pointer; background: var(--surface); color: var(--text); font-family: inherit; font-variant-numeric: tabular-nums; }
 .pk-chip:hover { background: var(--muted-bg); }
 .pk-chip.sel { border-color: var(--accent-blue); color: var(--accent-blue); font-weight: 700; }
@@ -223,6 +247,8 @@ tr:hover .act-cell-actions { opacity: 1; }
 .sum-table tbody td { border-bottom: 1px solid var(--border); padding: 9px 12px; }
 .sum-table tbody tr:last-child td { border-bottom: none; }
 .sum-table tbody tr:hover td { background: color-mix(in srgb, var(--muted-bg) 45%, transparent); }
+.sum-table tbody .sum-team-row td { background: color-mix(in srgb, var(--muted-bg) 72%, var(--surface)); color: var(--text); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.sum-table tbody .sum-team-row:hover td { background: color-mix(in srgb, var(--muted-bg) 72%, var(--surface)); }
 .sum-table tfoot td { padding: 9px 12px; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--muted-bg) 35%, var(--surface)); }
 .sum-table td.num { text-align: right; }
 .sum-pill { display: inline-block; border-radius: 5px; padding: 2px 6px; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; border: 1px solid transparent; }
@@ -312,22 +338,24 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 <!-- Cell status picker popover -->
 <div id="picker">
   <div class="pk-head" id="pk-head"></div>
-  <div class="pk-label">Status</div>
-  <div id="pk-status-btns" style="display:flex;flex-direction:column;gap:4px"></div>
-  <div id="pk-duration-section" style="display:none;flex-direction:column;gap:4px;border-top:1px solid var(--border);padding-top:6px;margin-top:2px">
-    <div class="pk-label" id="pk-duration-label">Duration</div>
-    <button class="pk-btn" style="background:var(--muted-bg);color:var(--text)" onclick="saveWithDuration('fullday')"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg> Full day</button>
-    <div style="display:flex;flex-direction:column;gap:3px;border-top:1px solid var(--border);padding-top:5px">
-      <div class="pk-label">Specific time</div>
-      <input id="pk-time" type="text" class="pk-input" placeholder="e.g. 1000-1130">
-      <button class="pk-btn" style="background:var(--primary);color:var(--primary-fg)" onclick="saveWithDuration('time')">Save time</button>
+  <div id="pk-status-section" style="display:flex;flex-direction:column;gap:4px">
+    <div class="pk-label">Status</div>
+    <div id="pk-status-btns"></div>
+    <div id="pk-duration-section" style="display:none;flex-direction:column;gap:4px;border-top:1px solid var(--border);padding-top:6px;margin-top:2px">
+      <div class="pk-label" id="pk-duration-label">Duration</div>
+      <button class="pk-btn" style="background:var(--muted-bg);color:var(--text)" onclick="saveWithDuration('fullday')"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg> Full day</button>
+      <div style="display:flex;flex-direction:column;gap:3px;border-top:1px solid var(--border);padding-top:5px">
+        <div class="pk-label">Specific time</div>
+        <input id="pk-time" type="text" class="pk-input" placeholder="e.g. 1000-1130">
+        <button class="pk-btn" style="background:var(--primary);color:var(--primary-fg)" onclick="saveWithDuration('time')">Save time</button>
+      </div>
     </div>
   </div>
   <div id="pk-shift-section"></div>
-  <button class="pk-btn" id="pk-add-activity-btn" style="display:none;background:var(--muted-bg);color:var(--text)" onclick="openActivityFromSelection()">${svgIcon('plus')} Add activity for selected dates</button>
+  <button class="pk-btn" id="pk-add-activity-btn" style="display:none;background:var(--muted-bg);color:var(--text)" onclick="openActivityFromSelection()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add activity for selected dates</button>
   <div class="pk-sep"></div>
-  <button class="pk-clear" id="pk-clear-btn" style="display:none" onclick="clearStatus()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg> Clear status</button>
-  <button class="pk-cancel" onclick="closePicker()">Cancel</button>
+  <button class="pk-clear" id="pk-clear-btn" style="display:none" onclick="clearStatus()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg> <span id="pk-clear-label">Clear cell</span></button>
+  <button class="pk-cancel" onclick="closePicker()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg> Close</button>
 </div>
 
 <!-- Activity report modal -->
@@ -415,16 +443,31 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   </div>
 </div>
 
-<!-- Fitness test modal -->
-<div class="modal-bg" id="fitness-modal">
-  <div class="modal" style="width:390px">
-    <h3 id="fitness-modal-title">Fitness test</h3>
-    <div class="form-row"><label>Requirement</label><select id="fitness-required" class="plain-select" style="width:100%" onchange="toggleFitnessFields()"><option value="required">Required</option><option value="not_required">Not required</option></select></div>
-    <div id="fitness-fields">
-      <div class="form-row"><label>Completion date</label><input id="fitness-date" type="date"></div>
-      <div class="form-row"><label>Grade (1–9)</label><select id="fitness-grade" class="plain-select" style="width:100%"><option value="">Select grade</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select></div>
+<!-- Annual requirement definition modal -->
+<div class="modal-bg" id="req-def-modal">
+  <div class="modal" style="width:420px">
+    <h3 id="req-def-modal-title">Add requirement</h3>
+    <p class="modal-desc">Add an annual certification, review, or recurring requirement.</p>
+    <div class="form-row"><label>Requirement name *</label><input id="req-def-name" placeholder="Annual safety review"></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="req-def-delete-btn" style="margin-right:auto;display:none" onclick="deleteRequirementFromModal()">Delete</button>
+      <button class="btn" onclick="closeModal('req-def-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRequirementFromModal()">Save</button>
     </div>
-    <div class="modal-actions"><button class="btn" onclick="closeModal('fitness-modal')">Cancel</button><button class="btn btn-primary" onclick="saveFitnessFromModal()">Save</button></div>
+  </div>
+</div>
+
+<!-- Annual requirement record modal -->
+<div class="modal-bg" id="req-record-modal">
+  <div class="modal" style="width:420px">
+    <h3 id="req-record-modal-title">Annual requirement</h3>
+    <div class="form-row"><label>Requirement</label><select id="req-record-required" class="plain-select" style="width:100%" onchange="toggleRequirementFields()"><option value="required">Required</option><option value="not_required">Not required</option></select></div>
+    <div id="req-record-fields">
+      <div class="form-row"><label>Completed Date</label><input id="req-record-completed" type="date"></div>
+      <div class="form-row"><label>Valid Until / Due Date</label><input id="req-record-due" type="date"></div>
+      <div class="form-row"><label>Result / Note</label><input id="req-record-result" type="text" placeholder="Passed, Grade 6, awaiting review..."></div>
+    </div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('req-record-modal')">Cancel</button><button class="btn btn-primary" onclick="saveRequirementRecordFromModal()">Save</button></div>
   </div>
 </div>
 
@@ -443,8 +486,12 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="form-row" style="margin:0"><label>Billing explanation</label><input id="af-billing" placeholder="e.g. Customer"></div>
     </div>
     <div class="form-row">
-      <label>Type <span class="muted" style="font-weight:400">(optional, from status types)</span></label>
-      <select id="af-type"></select>
+      <label>Activity type <span class="muted" style="font-weight:400">(optional)</span></label>
+      <input id="af-type" type="hidden" value="">
+      <details class="activity-type-menu" id="af-type-menu">
+        <summary><span class="pk-color-dot" id="af-type-dot" style="background:#94a3b8"></span><span id="af-type-label">No type</span><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="activity-type-options" id="af-type-options"></div>
+      </details>
     </div>
     <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;margin:8px 0 12px">
       <input type="checkbox" id="af-count-load" checked> Counts toward staffing load
@@ -466,7 +513,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="swatches" id="af-swatches"></div>
     </div>
     <div class="form-row">
-      <label>Participants &amp; shifts <span id="af-participant-count" class="muted" style="font-weight:400"></span></label>
+      <label>Participants <span id="af-participant-count" class="muted" style="font-weight:400"></span></label>
       <div id="af-participants" class="participant-list"></div>
     </div>
     <div class="form-row"><label>Notes (optional)</label><textarea id="af-notes" placeholder="Any additional context…"></textarea></div>
@@ -487,28 +534,61 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   <option value="2200-0600"></option>
 </datalist>
 
-<!-- Manage statuses modal -->
+<!-- Activity types and work codes modal -->
 <div class="modal-bg" id="status-modal">
-  <div class="modal" style="width:520px">
-    <h3>Manage Statuses</h3>
-    <p class="modal-desc">Customizable daily status categories used across the app.</p>
+  <div class="modal" style="width:620px;max-height:85vh;overflow:auto">
+    <h3>Aktivitetskategorier (Prosjekttype)</h3>
+    <p class="modal-desc">Kategoriserer hva selve aktiviteten/prosjektet er (f.eks. Møte, Øvelse, Oppdrag).</p>
     <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px" id="sf-form-title">Add a new status</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px" id="sf-form-title">Add a new activity type</div>
       <div class="form-row-2" style="margin-bottom:10px">
-        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Label *</label><input id="sf-label" placeholder="e.g. Sick Leave" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text);outline:none;font-family:inherit"></div>
-        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Abbreviation * (max 3)</label><input id="sf-abbr" maxlength="3" placeholder="SL" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text);outline:none;font-family:inherit;text-transform:uppercase"></div>
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Name *</label><input id="sf-label" placeholder="e.g. Exercise" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text);outline:none;font-family:inherit"></div>
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Abbreviation * (max 8)</label><input id="sf-abbr" maxlength="8" placeholder="EX" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text);outline:none;font-family:inherit;text-transform:uppercase"></div>
       </div>
       <div class="swatches" id="sf-swatches" style="margin-bottom:10px"></div>
-      <div class="flex gap-2" style="margin-bottom:10px;align-items:center">
-        <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="sf-absence"> Absence</label>
-        <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="sf-ooo"> Out of office</label>
-      </div>
       <div class="flex gap-2" style="justify-content:flex-end">
         <button class="btn btn-sm" id="sf-cancel-edit" style="display:none" onclick="resetStatusForm()">Cancel edit</button>
-        <button class="btn btn-sm btn-primary" onclick="saveStatus()" id="sf-save-btn">Add status</button>
+        <button class="btn btn-sm btn-primary" onclick="saveStatus()" id="sf-save-btn">Add activity type</button>
       </div>
     </div>
     <div id="status-list" style="max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <div style="height:1px;background:var(--border);margin:18px 0"></div>
+    <h3 style="font-size:16px">Daglige Avvik / Fravær</h3>
+    <p class="modal-desc">Statuser for dager utenom prosjekter (f.eks. Syk, Ferie, Avspasering).</p>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px" id="dsf-form-title">Add a daily status</div>
+      <div class="form-row-2" style="margin-bottom:10px">
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Name *</label><input id="dsf-label" placeholder="e.g. Leave"></div>
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Abbreviation * (max 3)</label><input id="dsf-abbr" maxlength="3" placeholder="LV" style="text-transform:uppercase"></div>
+      </div>
+      <div class="swatches" id="dsf-swatches" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input id="dsf-absence" type="checkbox"> Counts as absence</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input id="dsf-out-of-office" type="checkbox"> Out of office</label>
+      </div>
+      <div class="flex gap-2" style="justify-content:flex-end">
+        <button class="btn btn-sm" id="dsf-cancel-edit" style="display:none" onclick="resetDailyStatusForm()">Cancel edit</button>
+        <button class="btn btn-sm btn-primary" onclick="saveDailyStatus()" id="dsf-save-btn">Add status</button>
+      </div>
+    </div>
+    <div id="daily-status-list" style="max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <div style="height:1px;background:var(--border);margin:18px 0"></div>
+    <h3 style="font-size:16px">Arbeidstidskoder (FIF-koder for aktivitet)</h3>
+    <p class="modal-desc">Lønnskoder som tildeles ansatte på spesifikke aktivitetsdager (f.eks. ØV, RE, OT).</p>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+      <input id="wcf-id" type="hidden">
+      <div class="form-row-3" style="margin-bottom:10px">
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Name *</label><input id="wcf-name" placeholder="Exercise Day"></div>
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Abbreviation *</label><input id="wcf-abbr" maxlength="12" placeholder="EX D" style="text-transform:uppercase"></div>
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Hours</label><input id="wcf-hours" type="number" min="0" step="0.25" value="0"></div>
+      </div>
+      <div class="swatches" id="wcf-swatches" style="margin-bottom:10px"></div>
+      <div class="flex gap-2" style="justify-content:flex-end">
+        <button class="btn btn-sm" id="wcf-cancel" style="display:none" onclick="resetWorkCodeForm()">Cancel edit</button>
+        <button class="btn btn-sm btn-primary" onclick="saveWorkCode()" id="wcf-save">Add work code</button>
+      </div>
+    </div>
+    <div id="work-code-list" style="max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('status-modal')">Done</button>
     </div>
@@ -565,6 +645,18 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
         <div><label class="muted text-sm">High up to %</label><input id="set-high-max" type="number" min="1" max="500" step="1"></div>
       </div>
       <div class="form-hint">Values above the High limit are Overloaded. Limits must increase from Light to High.</div>
+    </div>
+    <div class="form-row">
+      <label>Planning configuration</label>
+      <button class="btn" type="button" onclick="closeModal('settings-modal');openStatusManager()">Manage Daily Statuses, Activity Types &amp; Work Codes</button>
+    </div>
+    <div class="form-row">
+      <label>Drøftingsfrist (Planning Horizon)</label>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
+        <div><label class="muted text-sm">Days from today</label><input id="set-planning-horizon-days" type="number" min="0" max="365" step="1"></div>
+        <div><label class="muted text-sm">Line color</label><input id="set-planning-horizon-color" type="color" style="width:48px;height:34px;padding:2px"></div>
+      </div>
+      <div class="form-hint">Set to 0 to hide the planning-horizon line.</div>
     </div>
     <div class="form-row">
       <label>Data storage mode</label>
@@ -668,7 +760,11 @@ function lsSet(key, value) { try { window.localStorage.setItem(key, value); } ca
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
 const APP_VERSION = '1.1.0';
-const DATA_VERSION = 3;
+const DATA_VERSION = 5;
+const DEFAULT_WORK_CODES = [
+  { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', hours: 12, color: '#3b82f6' },
+  { id: 'wc2', name: 'Turnusfri', abbreviation: 'TF', hours: 0, color: '#64748b' },
+];
 
 let appSettings = {
   appName: 'Team Manager',
@@ -679,8 +775,12 @@ let appSettings = {
   lightMax: 70,
   normalMax: 100,
   highMax: 110,
+  planningHorizonDays: 14,
+  planningHorizonColor: '#ef4444',
   holidays: [],
   departmentColors: {},
+  activityTypes: [],
+  workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })),
 };
 let storageMode = STORAGE_MODE_SERVER;
 
@@ -701,6 +801,75 @@ function normalizeCoreWorkdayRange(value, fallback = '0730-1500') {
   const canonical = `${String(startHour).padStart(2, '0')}${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}${String(endMinute).padStart(2, '0')}`;
   return timeRangeHours(canonical) ? canonical : fallback;
 }
+function normalizeActivityTypes(value) {
+  return (Array.isArray(value) ? value : []).map((type, index) => ({
+    id: String(type.id || `at${index + 1}`),
+    key: String(type.key || type.name || type.label || `activity_type_${index + 1}`).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''),
+    name: String(type.name || type.label || 'Activity Type').trim(),
+    abbreviation: String(type.abbreviation || type.abbr || '').trim().toUpperCase().slice(0, 8),
+    color: normalizeHexColor(type.color),
+  }));
+}
+function normalizeWorkCodes(value) {
+  const source = Array.isArray(value) && value.length ? value : DEFAULT_WORK_CODES;
+  return source.map((code, index) => ({
+    id: String(code.id || `wc${index + 1}`),
+    name: String(code.name || 'Work Code').trim(),
+    abbreviation: String(code.abbreviation || code.abbr || '').trim().toUpperCase().slice(0, 12),
+    hours: Number.isFinite(Number(code.hours)) ? Number(code.hours) : 0,
+    color: normalizeHexColor(code.color, '#3b82f6'),
+  }));
+}
+function normalizeAnnualRequirements(raw) {
+  const existingRequirements = Array.isArray(raw.requirements)
+    ? raw.requirements.map((requirement, index) => ({
+        id: Number.isFinite(Number(requirement.id)) ? Number(requirement.id) : index + 1,
+        name: String(requirement.name || `Requirement ${index + 1}`).trim(),
+      }))
+    : null;
+  if (existingRequirements) {
+    return {
+      requirements: existingRequirements,
+      requirementRecords: raw.requirementRecords && typeof raw.requirementRecords === 'object' ? { ...raw.requirementRecords } : {},
+    };
+  }
+
+  const legacy = raw.fitnessTests && typeof raw.fitnessTests === 'object' ? raw.fitnessTests : null;
+  if (!legacy) return { requirements: [], requirementRecords: {} };
+  const requirements = [{ id: 1, name: 'Condition' }, { id: 2, name: 'Strength' }];
+  const requirementRecords = {};
+  Object.entries(legacy).forEach(([key, record]) => {
+    const match = key.match(/^(\d+)_(condition|strength)$/);
+    if (!match || !record || typeof record !== 'object') return;
+    const employeeId = Number(match[1]);
+    const requirementId = match[2] === 'condition' ? 1 : 2;
+    const completedDate = /^\d{4}-\d{2}-\d{2}$/.test(record.date || '') ? record.date : '';
+    const year = completedDate ? Number(completedDate.slice(0, 4)) : new Date().getFullYear();
+    requirementRecords[`${requirementId}_${employeeId}_${year}`] = {
+      completedDate,
+      dueDate: '',
+      result: record.grade ? `Grade ${record.grade}` : '',
+      required: record.required !== false,
+    };
+  });
+  return { requirements, requirementRecords };
+}
+function migrateLegacyDailyStatuses(activityTypes) {
+  let migrated = 0;
+  activityTypes.forEach(type => {
+    const exists = statuses.some(status => status.key === type.key || status.label.toLowerCase() === type.name.toLowerCase());
+    if (exists) return;
+    statuses.push({ id: nextStatusId++, key: type.key, label: type.name, abbr: type.abbreviation, color: type.color, isAbsence: false, isOutOfOffice: false });
+    migrated++;
+  });
+  return migrated;
+}
+function sortDailyStatuses() {
+  statuses.sort((a, b) => a.label.localeCompare(b.label, 'nb', { sensitivity: 'base' }));
+}
+function sortedPlanningItems(items) {
+  return [...(items || [])].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'nb', { sensitivity: 'base' }));
+}
 function updateCoreHoursDisplayFromRangeInput() {
   const output = document.getElementById('set-core-hours-display');
   const input = document.getElementById('set-core-time');
@@ -720,6 +889,11 @@ function normalizeStateVersion(data) {
   const detectedVersion = Number(raw.dataVersion ?? raw.version ?? 1);
   normalized.dataVersion = Math.max(DATA_VERSION, detectedVersion);
   normalized.appVersion = raw.appVersion || APP_VERSION;
+  normalized.activityTypes = normalizeActivityTypes(raw.activityTypes || raw.appSettings?.activityTypes || []);
+  normalized.workCodes = normalizeWorkCodes(raw.workCodes || raw.appSettings?.workCodes);
+  const annualRequirements = normalizeAnnualRequirements(raw);
+  normalized.requirements = annualRequirements.requirements;
+  normalized.requirementRecords = annualRequirements.requirementRecords;
   if (!normalized.departmentColors || typeof normalized.departmentColors !== 'object') normalized.departmentColors = {};
   normalized.departmentColors = Object.fromEntries(Object.entries(normalized.departmentColors || {}).map(([dept, value]) => [String(dept), normalizeHexColor(value)]));
   return normalized;
@@ -740,10 +914,14 @@ function loadSettings() {
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
       appSettings.normalMax = typeof parsed.normalMax === 'number' ? parsed.normalMax : 100;
       appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 110;
+      appSettings.planningHorizonDays = Number.isFinite(Number(parsed.planningHorizonDays)) ? Math.max(0, Math.min(365, Math.round(Number(parsed.planningHorizonDays)))) : 14;
+      appSettings.planningHorizonColor = normalizeHexColor(parsed.planningHorizonColor, '#ef4444');
       appSettings.holidays = Array.isArray(parsed.holidays) ? parsed.holidays : [];
       appSettings.departmentColors = parsed.departmentColors && typeof parsed.departmentColors === 'object'
         ? Object.fromEntries(Object.entries(parsed.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
         : {};
+      appSettings.activityTypes = normalizeActivityTypes(parsed.activityTypes);
+      appSettings.workCodes = normalizeWorkCodes(parsed.workCodes);
       if (legacyRaw) {
         lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
         lsRemove(LEGACY_SETTINGS_KEY);
@@ -891,6 +1069,8 @@ function openSettings() {
   document.getElementById('set-light-max').value = String(appSettings.lightMax);
   document.getElementById('set-normal-max').value = String(appSettings.normalMax);
   document.getElementById('set-high-max').value = String(appSettings.highMax);
+  document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
+  document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
   const storageSelect = document.getElementById('set-storage-mode');
   if (storageSelect) storageSelect.value = storageMode;
   applyStorageModeControls();
@@ -1201,6 +1381,13 @@ function saveSettings() {
   appSettings.lightMax = lightMax;
   appSettings.normalMax = normalMax;
   appSettings.highMax = highMax;
+  const planningHorizonDays = Number(document.getElementById('set-planning-horizon-days').value);
+  if (!Number.isInteger(planningHorizonDays) || planningHorizonDays < 0 || planningHorizonDays > 365) {
+    alert('Planning Horizon must be a whole number from 0 to 365 days.');
+    return;
+  }
+  appSettings.planningHorizonDays = planningHorizonDays;
+  appSettings.planningHorizonColor = normalizeHexColor(document.getElementById('set-planning-horizon-color').value, '#ef4444');
   if (window.location.protocol !== 'file:') {
     const selectedMode = document.getElementById('set-storage-mode')?.value;
     if (selectedMode === STORAGE_MODE_LOCAL || selectedMode === STORAGE_MODE_SERVER) storageMode = selectedMode;
@@ -1306,14 +1493,15 @@ let summaryMonthValue = `${summaryYear}-${String(new Date().getMonth() + 1).padS
 let summaryWeekValue = isoWeekStringFromDate(new Date());
 let workloadPeriod = 'year';
 let workloadAnchorDate = fmt(new Date());
-let summarySortKey = 'name', summarySortDir = 'asc';
+let boardYear = new Date().getFullYear();
+let summarySortKey = 'people', summarySortDir = 'asc';
 let empSearch = '', empFilterDept = '', empFilterCatId = null;
 let deptColorsExpanded = false;
 let hiddenEmployees = new Set();
 let hiddenEmployeesDraft = null;
 let pastActivitiesExpanded = false;
 
-let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, fitnessTests = {};
+let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, requirements = [], requirementRecords = {};
 let entriesMap = {}, activityShiftsMap = {};
 let nextEmpId = 1, nextActId = 1, nextStatusId = 1, nextCatId = 1;
 
@@ -1325,8 +1513,8 @@ let activityRangeSelection = { active: false, rowKey: null, startDate: null, end
 let suppressCellClick = false;
 let suppressActivityCellClick = false;
 let pendingRangeSelection = null;
-let editingEmpId = null, editingActId = null, editingStatusId = null, editingCatId = null;
-let selectedActColor = PALETTE[0], selectedParticipants = [], selectedStatusColor = PALETTE[0], selectedCatColor = PALETTE[7], selectedEmpCatIds = [];
+let editingEmpId = null, editingActId = null, editingStatusId = null, editingDailyStatusId = null, editingCatId = null;
+let selectedActColor = PALETTE[0], selectedParticipants = [], selectedStatusColor = PALETTE[0], selectedDailyStatusColor = PALETTE[0], selectedWorkCodeColor = '#3b82f6', selectedCatColor = PALETTE[7], selectedEmpCatIds = [];
 let hasUnsavedChanges = false;
 let undoStack = [];
 let autoSaveTimer = null;
@@ -1340,7 +1528,7 @@ function updateUndoButton() {
 function recordUndo() {
   undoStack.push(JSON.parse(JSON.stringify({
     appSettings: { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } },
-    employees, categories, statuses, activities, courses, courseStatuses, fitnessTests, entriesMap, activityShiftsMap,
+    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   })));
   if (undoStack.length > 20) undoStack.shift();
@@ -1349,7 +1537,7 @@ function recordUndo() {
 async function undoLastChange() {
   const previous = undoStack.pop();
   if (!previous) return;
-  ({ appSettings, employees, categories, statuses, activities, courses, courseStatuses, fitnessTests, entriesMap, activityShiftsMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
+  ({ appSettings, employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
   if (appSettings && typeof appSettings === 'object') {
     const merged = { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } };
     Object.assign(appSettings, merged);
@@ -1400,9 +1588,11 @@ function loadFromData(data) {
   appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
     ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
     : {};
+  appSettings.workCodes = normalizeWorkCodes(normalized.workCodes);
   courses = (normalized.courses || []).map(course => ({ ...course, id: +course.id }));
   courseStatuses = normalized.courseStatuses && typeof normalized.courseStatuses === 'object' ? { ...normalized.courseStatuses } : {};
-  fitnessTests = normalized.fitnessTests && typeof normalized.fitnessTests === 'object' ? { ...normalized.fitnessTests } : {};
+  requirements = normalized.requirements;
+  requirementRecords = normalized.requirementRecords;
   const joinCatIds = {};
   if (Array.isArray(normalized.employeeCategories)) {
     for (const ec of normalized.employeeCategories) {
@@ -1429,11 +1619,7 @@ function loadFromData(data) {
     if ((!Array.isArray(a.participants) || !a.participants.length) && Array.isArray(a.employeeIds)) {
       a.participants = a.employeeIds.map(id => ({ id, shift: '' }));
     }
-    a.participants = (a.participants || []).map(p => ({
-      id: +p.id, shift: p.shift || '',
-      shiftType: p.shiftType === 'none' ? 'none' : (p.shiftType === 'night' ? 'night' : (p.shiftType === 'normal' ? 'normal' : 'day')),
-      hasScheduledShifts: p.hasScheduledShifts === true,
-    })).filter(p => Number.isFinite(p.id));
+    a.participants = (a.participants || []).map(p => ({ id: +p.id })).filter(p => Number.isFinite(p.id));
     a.abbreviation = a.abbreviation || '';
     a.project = a.project || '';
     a.order = a.order || '';
@@ -1456,12 +1642,14 @@ function loadFromData(data) {
     });
   } else entriesMap = {};
   if (normalized.activityShiftsMap && typeof normalized.activityShiftsMap === 'object' && !Array.isArray(normalized.activityShiftsMap)) {
-    activityShiftsMap = { ...normalized.activityShiftsMap };
+    activityShiftsMap = Object.fromEntries(Object.entries(normalized.activityShiftsMap).map(([key, value]) => [key,
+      typeof value === 'string' ? { shift: value, workCodeId: null, excluded: false } : { shift: value?.shift || '', workCodeId: value?.workCodeId || null, excluded: value?.excluded === true }
+    ]));
   } else if (Array.isArray(normalized.activityShifts)) {
     activityShiftsMap = {};
     normalized.activityShifts.forEach(s => {
       const eid = +s.employeeId, pid = +s.projectId;
-      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = s.shift || 'fullday';
+      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || 'fullday', workCodeId: s.workCodeId || null, excluded: s.excluded === true };
     });
   } else activityShiftsMap = {};
   const rawStatuses = Array.isArray(normalized.statuses) && normalized.statuses.length
@@ -1475,11 +1663,14 @@ function loadFromData(data) {
     abbr: String(s.abbr || '?').slice(0, 3),
     isAbsence: s.isAbsence === true, isOutOfOffice: s.isOutOfOffice === true,
   }));
+  appSettings.activityTypes = normalizeActivityTypes(normalized.activityTypes.length ? normalized.activityTypes : rawStatuses);
   const maxId = arr => arr.length ? Math.max(...arr.map(x => x.id || 0)) : 0;
   nextEmpId    = Math.max(normalized.nextEmpId    || 1, maxId(employees) + 1);
   nextActId    = Math.max(normalized.nextActId    || 1, maxId(activities) + 1);
   nextStatusId = Math.max(normalized.nextStatusId || 1, maxId(statuses) + 1);
   nextCatId    = Math.max(normalized.nextCatId    || 1, maxId(categories) + 1);
+  if (normalized.dailyStatusesSeparated !== true) migrateLegacyDailyStatuses(appSettings.activityTypes);
+  sortDailyStatuses();
   pruneImplicitDefaultActivityShifts();
   employees.sort((a, b) => a.name.localeCompare(b.name));
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -1548,8 +1739,11 @@ function snapshotData() {
     dataVersion: DATA_VERSION,
     version: DATA_VERSION,
     savedAt: new Date().toISOString(),
+    dailyStatusesSeparated: true,
     departmentColors: appSettings.departmentColors || {},
-    employees, categories, statuses, activities, courses, courseStatuses, fitnessTests, entriesMap, activityShiftsMap,
+    activityTypes: appSettings.activityTypes || [],
+    workCodes: appSettings.workCodes || [],
+    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   };
 }
@@ -1705,10 +1899,38 @@ function activityDefaultShift(shiftType, act = null) {
   if (shiftType === 'normal') return act?.normalShift || appSettings.coreWorkdayRange || '0730-1500';
   return shiftType === 'night' ? (act?.nightShift || '0000-0730') : (act?.dayShift || '0730-2400');
 }
-function activityShiftHours(act, empId, shift) {
-  if (shift === 'turn') return 0;
-  if (shift !== 'fullday') return shiftHours(shift);
-  return timeRangeHours(activityDefaultShift(participantFor(act, empId)?.shiftType, act));
+function activityShiftHours(act, empId, date) {
+  const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
+  const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
+  const fixedHours = Number(workCode?.hours);
+  if (Number.isFinite(fixedHours) && fixedHours > 0) return fixedHours;
+  const shiftStr = assignment.shift || 'normal';
+  if (shiftStr === 'turn') return 0;
+  if (['normal', 'day', 'night'].includes(shiftStr)) {
+    return timeRangeHours(activityDefaultShift(shiftStr, act)) ?? 0;
+  }
+  return timeRangeHours(shiftStr) ?? 0;
+}
+function activityShiftMeta(act, shift) {
+  if (shift === 'normal') return { key: 'normal', label: 'Normal Arbeidstid', range: activityDefaultShift('normal', act), icon: '' };
+  if (shift === 'day') return { key: 'day', label: 'Dag', range: activityDefaultShift('day', act), icon: svgIcon('sun', 'Dag') };
+  if (shift === 'night') return { key: 'night', label: 'Natt', range: activityDefaultShift('night', act), icon: svgIcon('moon', 'Natt') };
+  if (shift === 'turn') return { key: 'turn', label: 'Snudøgn', range: '', icon: shiftChangeIcon('Snudøgn') };
+  return shift ? { key: shift, label: 'Egendefinert', range: shift, icon: '' } : null;
+}
+function activityAssignmentInfo(act, empId, date) {
+  const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
+  const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
+  if (!workCode) return null;
+  const shiftMeta = activityShiftMeta(act, assignment.shift);
+  const physicalShift = ['normal', 'day', 'night'].includes(assignment.shift)
+    ? `${shiftMeta.label} (${shiftMeta.range})`
+    : (assignment.shift === 'turn' ? shiftMeta.label : (assignment.shift || 'Ikke angitt'));
+  return { assignment, workCode, physicalShift, hours: activityShiftHours(act, empId, date) };
+}
+function assignmentShiftType(shift, participant = null) {
+  if (shift === 'normal' || shift === 'day' || shift === 'night' || shift === 'turn') return shift;
+  return participant?.shiftType === 'night' ? 'night' : (participant?.shiftType === 'normal' ? 'normal' : 'day');
 }
 function activityCountsTowardLoad(act) {
   return act?.countsTowardLoad !== false;
@@ -1716,12 +1938,21 @@ function activityCountsTowardLoad(act) {
 function activityTypeMeta(act) {
   const typeKey = (act?.type || '').trim();
   if (!typeKey) return null;
-  return siFor(typeKey) || statuses.find(s => s.key === typeKey) || null;
+  const type = (appSettings.activityTypes || []).find(item => item.key === typeKey);
+  return type ? { ...type, label: type.name, abbr: type.abbreviation } : (siFor(typeKey) || null);
+}
+function activityAssignment(key) {
+  const value = activityShiftsMap[key];
+  if (!value) return { shift: '', workCodeId: null, excluded: false };
+  return typeof value === 'string' ? { shift: value, workCodeId: null, excluded: false } : { shift: value.shift || '', workCodeId: value.workCodeId || null, excluded: value.excluded === true };
+}
+function activityAssignmentShift(key) {
+  return activityAssignment(key).shift;
 }
 function participantActivityShift(act, empId, dateString) {
   const participant = participantFor(act, empId);
   if (!participant) return '';
-  return dateString ? (activityShiftsMap[`${empId}_${dateString}_${act.id}`] || '') : '';
+  return dateString ? activityAssignmentShift(`${empId}_${dateString}_${act.id}`) : '';
 }
 function activityHasScheduledShift(act, empId, start, end) {
   const prefix = `${empId}_`;
@@ -1729,21 +1960,8 @@ function activityHasScheduledShift(act, empId, start, end) {
   return Object.keys(activityShiftsMap).some(key => {
     if (!key.startsWith(prefix) || !key.endsWith(suffix)) return false;
     const [, date] = key.split('_', 3);
-    return date >= start && date <= end;
+    return date >= start && date <= end && Boolean(activityAssignment(key).workCodeId);
   });
-}
-function teamReportShiftHours(act, participant, shift) {
-  const shiftType = participant?.shiftType === 'night' ? 'night' : (participant?.shiftType === 'day' ? 'day' : 'normal');
-  const range = shift === 'fullday' ? activityDefaultShift(shiftType, act) : shift;
-  return timeRangeHours(range) ?? activityShiftHours(act, participant?.id, shift);
-}
-function syncParticipantScheduledState(actId, empId) {
-  const activity = activities.find(act => act.id === actId);
-  const participant = activity ? participantFor(activity, empId) : null;
-  if (!participant) return;
-  const prefix = `${empId}_`;
-  const suffix = `_${actId}`;
-  participant.hasScheduledShifts = Object.keys(activityShiftsMap).some(key => key.startsWith(prefix) && key.endsWith(suffix));
 }
 function pruneImplicitDefaultActivityShifts() {
   for (const act of activities) {
@@ -1754,11 +1972,9 @@ function pruneImplicitDefaultActivityShifts() {
       const suffix = `_${act.id}`;
       const participantShiftKeys = Object.keys(activityShiftsMap).filter(key => key.startsWith(prefix) && key.endsWith(suffix));
       if (!participantShiftKeys.length) continue;
-      const hasOnlyFulldayEntries = participantShiftKeys.every(key => activityShiftsMap[key] === 'fullday');
+      const hasOnlyFulldayEntries = participantShiftKeys.every(key => activityAssignmentShift(key) === 'fullday');
       if (!hasOnlyFulldayEntries) continue;
       participantShiftKeys.forEach(key => delete activityShiftsMap[key]);
-      participant.shiftType = 'none';
-      participant.hasScheduledShifts = false;
     }
   }
 }
@@ -1776,6 +1992,14 @@ function fmtDaysHours(totalHours) {
   if (days > 0 && remH > 0) return `${days}d ${remH}h`;
   if (days > 0) return `${days}d`;
   return `${remH}h`;
+}
+function fmtFIF(totalHours) {
+  if (!totalHours) return '0t';
+  const days = Math.floor(totalHours / 24);
+  const hours = Math.round((totalHours % 24) * 10) / 10;
+  if (days > 0 && hours > 0) return `${days} døgn ${hours}t`;
+  if (days > 0) return `${days} døgn`;
+  return `${hours}t`;
 }
 function deptPalettes() {
   const dark = appSettings.darkMode;
@@ -1962,6 +2186,18 @@ function renderPage() {
 }
 
 // ═══ GRID VIEW ═══════════════════════════════════════════════════════════════
+function planningHorizonDate() {
+  const days = Number(appSettings.planningHorizonDays);
+  if (!Number.isFinite(days) || days <= 0) return '';
+  const date = new Date(`${todayStr()}T00:00:00`);
+  date.setDate(date.getDate() + Math.round(days));
+  return fmt(date);
+}
+function planningHorizonStyle(date) {
+  return date === planningHorizonDate()
+    ? `border-right:2px dashed ${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;`
+    : '';
+}
 function renderGrid() {
   const days = daysOfYear(gridYear);
   const today = todayStr();
@@ -1981,7 +2217,7 @@ function renderGrid() {
     const ds = fmt(d);
     const holiday = displayedHolidayFor(ds);
     const holidayStyle = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
-    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
+    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
 
@@ -1993,7 +2229,7 @@ function renderGrid() {
           <div class="page-sub">Daily status for the whole year with week numbers and activity timeline.</div>
         </div>
         <div class="flex items-center gap-2">
-          <button class="btn btn-sm" onclick="openStatusManager()">Manage statuses</button>
+          <button class="btn btn-sm" onclick="openStatusManager()">Manage Planning Options</button>
           <button class="btn btn-sm" onclick="openTeamScheduleReport()">Team Work Schedule</button>
           <button class="btn btn-sm" onclick="goToday()">Today</button>
           <div class="year-nav" aria-label="Calendar year">
@@ -2091,7 +2327,7 @@ function renderGridBody(days, today) {
     </td><td colspan="${days.length}"></td></tr>`;
 
   if (!currentActs.length && !pastActs.length) {
-    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">No activities yet. Use the add activity button to create one.</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}"></td>`).join('')}</tr>`;
+    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">No activities yet. Use the add activity button to create one.</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
   }
   const renderActRow = (act, dim) => {
     const attendCount = act.participants.length;
@@ -2119,12 +2355,12 @@ function renderGridBody(days, today) {
       const isS = ds === act.startDate, isE = ds === act.endDate;
       if (inR) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
-        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
+        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
           <div class="act-bar" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${act.color};opacity:${dim ? '.16' : '.28'};border-radius:${brl} ${brr}"></div>
           ${isS ? `<span style="position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;white-space:nowrap;z-index:2;pointer-events:none;color:${act.color};width:${labelWidth}px;overflow:hidden;text-overflow:ellipsis;${dim ? 'opacity:.6' : ''}">${esc(act.name)}</span>` : ''}
         </td>`;
       } else {
-        row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
+        row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
       }
     }
     return row + '</tr>';
@@ -2149,7 +2385,7 @@ function renderGridBody(days, today) {
   if (!showHolidays) {
     html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Holidays hidden.</td><td colspan="${days.length}"></td></tr>`;
   } else if (!currentHolidays.length && !pastHolidays.length) {
-    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">No holidays or red-day periods added.</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}"></td>`).join('')}</tr>`;
+    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">No holidays or red-day periods added.</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
   } else {
     const renderHolidayRow = holiday => {
       const start = holiday.startDate, end = holiday.endDate;
@@ -2157,7 +2393,7 @@ function renderGridBody(days, today) {
       html += `<tr><td class="gempl sticky-left" style="cursor:pointer" onclick="openHolidayModal(${holiday.sourceIndexes[0]},[${holiday.sourceIndexes.join(',')}])" title="Edit ${esc(holiday.name || 'Holiday')}"><div class="act-cell-name"><span class="act-name" style="color:${color}">${esc(holiday.name || 'Holiday')}</span><span class="act-cell-actions"><button class="icon-btn" title="Edit" onclick="event.stopPropagation();openHolidayModal(${holiday.sourceIndexes[0]},[${holiday.sourceIndexes.join(',')}])">${svgIcon('edit')}</button></span></div><div class="act-dates muted">${fmtShort(start)} – ${fmtShort(end)}${holiday.nonWorking ? ' · non-working' : ' · highlight only'}</div></td>`;
       days.forEach(day => {
         const ds = fmt(day), active = ds >= start && ds <= end;
-        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${active ? ' holiday-col' : ''}" style="${active ? `background:${color}28 !important;color:${color};border-color:${color}55;` : ''}" title="${active ? esc(holiday.name || 'Holiday') : ''}"></td>`;
+        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${active ? ' holiday-col' : ''}" style="${active ? `background:${color}28 !important;color:${color};border-color:${color}55;` : ''}${planningHorizonStyle(ds)}" title="${active ? esc(holiday.name || 'Holiday') : ''}"></td>`;
       });
       html += '</tr>';
     };
@@ -2200,21 +2436,19 @@ function cellActivities(empId, ds) {
   return activities
     .filter(act => ds >= act.startDate && ds <= act.endDate && participantFor(act, empId))
     .map(act => {
-      const participant = participantFor(act, empId);
-      const shift = participantActivityShift(act, empId, ds);
+      const assignment = activityAssignment(`${empId}_${ds}_${act.id}`);
+      const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
+      if (!workCode) return null;
       return {
         ...act,
         isStart: ds === act.startDate, isEnd: ds === act.endDate,
-        shift,
-        shiftType: participant && participant.shiftType === 'night' ? 'night' : (participant && participant.shiftType === 'normal' ? 'normal' : 'day'),
+        assignment,
+        workCodeId: assignment.workCodeId,
+        workCode,
       };
     })
-    .sort((a, b) => {
-      const aHasShift = !!a.shift;
-      const bHasShift = !!b.shift;
-      if (aHasShift !== bHasShift) return aHasShift ? -1 : 1;
-      return a.id - b.id;
-    });
+    .filter(Boolean)
+    .sort((a, b) => a.id - b.id);
 }
 
 function isEmployeeBirthday(emp, dateString) {
@@ -2232,13 +2466,12 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const isPartial = entry?.durationType === 'time';
   const acts = cellActivities(emp.id, ds);
   const birthday = isEmployeeBirthday(emp, ds);
-  const hasNightShift = acts.some(act => act.shift === activityDefaultShift('night', act));
 
   const tipParts = [];
   acts.forEach(act => {
-    let detail = `Activity: ${act.abbreviation || act.name}`;
-    if (act.order) detail += ` [Order: ${act.order}]`;
-    detail += ` | Shift: ${act.shift ? act.shift : 'Not scheduled'} | Type: ${act.shiftType === 'night' ? 'Night' : (act.shiftType === 'normal' ? 'Normal Day' : 'Day')}`;
+    const shift = activityShiftMeta(act, act.assignment.shift);
+    let detail = `Aktivitet: ${act.name}\nKode: ${act.workCode.name} (${act.workCode.abbreviation})`;
+    if (shift) detail += `\nSkift: ${shift.label}${shift.range ? ` (${shift.range})` : ''}`;
     tipParts.push(detail);
   });
   if (si) {
@@ -2250,7 +2483,8 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   if (birthday) tipParts.push(`Birthday: ${emp.name}`);
   if (!tipParts.length) tipParts.push('Click to set status');
 
-  const primaryActivity = acts.find(act => act.shift) || acts[0];
+  const primaryActivity = acts[0];
+  const activeWorkCode = primaryActivity?.workCode || null;
   let cellText = '', cellStyleStr = '';
   if (!isPartial && si) {
     cellText = si.abbr;
@@ -2258,56 +2492,33 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   } else if (isPartial && si) {
     cellText = si.abbr;
     cellStyleStr = `color:${si.color}`;
-  } else if (acts.length) {
-    const primaryType = activityTypeMeta(primaryActivity || acts[0]);
-    cellText = primaryType?.abbr || (primaryActivity?.abbreviation || primaryActivity?.name || '').slice(0, 2).toUpperCase();
-    if (primaryType) cellStyleStr = statusStyle(primaryType.color);
-    else if (primaryActivity) cellStyleStr = `color:${primaryActivity.color}`;
+  } else if (activeWorkCode) {
+    cellText = activeWorkCode.abbreviation;
+    cellStyleStr = `background:${activeWorkCode.color}20;color:${activeWorkCode.color}`;
   }
 
-  const hasShiftChange = acts.some(act => act.shift === 'turn');
-  const primaryShiftType = hasShiftChange
-    ? 'change'
-    : (primaryActivity && primaryActivity.shift === activityDefaultShift('day', primaryActivity)
-      ? 'day'
-      : (primaryActivity && primaryActivity.shift === activityDefaultShift('night', primaryActivity) ? 'night' : ''));
-  const symbol = primaryShiftType === 'change'
-    ? `<span class="shift-symbol" title="Shift change">${shiftChangeIcon('Shift change')}</span>`
-    : (primaryShiftType === 'night'
-      ? `<span class="shift-symbol" title="Night shift">${svgIcon('moon')}</span>`
-      : (primaryShiftType === 'day'
-        ? `<span class="shift-symbol" title="Day shift">${svgIcon('sun')}</span>`
-        : ''));
-  const dot = (isPartial && si) ? `<div class="status-dot" style="background:${si.color}"></div>` : '';
-  const activityBadge = (acts.length && si?.key === 'syk' && (activityTypeMeta(primaryActivity || acts[0]) || primaryActivity))
-    ? `<span class="activity-tag" title="Activity">${esc((activityTypeMeta(primaryActivity || acts[0])?.abbr || (primaryActivity?.abbreviation || primaryActivity?.name || '').slice(0, 2).toUpperCase()))}</span>`
-    : '';
-  const activityTint = acts.length && primaryActivity?.color
-    ? (primaryShiftType === 'change'
-      ? `background: linear-gradient(90deg, color-mix(in srgb, ${primaryActivity.color} 60%, transparent) 0 50%, rgba(15,23,42,.9) 50% 100%);`
-      : (si
-        ? `box-shadow: inset 0 0 0 999px color-mix(in srgb, ${primaryActivity.color} ${hasNightShift ? 18 : 8}%, transparent);`
-        : `background: color-mix(in srgb, ${primaryActivity.color} ${hasNightShift ? 18 : 10}%, transparent);`))
-    : '';
-  const activityUnderline = acts.length && primaryActivity ? `box-shadow: inset 0 -2px 0 ${primaryActivity.color};` : '';
+  const customActivityShift = primaryActivity?.assignment.shift && !['normal', 'day', 'night', 'turn'].includes(primaryActivity.assignment.shift);
+  const dot = customActivityShift
+    ? `<div class="status-dot" style="background:${activeWorkCode?.color || primaryActivity.color}"></div>`
+    : ((isPartial && si) ? `<div class="status-dot" style="background:${si.color}"></div>` : '');
+  const shiftMeta = primaryActivity ? activityShiftMeta(primaryActivity, primaryActivity.assignment.shift) : null;
+  const shiftSymbol = !customActivityShift && shiftMeta?.icon ? `<span class="shift-symbol">${shiftMeta.icon}</span>` : '';
+  const activityUnderline = acts.length && primaryActivity ? `box-shadow: inset 0 -3px 0 ${primaryActivity.color};` : '';
   const holidayTint = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
   const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">🎂</span>` : '';
 
   const dayBackground = holiday ? `background:${holiday.color || '#ef4444'}28 !important;` : '';
   const dayTextColor = holiday ? `color:${holiday.color || '#ef4444'} !important;` : '';
 
-  const effectiveStatusColor = si ? si.color : (acts.length ? primaryActivity?.color : null);
-  const nightShiftStyle = hasNightShift ? `--night-shift-color:${si?.color || primaryActivity?.color || '#22c55e'};--night-shift-underline:${primaryActivity?.color || '#f97316'};` : '';
   const finalCellStyle = holiday
-    ? `${dayBackground}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${dayTextColor}${holidayTint}`
-    : (primaryShiftType === 'change'
-      ? `--shift-change-color:#22c55e;--shift-change-underline:${primaryActivity?.color || '#f97316'};color:${effectiveStatusColor || 'var(--text)'};`
-      : `${activityTint}${effectiveStatusColor && !si ? `color:${effectiveStatusColor};` : ''}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}`);
+    ? `${dayBackground}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${dayTextColor}${holidayTint}${planningHorizonStyle(ds)}`
+    : `${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${planningHorizonStyle(ds)}`;
 
-  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${hasNightShift || primaryShiftType === 'night' ? ' night-shift-cell' : ''}${primaryShiftType === 'change' ? ' shift-change-cell' : ''}"
-    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${nightShiftStyle}${finalCellStyle}"
+  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}"
+    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
-    onclick="openPicker(event,${emp.id},'${ds}')">${dot}${symbol}${activityBadge}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
+    onclick="handleCellClick(event,${emp.id},'${ds}')"
+    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${shiftSymbol}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
@@ -2352,11 +2563,11 @@ function activityCellFromEl(el) {
   return el?.closest?.('td.activity-select-cell') || null;
 }
 function paintActivityRangeSelection() {
-  document.querySelectorAll('td.activity-select-cell').forEach(cell => {
-    const isSelected = activityRangeSelection.rowKey &&
-      cell.dataset.rowKey === activityRangeSelection.rowKey &&
-      activityRangeSelection.dates.includes(cell.dataset.date);
-    cell.classList.toggle('cell-selected', isSelected);
+  if (!activityRangeSelection.rowKey) return;
+  const start = activityRangeSelection.startDate <= activityRangeSelection.endDate ? activityRangeSelection.startDate : activityRangeSelection.endDate;
+  const end = activityRangeSelection.startDate <= activityRangeSelection.endDate ? activityRangeSelection.endDate : activityRangeSelection.startDate;
+  document.querySelectorAll(`td.activity-select-cell[data-row-key="${activityRangeSelection.rowKey}"]`).forEach(cell => {
+    cell.classList.toggle('cell-selected', cell.dataset.date >= start && cell.dataset.date <= end);
   });
 }
 function clearActivityRangeSelection() {
@@ -2392,6 +2603,7 @@ function finishActivityRangeSelection(event) {
 }
 function startActivityRangeSelection(event, rowKey, date) {
   if (event.button !== 0) return;
+  event.preventDefault();
   event.stopPropagation();
   event.currentTarget.setPointerCapture(event.pointerId);
   suppressActivityCellClick = false;
@@ -2410,9 +2622,11 @@ function handleActivityCellClick(event, actId) {
   openActModal(actId);
 }
 function paintCellSelection() {
-  document.querySelectorAll('.gday.status-cell').forEach(cell => {
-    const isSelected = +cell.dataset.empid === cellSelection.empId && cellSelection.dates.includes(cell.dataset.date);
-    cell.classList.toggle('cell-selected', isSelected);
+  if (cellSelection.empId === null) return;
+  const start = cellSelection.startDate <= cellSelection.endDate ? cellSelection.startDate : cellSelection.endDate;
+  const end = cellSelection.startDate <= cellSelection.endDate ? cellSelection.endDate : cellSelection.startDate;
+  document.querySelectorAll(`td.status-cell[data-empid="${cellSelection.empId}"]`).forEach(cell => {
+    cell.classList.toggle('cell-selected', cell.dataset.date >= start && cell.dataset.date <= end);
   });
 }
 function clearCellSelection() {
@@ -2449,6 +2663,7 @@ function finishCellSelection(event) {
 }
 function startCellSelection(event, empId, date) {
   if (event.button !== 0) return;
+  event.preventDefault();
   event.currentTarget.setPointerCapture(event.pointerId);
   suppressCellClick = false;
   pendingRangeSelection = null;
@@ -2471,39 +2686,48 @@ function _showPicker(event, empId, dates) {
     : fmtMed(pickerDate);
   document.getElementById('pk-head').innerHTML = `<b>${esc(emp?.name || '')}</b>${dateLabel}`;
 
+  const acts = activities.filter(act => actParticipantIds(act).includes(empId) && pickerDates.some(date => date >= act.startDate && date <= act.endDate));
+  document.getElementById('pk-status-section').style.display = 'flex';
   const entry = getEntryObj(`${empId}_${pickerDate}`);
   const btns = document.getElementById('pk-status-btns');
   btns.innerHTML = statuses.length
-    ? statuses.map(s => `<button class="pk-btn${entry?.status === s.key ? ' pk-sel' : ''}" style="${statusStyle(s.color)};border:1px solid ${s.color}50" onclick="pickStatusById(${s.id})"><span class="pk-initial">${esc(s.abbr)}</span>${esc(s.label)}</button>`).join('')
-    : '<div style="padding:4px 6px;font-size:11.5px;color:var(--muted)">No statuses defined yet — use "Manage statuses" in Grid View.</div>';
+    ? statuses.map(s => `<button class="pk-btn${entry?.status === s.key ? ' pk-sel' : ''}" title="${esc(s.label)}" style="${statusStyle(s.color)};border:1px solid ${s.color}50" onclick="pickStatusById(${s.id})"><span class="pk-initial">${esc(s.abbr)}</span><span class="pk-status-label">${esc(s.label)}</span></button>`).join('')
+    : '<div style="padding:4px 6px;font-size:11.5px;color:var(--muted)">No daily statuses configured.</div>';
   document.getElementById('pk-duration-section').style.display = 'none';
   document.getElementById('pk-time').value = (entry?.durationType === 'time' && entry.time) ? entry.time : '';
-  document.getElementById('pk-clear-btn').style.display = entry ? 'block' : 'none';
+  const hasCellActivity = activities.some(act => actParticipantIds(act).includes(empId) && pickerDate >= act.startDate && pickerDate <= act.endDate && activityAssignment(`${empId}_${pickerDate}_${act.id}`).workCodeId);
+  document.getElementById('pk-clear-btn').style.display = (entry || hasCellActivity) ? 'block' : 'none';
+  document.getElementById('pk-clear-label').textContent = pickerDates.length > 1 ? 'Slett alt i valgte celler' : 'Slett alt i cellen';
   document.getElementById('pk-add-activity-btn').style.display = pickerDates.length > 1 ? 'flex' : 'none';
 
-  const acts = activities.filter(act => actParticipantIds(act).includes(empId) && pickerDate >= act.startDate && pickerDate <= act.endDate);
   const sect = document.getElementById('pk-shift-section');
   if (acts.length) {
-    sect.innerHTML = '<div class="pk-sep"></div><div class="pk-label">Activity shift</div>' + acts.map(act => {
-      const cur = activityShiftsMap[`${empId}_${pickerDate}_${act.id}`] || '';
-      const shiftOptions = [
-        { value: 'none', label: 'No shift' },
-        { value: activityDefaultShift('normal', act), label: `Normal Day (${activityDefaultShift('normal', act)})` },
-        { value: activityDefaultShift('day', act), label: `Day shift (${activityDefaultShift('day', act)})` },
-        { value: activityDefaultShift('night', act), label: `Night shift (${activityDefaultShift('night', act)})` },
-        { value: 'turn', label: `Shift change` },
-      ];
-      const chips = shiftOptions.map(option => {
-        const selected = option.value === 'none' ? !cur : cur === option.value;
-        const action = option.value === 'none' ? 'null' : `'${option.value}'`;
-        return `<button class="pk-chip${selected ? ' sel' : ''}" onclick="saveShift(${empId},'${pickerDate}',${act.id},${action})">${esc(option.label)}</button>`;
-      }).join('');
+    sect.innerHTML = '<div class="pk-sep"></div><div class="pk-label">Activity assignment</div>' + acts.map(act => {
+      const firstDate = pickerDates.find(date => date >= act.startDate && date <= act.endDate) || pickerDate;
+      const assignmentKey = `${empId}_${firstDate}_${act.id}`;
+      const assignment = activityAssignment(assignmentKey);
+      const selectedCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
+      const rawShift = assignment.shift || 'normal';
+      const selectedShift = ['normal', 'day', 'night', 'turn'].includes(rawShift) ? rawShift : 'custom';
       return `<div class="pk-shift-box">
         <div class="pk-shift-title"><span class="act-dot" style="background:${act.color};width:9px;height:9px"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(act.abbreviation || act.name)}</span></div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">${chips}</div>
-        <div style="display:flex;gap:4px">
-          <input id="pk-shift-${act.id}" class="pk-input" placeholder="Custom e.g. 0800-1600" value="${esc(cur === 'fullday' ? '' : cur)}" style="flex:1" onclick="event.stopPropagation()">
-          <button class="pk-chip" onclick="saveShiftCustom(${empId},'${pickerDate}',${act.id})">Set</button>
+        <div class="pk-field"><span class="pk-field-label">Work Code</span>
+          <input id="pk-code-${act.id}" type="hidden" value="${esc(assignment.workCodeId || '')}">
+          <details class="pk-code-menu" id="pk-code-menu-${act.id}">
+            <summary><span class="pk-color-dot" id="pk-code-dot-${act.id}" style="background:${selectedCode?.color || '#94a3b8'}"></span><span id="pk-code-label-${act.id}">${selectedCode ? `${esc(selectedCode.abbreviation)} · ${esc(selectedCode.name)} (${selectedCode.hours} h)` : 'Select code'}</span>${svgIcon('chevronDown')}</summary>
+            <div class="pk-code-options">${sortedPlanningItems(appSettings.workCodes).map(code => `<button type="button" class="pk-code-option${assignment.workCodeId === code.id ? ' sel' : ''}" data-work-code-id="${esc(code.id)}" onclick="selectPickerWorkCode(${act.id},this.dataset.workCodeId)"><span class="pk-color-dot" style="background:${code.color}"></span><span>${esc(code.abbreviation)} · ${esc(code.name)} (${code.hours} h)</span></button>`).join('')}</div>
+          </details>
+        </div>
+        <div class="pk-field"><span class="pk-field-label">Shift Type</span><div class="pk-shift-options" id="pk-shifts-${act.id}" data-shift="${esc(selectedShift === 'custom' ? assignment.shift : rawShift)}">
+          <button class="pk-chip${selectedShift === 'normal' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'normal')">Normal Arbeidstid</button>
+          <button class="pk-chip${selectedShift === 'day' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'day')">${svgIcon('sun')} Dag</button>
+          <button class="pk-chip${selectedShift === 'night' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'night')">${svgIcon('moon')} Natt</button>
+          <button class="pk-chip${selectedShift === 'turn' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'turn')">${shiftChangeIcon('')} Snudøgn</button>
+          <button class="pk-chip${selectedShift === 'custom' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'custom')">Egendefinert</button>
+        </div><div id="pk-custom-shift-wrap-${act.id}" style="display:${selectedShift === 'custom' ? 'block' : 'none'}"><input class="pk-input" id="pk-custom-shift-${act.id}" type="text" placeholder="1500-2000" value="${esc(selectedShift === 'custom' ? assignment.shift : '')}" oninput="document.getElementById('pk-shifts-${act.id}').dataset.shift=this.value.trim()"><div class="form-hint">Expected format: HHMM-HHMM, for example 1500-2000.</div></div></div>
+        <div class="pk-save-row">
+          <button class="pk-clear" onclick="clearActivityAssignment(${empId},${act.id})">Remove</button>
+          <button class="btn btn-sm btn-primary" onclick="saveActivityAssignment(${empId},${act.id})">Set</button>
         </div>
       </div>`;
     }).join('');
@@ -2511,11 +2735,18 @@ function _showPicker(event, empId, dates) {
 
   const picker = document.getElementById('picker');
   picker.classList.add('open');
-  const pad = 8, rect = { x: event.clientX, y: event.clientY };
+  const pad = 8;
+  const pointedCell = cellFromEl(document.elementFromPoint(event.clientX, event.clientY));
+  const fallbackCell = document.querySelector(`td.status-cell[data-empid="${empId}"][data-date="${pickerDate}"]`);
+  const anchor = (pointedCell?.dataset.empid === String(empId) ? pointedCell : fallbackCell)?.getBoundingClientRect();
   picker.style.left = '0px'; picker.style.top = '0px';
   const pw = picker.offsetWidth, ph = picker.offsetHeight;
-  picker.style.left = Math.min(rect.x, window.innerWidth - pw - pad) + 'px';
-  picker.style.top = Math.min(rect.y, window.innerHeight - ph - pad) + 'px';
+  const preferredLeft = anchor ? anchor.right + 6 : event.clientX;
+  const left = preferredLeft + pw <= window.innerWidth - pad
+    ? preferredLeft
+    : (anchor ? anchor.left - pw - 6 : event.clientX - pw);
+  picker.style.left = Math.max(pad, Math.min(left, window.innerWidth - pw - pad)) + 'px';
+  picker.style.top = Math.max(pad, Math.min(anchor?.top ?? event.clientY, window.innerHeight - ph - pad)) + 'px';
 }
 function openActivityFromSelection() {
   if (!pickerDates.length) return;
@@ -2543,6 +2774,87 @@ function openPicker(event, empId, date) {
   event.stopPropagation();
   _showPicker(event, empId, [date]);
 }
+async function handleCellClick(event, empId, date) {
+  if (suppressCellClick) { suppressCellClick = false; event.stopPropagation(); return; }
+  event.stopPropagation();
+  openPicker(event, empId, date);
+}
+function selectPickerWorkCode(actId, workCodeId) {
+  const code = (appSettings.workCodes || []).find(item => item.id === workCodeId);
+  const input = document.getElementById(`pk-code-${actId}`);
+  const dot = document.getElementById(`pk-code-dot-${actId}`);
+  const label = document.getElementById(`pk-code-label-${actId}`);
+  if (input) input.value = workCodeId;
+  if (dot) dot.style.background = code?.color || '#94a3b8';
+  if (label) label.textContent = code ? `${code.abbreviation} · ${code.name} (${code.hours} h)` : 'Select code';
+  document.querySelectorAll(`#pk-code-menu-${actId} .pk-code-option`).forEach(button => button.classList.toggle('sel', button.dataset.workCodeId === workCodeId));
+  document.getElementById(`pk-code-menu-${actId}`)?.removeAttribute('open');
+}
+function selectPickerShift(actId, shift) {
+  const container = document.getElementById(`pk-shifts-${actId}`);
+  if (!container) return;
+  const customShift = document.getElementById(`pk-custom-shift-${actId}`);
+  const customWrap = document.getElementById(`pk-custom-shift-wrap-${actId}`);
+  const isCustom = shift === 'custom';
+  container.dataset.shift = isCustom ? (customShift?.value.trim() || '') : shift;
+  if (customWrap) customWrap.style.display = isCustom ? 'block' : 'none';
+  if (customShift && !isCustom) customShift.value = '';
+  container.querySelectorAll('.pk-chip').forEach(button => button.classList.toggle('sel', button.getAttribute('onclick')?.includes(`'${shift}'`)));
+  if (isCustom) customShift?.focus();
+}
+function conflictingActivityAssignments(empId, date, actId) {
+  return activities.filter(activity =>
+    activity.id !== actId && Boolean(activityAssignment(`${empId}_${date}_${activity.id}`).workCodeId)
+  );
+}
+function confirmActivityReplacement(empId, dates, actId) {
+  const conflicts = dates.flatMap(date =>
+    conflictingActivityAssignments(empId, date, actId).map(activity => ({ date, activity }))
+  );
+  if (!conflicts.length) return true;
+  const employee = employees.find(item => item.id === empId);
+  const details = conflicts.map(({ date, activity }) => `${fmtMed(date)}: ${activity.name}`).join('\n');
+  return confirm(`${employee?.name || 'This employee'} already has an activity assignment:\n\n${details}\n\nReplace the existing assignment?`);
+}
+function removeConflictingActivityAssignments(empId, date, actId) {
+  conflictingActivityAssignments(empId, date, actId).forEach(activity => {
+    delete activityShiftsMap[`${empId}_${date}_${activity.id}`];
+  });
+}
+async function saveActivityAssignment(empId, actId) {
+  const activity = activities.find(item => item.id === actId);
+  const workCodeId = document.getElementById(`pk-code-${actId}`)?.value || '';
+  const customShift = document.getElementById(`pk-custom-shift-${actId}`)?.value.trim() || '';
+  const shift = customShift || document.getElementById(`pk-shifts-${actId}`)?.dataset.shift || '';
+  if (!activity || !workCodeId || !shift) { alert('Select both a Work Code and a Shift Type.'); return; }
+  const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
+  if (!confirmActivityReplacement(empId, dates, actId)) return;
+  recordUndo();
+  dates.forEach(date => {
+    removeConflictingActivityAssignments(empId, date, actId);
+    activityShiftsMap[`${empId}_${date}_${actId}`] = { shift, workCodeId, excluded: false };
+  });
+  if (pickerSelectedStatus) {
+    dates.forEach(date => {
+      const statusKey = `${empId}_${date}`;
+      const existing = getEntryObj(statusKey);
+      entriesMap[statusKey] = { status: pickerSelectedStatus, durationType: existing?.durationType || 'fullday', time: existing?.time || null };
+    });
+  }
+  markUnsaved(); await saveState();
+  dates.forEach(date => updateCell(empId, date));
+  closePicker();
+}
+async function clearActivityAssignment(empId, actId) {
+  const activity = activities.find(item => item.id === actId);
+  if (!activity) return;
+  const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
+  recordUndo();
+  dates.forEach(date => delete activityShiftsMap[`${empId}_${date}_${actId}`]);
+  markUnsaved(); await saveState();
+  dates.forEach(date => updateCell(empId, date));
+  closePicker();
+}
 function pickStatusById(id) {
   const st = statuses.find(s => s.id === id);
   if (st) pickStatus(st.key);
@@ -2554,7 +2866,7 @@ function pickStatus(key) {
   const btn = document.querySelectorAll('#pk-status-btns .pk-btn')[idx];
   if (btn) btn.classList.add('pk-sel');
   const st = siFor(key);
-  document.getElementById('pk-duration-label').textContent = `Duration — ${st ? st.label : key}`;
+  document.getElementById('pk-duration-label').innerHTML = `Varighet &mdash; ${esc(st ? st.label : key)} <span class="muted" style="font-weight:400;text-transform:none">(Ignorer hvis du tildeler aktivitet under)</span>`;
   document.getElementById('pk-duration-section').style.display = 'flex';
 }
 async function saveWithDuration(durationType) {
@@ -2576,7 +2888,12 @@ async function clearStatus() {
   if (pickerEmpId == null || !pickerDate) return;
   const dates = pickerDates.length ? pickerDates : [pickerDate];
   recordUndo();
-  dates.forEach(date => delete entriesMap[`${pickerEmpId}_${date}`]);
+  dates.forEach(date => {
+    delete entriesMap[`${pickerEmpId}_${date}`];
+    activities.filter(act => actParticipantIds(act).includes(pickerEmpId) && date >= act.startDate && date <= act.endDate).forEach(act => {
+      delete activityShiftsMap[`${pickerEmpId}_${date}_${act.id}`];
+    });
+  });
   markUnsaved();
   await saveState();
   dates.forEach(date => updateCell(pickerEmpId, date));
@@ -2592,12 +2909,27 @@ async function saveShift(empId, date, actId, shift) {
       entriesMap[statusKey] = { ...(existing || {}), status: pickerSelectedStatus, durationType: existing?.durationType || 'fullday', time: existing?.time || null };
     }
     const key = `${empId}_${selectedDate}_${actId}`;
-    if (shift === null) delete activityShiftsMap[key];
-    else activityShiftsMap[key] = shift;
+    if (shift === null) activityShiftsMap[key] = { shift: '', workCodeId: null, excluded: true };
+    else activityShiftsMap[key] = { ...activityAssignment(key), shift, excluded: false };
   }
-  syncParticipantScheduledState(actId, empId);
   markUnsaved();
   await saveState();
+  dates.forEach(selectedDate => updateCell(empId, selectedDate));
+  closePicker();
+}
+async function setAssignmentWorkCode(empId, date, actId, workCodeId) {
+  const dates = pickerEmpId === empId && pickerDates.length ? pickerDates : [date];
+  if (workCodeId && !confirmActivityReplacement(empId, dates, actId)) return;
+  recordUndo();
+  for (const selectedDate of dates) {
+    const key = `${empId}_${selectedDate}_${actId}`;
+    if (!workCodeId) delete activityShiftsMap[key];
+    else {
+      removeConflictingActivityAssignments(empId, selectedDate, actId);
+      activityShiftsMap[key] = { shift: '', workCodeId, excluded: false };
+    }
+  }
+  markUnsaved(); await saveState();
   dates.forEach(selectedDate => updateCell(empId, selectedDate));
   closePicker();
 }
@@ -2623,70 +2955,181 @@ document.addEventListener('click', e => {
 // ═══ STATUS MANAGER ══════════════════════════════════════════════════════════
 function openStatusManager() {
   resetStatusForm();
+  resetDailyStatusForm();
+  resetWorkCodeForm();
   renderStatusList();
+  renderDailyStatusList();
+  renderWorkCodeList();
   document.getElementById('status-modal').classList.add('open');
 }
 function resetStatusForm() {
   editingStatusId = null;
-  document.getElementById('sf-form-title').textContent = 'Add a new status';
-  document.getElementById('sf-save-btn').textContent = 'Add status';
+  document.getElementById('sf-form-title').textContent = 'Add a new activity type';
+  document.getElementById('sf-save-btn').textContent = 'Add activity type';
   document.getElementById('sf-cancel-edit').style.display = 'none';
   document.getElementById('sf-label').value = '';
   document.getElementById('sf-abbr').value = '';
-  document.getElementById('sf-absence').checked = false;
-  document.getElementById('sf-ooo').checked = false;
   selectedStatusColor = PALETTE[0];
   buildSwatchRow('sf-swatches', selectedStatusColor, c => { selectedStatusColor = c; markSwatch('sf-swatches', c); });
 }
 function renderStatusList() {
   const list = document.getElementById('status-list');
-  if (!statuses.length) { list.innerHTML = '<div class="empty-note" style="padding:22px">No statuses yet. Add your first one above.</div>'; return; }
-  list.innerHTML = statuses.map(s => `
+  const activityTypes = sortedPlanningItems(appSettings.activityTypes);
+  if (!activityTypes.length) { list.innerHTML = '<div class="empty-note" style="padding:22px">No activity types yet. Add your first one above.</div>'; return; }
+  list.innerHTML = activityTypes.map(type => `
     <div class="flex items-center justify-between" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px">
       <span class="flex items-center gap-2">
-        <span class="badge-status" style="${statusStyle(s.color)}">${esc(s.abbr)}</span>
-        <span style="font-weight:500;font-size:13px">${esc(s.label)}</span>
-        <span class="muted text-sm">(${esc(s.key)})</span>
+        <span class="badge-status" style="${statusStyle(type.color)}">${esc(type.abbreviation)}</span>
+        <span style="font-weight:500;font-size:13px">${esc(type.name)}</span>
       </span>
       <span class="flex gap-2">
-        <button class="icon-btn" title="Edit" onclick="startEditStatus(${s.id})">${svgIcon('edit')}</button>
-        <button class="icon-btn danger" title="Delete" onclick="confirmDelete('status',${s.id})">${svgIcon('trash')}</button>
+        <button class="icon-btn" title="Edit" onclick="startEditStatus('${esc(type.id)}')">${svgIcon('edit')}</button>
+        <button class="icon-btn danger" title="Delete" onclick="deleteActivityType('${esc(type.id)}')">${svgIcon('trash')}</button>
       </span>
     </div>`).join('');
 }
 function startEditStatus(id) {
-  const st = statuses.find(s => s.id === id);
-  if (!st) return;
+  const type = (appSettings.activityTypes || []).find(item => item.id === id);
+  if (!type) return;
   editingStatusId = id;
-  document.getElementById('sf-form-title').textContent = `Edit status — ${st.label}`;
+  document.getElementById('sf-form-title').textContent = `Edit activity type - ${type.name}`;
   document.getElementById('sf-save-btn').textContent = 'Save changes';
   document.getElementById('sf-cancel-edit').style.display = 'inline-block';
-  document.getElementById('sf-label').value = st.label;
-  document.getElementById('sf-abbr').value = st.abbr;
-  document.getElementById('sf-absence').checked = st.isAbsence === true;
-  document.getElementById('sf-ooo').checked = st.isOutOfOffice === true;
-  selectedStatusColor = st.color;
+  document.getElementById('sf-label').value = type.name;
+  document.getElementById('sf-abbr').value = type.abbreviation;
+  selectedStatusColor = type.color;
   buildSwatchRow('sf-swatches', selectedStatusColor, c => { selectedStatusColor = c; markSwatch('sf-swatches', c); });
 }
 async function saveStatus() {
-  const label = document.getElementById('sf-label').value.trim();
-  const abbr = document.getElementById('sf-abbr').value.trim().toUpperCase();
-  if (!label) { alert('Label is required.'); return; }
-  if (!abbr) { alert('Abbreviation is required (1–3 characters).'); return; }
-  const isAbsence = document.getElementById('sf-absence').checked;
-  const isOutOfOffice = document.getElementById('sf-ooo').checked;
+  const name = document.getElementById('sf-label').value.trim();
+  const abbreviation = document.getElementById('sf-abbr').value.trim().toUpperCase();
+  if (!name) { alert('Name is required.'); return; }
+  if (!abbreviation) { alert('Abbreviation is required.'); return; }
+  const activityTypes = appSettings.activityTypes || (appSettings.activityTypes = []);
   if (editingStatusId) {
-    const idx = statuses.findIndex(s => s.id === editingStatusId);
-    if (idx !== -1) statuses[idx] = { ...statuses[idx], label, abbr, color: selectedStatusColor, isAbsence, isOutOfOffice };
+    const index = activityTypes.findIndex(type => type.id === editingStatusId);
+    if (index !== -1) activityTypes[index] = { ...activityTypes[index], name, abbreviation, color: selectedStatusColor };
   } else {
-    let key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `s${nextStatusId}`;
+    let key = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `activity_type_${Date.now()}`;
     let candidate = key, n = 2;
-    while (statuses.some(s => s.key === candidate)) candidate = `${key}_${n++}`;
-    statuses.push({ id: nextStatusId++, key: candidate, label, abbr, color: selectedStatusColor, isAbsence, isOutOfOffice });
+    while (activityTypes.some(type => type.key === candidate)) candidate = `${key}_${n++}`;
+    activityTypes.push({ id: `at${Date.now()}`, key: candidate, name, abbreviation, color: selectedStatusColor });
   }
+  persistSettings();
   markUnsaved();
   await saveState();
   resetStatusForm(); renderStatusList();
+}
+async function deleteActivityType(id) {
+  const type = (appSettings.activityTypes || []).find(item => item.id === id);
+  if (!type || !confirm(`Delete activity type "${type.name}"? Existing activities keep their saved type key.`)) return;
+  recordUndo();
+  appSettings.activityTypes = appSettings.activityTypes.filter(item => item.id !== id);
+  persistSettings(); markUnsaved(); await saveState(); renderStatusList();
+}
+function resetDailyStatusForm() {
+  editingDailyStatusId = null;
+  document.getElementById('dsf-form-title').textContent = 'Add a daily status';
+  document.getElementById('dsf-save-btn').textContent = 'Add status';
+  document.getElementById('dsf-cancel-edit').style.display = 'none';
+  document.getElementById('dsf-label').value = '';
+  document.getElementById('dsf-abbr').value = '';
+  document.getElementById('dsf-absence').checked = false;
+  document.getElementById('dsf-out-of-office').checked = false;
+  selectedDailyStatusColor = PALETTE[0];
+  buildSwatchRow('dsf-swatches', selectedDailyStatusColor, color => { selectedDailyStatusColor = color; markSwatch('dsf-swatches', color); });
+}
+function renderDailyStatusList() {
+  const list = document.getElementById('daily-status-list');
+  if (!statuses.length) { list.innerHTML = '<div class="empty-note" style="padding:22px">No daily statuses yet. Add your first one above.</div>'; return; }
+  list.innerHTML = statuses.map(status => `
+    <div class="flex items-center justify-between" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px">
+      <span class="flex items-center gap-2"><span class="badge-status" style="${statusStyle(status.color)}">${esc(status.abbr)}</span><span><span style="font-weight:500;font-size:13px">${esc(status.label)}</span><span class="muted text-sm">${status.isAbsence ? ' · absence' : ''}${status.isOutOfOffice ? ' · out of office' : ''}</span></span></span>
+      <span class="flex gap-2"><button class="icon-btn" title="Edit" onclick="startEditDailyStatus(${status.id})">${svgIcon('edit')}</button><button class="icon-btn danger" title="Delete" onclick="confirmDelete('status',${status.id})">${svgIcon('trash')}</button></span>
+    </div>`).join('');
+}
+function startEditDailyStatus(id) {
+  const status = statuses.find(item => item.id === id);
+  if (!status) return;
+  editingDailyStatusId = id;
+  document.getElementById('dsf-form-title').textContent = `Edit daily status - ${status.label}`;
+  document.getElementById('dsf-save-btn').textContent = 'Save changes';
+  document.getElementById('dsf-cancel-edit').style.display = 'inline-block';
+  document.getElementById('dsf-label').value = status.label;
+  document.getElementById('dsf-abbr').value = status.abbr;
+  document.getElementById('dsf-absence').checked = status.isAbsence === true;
+  document.getElementById('dsf-out-of-office').checked = status.isOutOfOffice === true;
+  selectedDailyStatusColor = status.color;
+  buildSwatchRow('dsf-swatches', selectedDailyStatusColor, color => { selectedDailyStatusColor = color; markSwatch('dsf-swatches', color); });
+}
+async function saveDailyStatus() {
+  const label = document.getElementById('dsf-label').value.trim();
+  const abbr = document.getElementById('dsf-abbr').value.trim().toUpperCase();
+  if (!label || !abbr) { alert('Daily status name and abbreviation are required.'); return; }
+  if (statuses.some(status => status.id !== editingDailyStatusId && status.label.toLowerCase() === label.toLowerCase())) { alert('A daily status with this name already exists.'); return; }
+  if (editingDailyStatusId !== null) {
+    const index = statuses.findIndex(status => status.id === editingDailyStatusId);
+    if (index !== -1) statuses[index] = { ...statuses[index], label, abbr, color: selectedDailyStatusColor, isAbsence: document.getElementById('dsf-absence').checked, isOutOfOffice: document.getElementById('dsf-out-of-office').checked };
+  } else {
+    let key = label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `status_${Date.now()}`;
+    let candidate = key, suffix = 2;
+    while (statuses.some(status => status.key === candidate)) candidate = `${key}_${suffix++}`;
+    statuses.push({ id: nextStatusId++, key: candidate, label, abbr, color: selectedDailyStatusColor, isAbsence: document.getElementById('dsf-absence').checked, isOutOfOffice: document.getElementById('dsf-out-of-office').checked });
+  }
+  sortDailyStatuses();
+  markUnsaved();
+  await saveState();
+  resetDailyStatusForm();
+  renderDailyStatusList();
+  if (currentPage === 'grid') renderPage();
+}
+function resetWorkCodeForm() {
+  document.getElementById('wcf-id').value = '';
+  document.getElementById('wcf-name').value = '';
+  document.getElementById('wcf-abbr').value = '';
+  document.getElementById('wcf-hours').value = '0';
+  selectedWorkCodeColor = '#3b82f6';
+  buildSwatchRow('wcf-swatches', selectedWorkCodeColor, color => { selectedWorkCodeColor = color; markSwatch('wcf-swatches', color); });
+  document.getElementById('wcf-cancel').style.display = 'none';
+  document.getElementById('wcf-save').textContent = 'Add work code';
+}
+function renderWorkCodeList() {
+  const list = document.getElementById('work-code-list');
+  const workCodes = sortedPlanningItems(appSettings.workCodes);
+  list.innerHTML = workCodes.length ? workCodes.map(code => `<div class="flex items-center justify-between" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px"><span class="flex items-center gap-2"><span style="width:8px;height:8px;border-radius:50%;background:${code.color};flex:none"></span><span><b>${esc(code.abbreviation)}</b> · ${esc(code.name)} <span class="muted text-sm">(${code.hours} h)</span></span></span><span class="flex gap-2"><button class="icon-btn" title="Edit" onclick="editWorkCode('${esc(code.id)}')">${svgIcon('edit')}</button><button class="icon-btn danger" title="Delete" onclick="deleteWorkCode('${esc(code.id)}')">${svgIcon('trash')}</button></span></div>`).join('') : '<div class="empty-note" style="padding:22px">No work codes yet.</div>';
+}
+function editWorkCode(id) {
+  const code = (appSettings.workCodes || []).find(item => item.id === id);
+  if (!code) return;
+  document.getElementById('wcf-id').value = id;
+  document.getElementById('wcf-name').value = code.name;
+  document.getElementById('wcf-abbr').value = code.abbreviation;
+  document.getElementById('wcf-hours').value = String(code.hours);
+  selectedWorkCodeColor = code.color;
+  buildSwatchRow('wcf-swatches', selectedWorkCodeColor, color => { selectedWorkCodeColor = color; markSwatch('wcf-swatches', color); });
+  document.getElementById('wcf-cancel').style.display = '';
+  document.getElementById('wcf-save').textContent = 'Save changes';
+}
+async function saveWorkCode() {
+  const id = document.getElementById('wcf-id').value;
+  const name = document.getElementById('wcf-name').value.trim();
+  const abbreviation = document.getElementById('wcf-abbr').value.trim().toUpperCase();
+  const hours = Number(document.getElementById('wcf-hours').value);
+  if (!name || !abbreviation) { alert('Work code name and abbreviation are required.'); return; }
+  if (!Number.isFinite(hours) || hours < 0) { alert('Hours must be zero or greater.'); return; }
+  const workCodes = appSettings.workCodes || (appSettings.workCodes = []);
+  const index = workCodes.findIndex(code => code.id === id);
+  if (id && index !== -1) workCodes[index] = { ...workCodes[index], name, abbreviation, hours, color: selectedWorkCodeColor };
+  else workCodes.push({ id: `wc${Date.now()}`, name, abbreviation, hours, color: selectedWorkCodeColor });
+  persistSettings(); markUnsaved(); await saveState(); resetWorkCodeForm(); renderWorkCodeList();
+}
+async function deleteWorkCode(id) {
+  const code = (appSettings.workCodes || []).find(item => item.id === id);
+  if (!code || !confirm(`Delete work code "${code.name}"?`)) return;
+  recordUndo();
+  appSettings.workCodes = appSettings.workCodes.filter(item => item.id !== id);
+  Object.keys(activityShiftsMap).forEach(key => { if (activityAssignment(key).workCodeId === id) activityShiftsMap[key] = { ...activityAssignment(key), workCodeId: null }; });
+  persistSettings(); markUnsaved(); await saveState(); renderWorkCodeList();
 }
 
 // ═══ SWATCH HELPERS ══════════════════════════════════════════════════════════
@@ -2702,14 +3145,25 @@ function markSwatch(containerId, color) {
 
 // ═══ ACTIVITIES ══════════════════════════════════════════════════════════════
 function buildActivityTypeOptions(selected) {
-  const sel = document.getElementById('af-type');
-  const options = [`<option value="">No type</option>`,
-    ...statuses.map(s => `<option value="${esc(s.key)}"${s.key === selected ? ' selected' : ''}>${esc(s.label)}</option>`)];
-  if (selected && !statuses.some(s => s.key === selected)) {
-    options.push(`<option value="${esc(selected)}" selected>${esc(selected)} (legacy type)</option>`);
-  }
-  sel.innerHTML = options.join('');
-  sel.value = selected || '';
+  const input = document.getElementById('af-type');
+  const label = document.getElementById('af-type-label');
+  const dot = document.getElementById('af-type-dot');
+  const options = document.getElementById('af-type-options');
+  const activityTypes = sortedPlanningItems(appSettings.activityTypes);
+  const selectedType = activityTypes.find(type => type.key === selected);
+  input.value = selected || '';
+  label.textContent = selectedType?.name || (selected ? `${selected} (legacy type)` : 'No type');
+  dot.style.background = selectedType?.color || '#94a3b8';
+  options.innerHTML = [
+    `<button type="button" class="activity-type-option${selected ? '' : ' sel'}" data-type-key="" onclick="selectActivityType(this.dataset.typeKey)"><span class="pk-color-dot" style="background:#94a3b8"></span><span>No type</span></button>`,
+    ...activityTypes.map(type => `<button type="button" class="activity-type-option${type.key === selected ? ' sel' : ''}" data-type-key="${esc(type.key)}" onclick="selectActivityType(this.dataset.typeKey)"><span class="pk-color-dot" style="background:${type.color}"></span><span>${esc(type.name)}</span></button>`),
+    ...(selected && !selectedType ? [`<button type="button" class="activity-type-option sel" data-type-key="${esc(selected)}" onclick="selectActivityType(this.dataset.typeKey)"><span class="pk-color-dot" style="background:#94a3b8"></span><span>${esc(selected)} (legacy type)</span></button>`] : []),
+  ].join('');
+}
+function selectActivityType(typeKey) {
+  buildActivityTypeOptions(typeKey || '');
+  document.getElementById('af-type-menu').removeAttribute('open');
+  document.querySelector('#af-type-menu summary')?.focus();
 }
 function buildParticipantPicker() {
   const container = document.getElementById('af-participants');
@@ -2717,9 +3171,7 @@ function buildParticipantPicker() {
   count.textContent = `(${selectedParticipants.length} selected)`;
   if (!employees.length) { container.innerHTML = '<div class="muted text-sm" style="padding:8px 10px">Add personnel first to assign participants.</div>'; return; }
   container.innerHTML = sortedEmployees().map(emp => {
-    const part = selectedParticipants.find(p => p.id === emp.id);
-    const checked = Boolean(part);
-    const shiftType = part?.shiftType === 'none' ? 'none' : (part?.shiftType === 'night' ? 'night' : (part?.shiftType === 'normal' ? 'normal' : 'day'));
+    const checked = selectedParticipants.some(p => p.id === emp.id);
     return `<div class="participant-option${checked ? ' sel' : ''}">
       <label class="participant-head">
         <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleParticipant(${emp.id},this.checked)">
@@ -2728,32 +3180,12 @@ function buildParticipantPicker() {
           <small>${esc(emp.role)} · ${esc(emp.department)}</small>
         </span>
       </label>
-      ${checked ? `<div class="participant-controls">
-        <span class="pc-label">Type:</span>
-        <select aria-label="Shift type for ${esc(emp.name)}" onchange="setParticipantShiftType(${emp.id},this.value)">
-          <option value="none"${shiftType === 'none' ? ' selected' : ''}>No shift scheduled</option>
-          <option value="normal"${shiftType === 'normal' ? ' selected' : ''}>Normal Day</option>
-          <option value="day"${shiftType === 'day' ? ' selected' : ''}>Day shift</option>
-          <option value="night"${shiftType === 'night' ? ' selected' : ''}>Night shift</option>
-        </select>
-        <span class="pc-label">Time:</span>
-        <input list="shift-presets-dl" value="${esc(part?.shift || '')}" placeholder="${shiftType === 'none' ? 'No shift scheduled' : 'e.g. 0800-1600 (optional)'}"
-          aria-label="Shift time for ${esc(emp.name)}" ${shiftType === 'none' ? 'disabled' : ''} oninput="setParticipantShift(${emp.id},this.value)">
-      </div>` : ''}
     </div>`;
-  }).join('') + `<datalist id="shift-presets-dl">${SHIFT_PRESETS.map(p => `<option value="${p}"></option>`).join('')}</datalist>`;
+  }).join('');
 }
 function toggleParticipant(id, checked) {
-  if (checked) { if (!selectedParticipants.find(p => p.id === id)) selectedParticipants.push({ id, shift: '', shiftType: 'none', hasScheduledShifts: false }); }
+  if (checked) { if (!selectedParticipants.find(p => p.id === id)) selectedParticipants.push({ id }); }
   else selectedParticipants = selectedParticipants.filter(p => p.id !== id);
-  buildParticipantPicker();
-}
-function setParticipantShift(id, shift) { const p = selectedParticipants.find(p => p.id === id); if (p) p.shift = shift; }
-function setParticipantShiftType(id, t) {
-  const p = selectedParticipants.find(p => p.id === id);
-  if (!p) return;
-  p.shiftType = t === 'none' ? 'none' : (t === 'night' ? 'night' : (t === 'normal' ? 'normal' : 'day'));
-  if (p.shiftType === 'none') p.shift = '';
   buildParticipantPicker();
 }
 function openActModal(id) {
@@ -2780,9 +3212,9 @@ function openActModal(id) {
   updateActivityWeekLabels();
   document.getElementById('af-notes').value = act?.notes || '';
   selectedActColor = act?.color || PALETTE[0];
-  selectedParticipants = act ? act.participants.map(p => ({ ...p })) : [];
+  selectedParticipants = act ? act.participants.map(p => ({ id: p.id })) : [];
   if (!act && preset?.participantId && employees.some(emp => emp.id === preset.participantId)) {
-    selectedParticipants = [{ id: preset.participantId, shift: '', shiftType: 'none', hasScheduledShifts: false }];
+    selectedParticipants = [{ id: preset.participantId }];
   }
   pendingActivityPreset = null;
   buildSwatchRow('af-swatches', selectedActColor, c => { selectedActColor = c; markSwatch('af-swatches', c); });
@@ -2846,15 +3278,6 @@ async function saveActivity() {
     const parts = key.split('_');
     if (+parts[2] === rec.id && (parts[1] < rec.startDate || parts[1] > rec.endDate)) delete activityShiftsMap[key];
   }
-  const endD = new Date(rec.endDate + 'T00:00:00');
-  for (const p of rec.participants) {
-    for (const d = new Date(rec.startDate + 'T00:00:00'); d <= endD; d.setDate(d.getDate() + 1)) {
-      const key = `${p.id}_${fmt(d)}_${rec.id}`;
-      if (p.shiftType === 'none') delete activityShiftsMap[key];
-    }
-    if (p.shiftType === 'none') p.hasScheduledShifts = false;
-    else syncParticipantScheduledState(rec.id, p.id);
-  }
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
   markUnsaved();
   await saveState();
@@ -2884,14 +3307,14 @@ function activityReportRows(act) {
     const emp = empById(participant.id);
     if (!emp) return;
     dates.forEach(date => {
-      const shift = participantActivityShift(act, emp.id, date);
+      const info = activityAssignmentInfo(act, emp.id, date);
       rows.push({
         employee: emp.name,
         department: emp.department,
         date,
-        shiftType: shift ? (participant.shiftType === 'night' ? 'Night' : (participant.shiftType === 'normal' ? 'Normal Day' : 'Day')) : '',
-        shift: shift || 'Not scheduled',
-        hours: shift ? activityShiftHours(act, emp.id, shift) : 0,
+        shiftType: info?.workCode.abbreviation || '',
+        shift: info?.physicalShift || 'Not scheduled',
+        hours: info?.hours || 0,
       });
     });
   });
@@ -2902,44 +3325,47 @@ function openActivityReport(id) {
   if (!act) return;
   activityReportId = id;
   const dates = activityReportDates(act);
-  const participants = [...(act.participants || [])].sort((a, b) =>
-    (empById(a.id)?.name || '').localeCompare(empById(b.id)?.name || ''));
-  const metaDetails = [
-    act.project ? `Cost Center: ${esc(act.project)}` : '',
-    act.order ? `Order: ${esc(act.order)}` : '',
-    act.billing ? `Billing explanation: ${esc(act.billing)}` : ''
-  ].filter(Boolean).join(' · ');
+  const participantGroups = activityReportParticipantGroups(act);
 
   document.getElementById('activity-report-title').textContent = `Work Schedule: ${act.name}`;
   document.getElementById('activity-report-content').innerHTML = `
-    <div style="margin-bottom:14px"><div style="font-weight:600;font-size:14px">Work Schedule</div><div style="margin-top:3px">${esc(act.name)}</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)} · ${(act.participants || []).length} participant${(act.participants || []).length === 1 ? '' : 's'}</div>${metaDetails ? `<div class="muted text-sm" style="margin-top:5px">${metaDetails}</div>` : ''}</div>
+    <div style="margin-bottom:14px"><div style="background:var(--muted-bg);border:1px solid var(--border);border-radius:6px;padding:10px"><div><b>Cost Center:</b> ${esc(act.project || 'Ikke angitt')}</div><div style="margin-top:4px"><b>Order:</b> ${esc(act.order || 'Ikke angitt')}</div><div style="margin-top:4px"><b>Billing explanation:</b> ${esc(act.billing || 'Ingen merknad')}</div></div><div class="muted text-sm" style="margin-top:7px">Period: ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)} · ${(act.participants || []).length} participant${(act.participants || []).length === 1 ? '' : 's'}</div></div>
     <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:620px">
       <thead><tr style="text-align:left;border-bottom:2px solid var(--border)">
         <th style="padding:7px 8px;min-width:150px">Employee</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 8px;min-width:92px;background:${weekend ? '#fff7ed' : 'transparent'};color:${weekend ? '#c2410c' : 'inherit'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}
       </tr></thead>
-      <tbody>${participants.length ? participants.map(participant => {
-        const emp = empById(participant.id);
-        if (!emp) return '';
-        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${esc(emp.name)}<div class="muted" style="font-size:11px;margin-top:2px">${esc(emp.department)}</div></td>${dates.map(date => {
-          const shift = participantActivityShift(act, emp.id, date);
-          const shiftType = participant.shiftType === 'night' ? 'Night' : (participant.shiftType === 'normal' ? 'Normal Day' : 'Day');
-          const label = shift ? `${shiftType} shift` : '—';
-          const shiftLabel = shift || activityDefaultShift(participant.shiftType, act);
-          const hours = shift ? `<div style="font-size:11px;margin-top:2px">${esc(shiftLabel)}</div><div class="muted" style="font-size:10px;margin-top:2px">${activityShiftHours(act, emp.id, shift)} h</div>` : '';
+      <tbody>${participantGroups.length ? participantGroups.map(group => `<tr><td colspan="${dates.length + 1}" style="padding:7px 8px;background:${group.color}18;border-bottom:1px solid ${group.color}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${group.color};margin-right:5px"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${esc(emp.name)}</td>${dates.map(date => {
+          const info = activityAssignmentInfo(act, emp.id, date);
+          const label = info ? info.workCode.abbreviation : '—';
+          const details = info ? `<div style="font-size:11px;margin-top:2px">${esc(info.physicalShift)}</div><div class="muted" style="font-size:10px;margin-top:2px">${info.hours}t</div>` : '';
           const weekendBackground = isWknd(new Date(`${date}T00:00:00`)) ? '#fff7ed' : 'transparent';
-          const cellBackground = shift ? `${act.color}14` : weekendBackground;
-          return `<td style="padding:8px;background:${cellBackground};color:${shift ? 'var(--text)' : 'var(--muted)'};border-left:${weekendBackground !== 'transparent' ? '1px solid #fed7aa' : '0'}">${esc(label)}${hours}</td>`;
-        }).join('')}</tr>`;
-      }).join('') : `<tr><td colspan="${dates.length + 1}" class="empty-note" style="padding:24px;text-align:center">No participants assigned.</td></tr>`}</tbody>
+          const cellBackground = info ? `${info.workCode.color}14` : weekendBackground;
+          return `<td style="padding:8px;background:${cellBackground};color:${info ? 'var(--text)' : 'var(--muted)'};border-left:${weekendBackground !== 'transparent' ? '1px solid #fed7aa' : '0'}"><strong>${esc(label)}</strong>${details}</td>`;
+        }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${dates.length + 1}" class="empty-note" style="padding:24px;text-align:center">No participants assigned.</td></tr>`}</tbody>
     </table>`;
   document.getElementById('activity-report-modal').classList.add('open');
 }
 function activityReportCsvValue(value) { return `"${String(value ?? '').replace(/"/g, '""')}"`; }
+function activityReportParticipantGroups(act) {
+  const groups = new Map();
+  [...(act.participants || [])].forEach(participant => {
+    const emp = empById(participant.id);
+    if (!emp) return;
+    const name = emp.department || 'Ikke angitt';
+    if (!groups.has(name)) groups.set(name, []);
+    groups.get(name).push({ participant, emp });
+  });
+  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([name, participants]) => ({
+    name,
+    color: resolveDeptColor(name) || '#999',
+    participants: participants.sort((a, b) => a.emp.name.localeCompare(b.emp.name)),
+  }));
+}
 function exportActivityReportCsv() {
   const act = activities.find(item => item.id === activityReportId);
   if (!act) return;
   const rows = activityReportRows(act);
-  const lines = [['Report', 'Activity', 'Cost Center', 'Order', 'Billing explanation', 'Employee', 'Department', 'Date', 'Shift type', 'Shift', 'Hours'],
+  const lines = [['Report', 'Activity', 'Cost Center', 'Order', 'Billing explanation', 'Employee', 'Department', 'Date', 'Work Code', 'Physical Shift', 'Hours'],
     ...rows.map(row => ['Work Schedule', act.name, act.project || '', act.order || '', act.billing || '', row.employee, row.department, row.date, row.shiftType, row.shift, row.hours])]
     .map(row => row.map(activityReportCsvValue).join(','));
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
@@ -2950,13 +3376,31 @@ function exportActivityReportCsv() {
 }
 function printActivityReport() {
   const act = activities.find(item => item.id === activityReportId);
-  const content = document.getElementById('activity-report-content')?.innerHTML;
-  if (!act || !content) return;
+  if (!act) return;
+  const dates = activityReportDates(act);
+  const participantGroups = activityReportParticipantGroups(act);
+  const sections = [];
+  for (let i = 0; i < dates.length; i += 14) {
+    const chunkDates = dates.slice(i, i + 14);
+    sections.push(`<section class="report-section">
+      <h1>Work Schedule: ${esc(act.name)}</h1>
+      <div class="info-box"><div><b>Cost Center:</b> ${esc(act.project || 'Ikke angitt')}</div><div><b>Order:</b> ${esc(act.order || 'Ikke angitt')}</div><div><b>Billing explanation:</b> ${esc(act.billing || 'Ingen merknad')}</div></div>
+      <div class="period">Period: ${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])}</div>
+      <table><thead><tr><th class="employee-column">Employee</th>${chunkDates.map(date => {
+        const weekend = isWknd(new Date(`${date}T00:00:00`));
+        return `<th class="date-column${weekend ? ' weekend' : ''}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted">${fmtShort(date)}</div></th>`;
+      }).join('')}</tr></thead><tbody>${participantGroups.length ? participantGroups.map(group => `<tr class="section-row"><td colspan="${chunkDates.length + 1}" style="background:${group.color}18;border-bottom-color:${group.color}"><span class="section-dot" style="background-color:${group.color}"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr><td><b>${esc(emp.name)}</b></td>${chunkDates.map(date => {
+          const info = activityAssignmentInfo(act, emp.id, date);
+          const weekend = isWknd(new Date(`${date}T00:00:00`));
+          return `<td class="${weekend ? 'weekend ' : ''}${info ? 'scheduled' : ''}"${info ? ` style="background:${info.workCode.color}14"` : ''}>${info ? `<strong>${esc(info.workCode.abbreviation)}</strong><div>${esc(info.physicalShift)}</div><div class="muted">${info.hours}t</div>` : '—'}</td>`;
+        }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${chunkDates.length + 1}" class="empty-note">No participants assigned.</td></tr>`}</tbody></table>
+    </section>`);
+  }
   const printWindow = window.open('', '_blank', 'width=1100,height=800');
   if (!printWindow) { alert('Please allow pop-ups to print the activity report.'); return; }
   printWindow.document.write(`<!doctype html><html><head><title>Work Schedule - ${esc(act.name)}</title><style>
-    body{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;padding:24px}h1{font-size:20px;margin:0 0 16px}table{width:100%;border-collapse:collapse}th,td{padding:7px 8px;border-bottom:1px solid #ddd;text-align:left}th:last-child,td:last-child{text-align:right}.muted{color:#666;font-size:12px;margin-bottom:12px}
-  </style></head><body><h1>Work Schedule</h1><div style="margin-bottom:16px">${esc(act.name)}<br><span style="color:#666;font-size:12px">Period: ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}</span></div>${content}</body></html>`);
+    @page{size:landscape;margin:8mm}*{box-sizing:border-box}body{font:9px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.info-box{background:#f5f5f5;border:1px solid #d8d8d8;border-radius:6px;padding:8px;margin-top:8px;display:flex;gap:20px}.period{color:#666;margin:7px 0 10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:5px 4px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:145px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:#fff7ed}.empty-note{text-align:center;padding:20px}.scheduled{color:#111}.section-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+  </style></head><body>${sections.join('')}</body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
 
@@ -2966,42 +3410,62 @@ function teamReportDates(start, end) {
   return dates;
 }
 function teamReportEntries(start, end) {
-  const entries = [];
-  sortedEmployees().forEach(emp => {
+  return sortedEmployees().map(emp => {
     const employeeActivities = activities.filter(act => {
       const participant = participantFor(act, emp.id);
-      return act.startDate <= end && act.endDate >= start && participant && participant.shiftType !== 'normal' && activityHasScheduledShift(act, emp.id, start, end);
+      return act.startDate <= end && act.endDate >= start && participant && activityHasScheduledShift(act, emp.id, start, end);
     })
-      .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name))
-    if (employeeActivities.length) employeeActivities.forEach(act => entries.push({ emp, act }));
-    else entries.push({ emp, act: null });
+      .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
+    return { emp, activities: employeeActivities };
   });
-  return entries;
 }
-function teamReportCellInfo(emp, act, date, isFirstDay) {
+function teamReportActivities(entries) {
+  return [...new Map(entries.flatMap(({ activities: employeeActivities }) => employeeActivities.map(act => [act.id, act]))).values()]
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+function teamReportBillingSummary(reportActivities) {
+  return `<div style="margin-bottom:15px;padding:10px;background:var(--muted-bg, #f8f9fa);border:1px solid #ccc;font-size:11px"><strong style="display:block;margin-bottom:7px">Faktureringskoder for perioden:</strong>${reportActivities.length ? `<table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">Aktivitet</th><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">CC</th><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">Ord</th><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">Fritekst</th></tr></thead><tbody>${reportActivities.map(act => `<tr><td style="padding:5px 7px;border:1px solid #ccc;font-weight:600;color:${act.color || 'inherit'}">${esc(act.name)}</td><td style="padding:5px 7px;border:1px solid #ccc">${esc(act.project || '-')}</td><td style="padding:5px 7px;border:1px solid #ccc">${esc(act.order || '-')}</td><td style="padding:5px 7px;border:1px solid #ccc">${esc(act.billing || '-')}</td></tr>`).join('')}</tbody></table>` : 'Ingen aktiviteter i perioden'}</div>`;
+}
+function teamReportShiftRange(act, participant, shift) {
+  const shiftType = assignmentShiftType(shift, participant);
+  if (shift === 'normal' || shift === 'day' || shift === 'night') return activityDefaultShift(shift, act);
+  if (shift === 'turn') return 'Snudøgn';
+  const configuredRange = activityDefaultShift(shiftType, act);
+  const oppositeDefault = shiftType === 'night' ? activityDefaultShift('day', act) : activityDefaultShift('night', act);
+  return shift === 'fullday' || shift === oppositeDefault ? configuredRange : shift;
+}
+function teamReportCellInfo(emp, act, date) {
   if (!act) return '';
   if (date < act.startDate || date > act.endDate) return '';
   const day = new Date(`${date}T00:00:00`);
   if (isWknd(day) && !act.includeWeekends) return '';
-  const shift = participantActivityShift(act, emp.id, date);
-  const participant = participantFor(act, emp.id);
-  if (!shift) return null;
-  const shiftType = participant?.shiftType === 'night' ? 'night' : (participant?.shiftType === 'normal' ? 'normal' : 'day');
-  const type = shiftType === 'night' ? 'Night' : (shiftType === 'normal' ? 'Normal' : 'Day');
-  const range = shift === 'fullday' ? activityDefaultShift(participant?.shiftType, act) : shift;
-  const hours = isFirstDay ? (24 - appSettings.coreHoursPerDay) : 24;
+  const info = activityAssignmentInfo(act, emp.id, date);
+  if (!info) return null;
+  const hours = info.hours;
   const days = hours / 24;
-  const tint = shiftType === 'night' ? 0.22 : 0.12;
+  const tint = info.assignment.shift === 'night' ? 0.22 : 0.12;
   return {
-    html: `<div style="font-weight:600">${esc(act.abbreviation || act.name)}</div><div style="font-size:10px;margin-top:2px">${type} · ${esc(range)}</div><div class="muted" style="font-size:10px">${hours} h</div>`,
+    html: `<div style="font-weight:700">${esc(info.workCode.abbreviation)}</div><div style="font-size:10px;margin-top:2px">${esc(info.physicalShift)}</div><div class="muted" style="font-size:10px">${hours}t</div>`,
     hours,
     days,
     tint,
+    workCode: info.workCode,
   };
 }
 function teamReportCell(emp, act, date) {
-  const info = teamReportCellInfo(emp, act, date, false);
+  const info = teamReportCellInfo(emp, act, date);
   return info ? info.html : '';
+}
+function teamReportEntryCellInfo(entry, date) {
+  const act = entry.activities.find(item => participantActivityShift(item, entry.emp.id, date));
+  if (!act) return null;
+  const info = teamReportCellInfo(entry.emp, act, date);
+  return info ? { ...info, act } : null;
+}
+function teamReportActivityLabels(employeeActivities) {
+  return employeeActivities.length
+    ? employeeActivities.map(act => `<span style="color:${act.color || 'var(--muted)'}">${esc(act.name)}</span>`).join(' · ')
+    : 'No activities in this period';
 }
 function openTeamScheduleReport() {
   const start = new Date();
@@ -3019,20 +3483,16 @@ function renderTeamScheduleReport() {
   if (!start || !end || end < start) { content.innerHTML = '<div class="empty-note" style="padding:24px;text-align:center">Choose a valid date range.</div>'; return; }
   const dates = teamReportDates(start, end);
   const entries = teamReportEntries(start, end);
+  const reportActivities = teamReportActivities(entries);
   content.innerHTML = `
     <div style="margin-bottom:14px"><div style="font-weight:600;font-size:14px">Team Work Schedule</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div></div>
+    ${teamReportBillingSummary(reportActivities)}
     <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:${220 + dates.length * 92 + 150}px">
       <thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="padding:7px 8px;min-width:210px;position:sticky;left:0;background:var(--surface);z-index:1">Employee / Activity</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 6px;min-width:92px;background:${weekend ? '#fff7ed' : 'var(--surface)'};color:${weekend ? '#c2410c' : 'inherit'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}<th style="padding:7px 8px;min-width:70px">Days</th><th style="padding:7px 8px;min-width:70px">Hours</th></tr></thead>
-      <tbody>${entries.map(({ emp, act }) => {
-        const metaParts = [];
-        if (act?.project) metaParts.push(`Cost Center: ${esc(act.project)}`);
-        if (act?.order) metaParts.push(`Order: ${esc(act.order)}`);
-        if (act?.billing) metaParts.push(`Billing: ${esc(act.billing)}`);
-        if (act?.notes) metaParts.push(`Notes: ${esc(act.notes)}`);
-        const firstVisibleDate = act ? dates.find(date => participantActivityShift(act, emp.id, date)) : null;
-        const totalHours = act ? dates.reduce((sum, date) => sum + (teamReportCellInfo(emp, act, date, date === firstVisibleDate)?.hours || 0), 0) : 0;
+      <tbody>${entries.map(entry => {
+        const totalHours = dates.reduce((sum, date) => sum + (teamReportEntryCellInfo(entry, date)?.hours || 0), 0);
         const totalDays = totalHours / 24;
-        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 8px;position:sticky;left:0;background:var(--surface);z-index:1"><div style="font-weight:600">${esc(emp.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${act ? esc(act.name) : 'No activities in this period'}</div>${metaParts.length ? `<div class="muted" style="font-size:10px;margin-top:2px">${metaParts.join(' · ')}</div>` : ''}</td>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); const cellInfo = teamReportCellInfo(emp, act, date, date === firstVisibleDate); return `<td style="padding:7px 6px;vertical-align:top;background:${cellInfo ? `color-mix(in srgb, ${act.color} ${cellInfo.tint * 100}%, transparent)` : (weekend ? '#fff7ed' : 'transparent')};border-left:${weekend ? '1px solid #fed7aa' : '0'}">${cellInfo ? cellInfo.html : ''}</td>`; }).join('')}<td style="padding:7px 8px;white-space:nowrap;font-weight:600">${act ? totalDays.toFixed(2) : ''}</td><td style="padding:7px 8px;white-space:nowrap;font-weight:600">${act ? totalHours.toFixed(1) : ''}</td></tr>`;
+        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 8px;position:sticky;left:0;background:var(--surface);z-index:1"><div style="font-weight:600">${esc(entry.emp.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${teamReportActivityLabels(entry.activities)}</div></td>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); const cellInfo = teamReportEntryCellInfo(entry, date); return `<td style="padding:7px 6px;vertical-align:top;background:${cellInfo ? `color-mix(in srgb, ${cellInfo.workCode.color} ${cellInfo.tint * 100}%, transparent)` : (weekend ? '#fff7ed' : 'transparent')};border-left:${weekend ? '1px solid #fed7aa' : '0'}">${cellInfo ? cellInfo.html : ''}</td>`; }).join('')}<td style="padding:7px 8px;white-space:nowrap;font-weight:600">${entry.activities.length ? totalDays.toFixed(2) : ''}</td><td style="padding:7px 8px;white-space:nowrap;font-weight:600">${entry.activities.length ? totalHours.toFixed(1) : ''}</td></tr>`;
       }).join('')}</tbody>
     </table></div>`;
 }
@@ -3040,10 +3500,33 @@ function printTeamScheduleReport() {
   const start = document.getElementById('team-report-start').value;
   const end = document.getElementById('team-report-end').value;
   if (!start || !end || end < start) { alert('Choose a valid date range first.'); return; }
-  const content = document.getElementById('team-report-content')?.innerHTML;
+  const dates = teamReportDates(start, end);
+  const entries = teamReportEntries(start, end);
+  const reportActivities = teamReportActivities(entries);
+  const sections = [];
+  for (let i = 0; i < dates.length; i += 14) {
+    const chunkDates = dates.slice(i, i + 14);
+    sections.push(`<section class="report-section">
+      <h1>Team Work Schedule</h1>
+      <div class="period">Period: ${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])}</div>
+      ${i === 0 ? teamReportBillingSummary(reportActivities) : ''}
+      <table><thead><tr><th class="employee-column">Employee / Activity</th>${chunkDates.map(date => {
+        const weekend = isWknd(new Date(`${date}T00:00:00`));
+        return `<th class="date-column${weekend ? ' weekend' : ''}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted">${fmtShort(date)}</div></th>`;
+      }).join('')}<th class="total-column">Days</th><th class="total-column">Hours</th></tr></thead>
+      <tbody>${entries.map(entry => {
+        const chunkHours = chunkDates.reduce((sum, date) => sum + (teamReportEntryCellInfo(entry, date)?.hours || 0), 0);
+        return `<tr><td><b>${esc(entry.emp.name)}</b><div class="muted activity-name">${teamReportActivityLabels(entry.activities)}</div></td>${chunkDates.map(date => {
+          const weekend = isWknd(new Date(`${date}T00:00:00`));
+          const cellInfo = teamReportEntryCellInfo(entry, date);
+          return `<td class="${weekend ? 'weekend' : ''}"${cellInfo ? ` style="background:color-mix(in srgb, ${cellInfo.workCode.color} ${cellInfo.tint * 100}%, transparent)"` : ''}>${cellInfo ? cellInfo.html : ''}</td>`;
+        }).join('')}<td class="total-column">${entry.activities.length ? (chunkHours / 24).toFixed(2) : ''}</td><td class="total-column">${entry.activities.length ? chunkHours.toFixed(1) : ''}</td></tr>`;
+      }).join('')}</tbody></table>
+    </section>`);
+  }
   const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the team schedule.'); return; }
-  printWindow.document.write(`<!doctype html><html><head><title>Team Work Schedule</title><style>@page{size:landscape}body{font:11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;padding:20px}h1{font-size:20px;margin:0 0 8px}table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}th{white-space:nowrap} .muted{color:#666;font-size:10px}@media print{th,td{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>Team Work Schedule</h1><div style="color:#666;margin-bottom:14px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div>${content}</body></html>`);
+  printWindow.document.write(`<!doctype html><html><head><title>Team Work Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:170px}.date-column{width:auto}.total-column{width:38px;font-weight:600}.muted{color:#666;font-size:8px;margin-top:2px}.activity-name{margin-top:3px}.weekend{background:#fff7ed}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
 
@@ -3090,38 +3573,90 @@ async function saveCourseStatus(courseId, employeeId, status, plannedDate) {
   else courseStatuses[key] = { status, plannedDate: plannedDate || '' };
   markUnsaved(); await saveState(); renderStatusBoard();
 }
-function fitnessFor(employeeId, testType) { return fitnessTests[`${employeeId}_${testType}`] || { date: '', grade: '', required: true }; }
-let editingFitnessEmployeeId = null, editingFitnessType = null;
-function openFitnessModal(employeeId, testType) {
-  editingFitnessEmployeeId = employeeId;
-  editingFitnessType = testType;
-  const record = fitnessFor(employeeId, testType);
-  document.getElementById('fitness-modal-title').textContent = `${empById(employeeId)?.name || 'Employee'} · ${testType === 'condition' ? 'Condition' : 'Strength'}`;
-  document.getElementById('fitness-required').value = record.required === false ? 'not_required' : 'required';
-  document.getElementById('fitness-date').value = record.date || '';
-  document.getElementById('fitness-grade').value = record.grade || '';
-  toggleFitnessFields();
-  document.getElementById('fitness-modal').classList.add('open');
+let editingRequirementId = null;
+let editingRequirementEmployeeId = null;
+function requirementRecordFor(requirementId, employeeId, year = boardYear) {
+  return requirementRecords[`${requirementId}_${employeeId}_${year}`] || { completedDate: '', dueDate: '', result: '', required: true };
 }
-function toggleFitnessFields() {
-  document.getElementById('fitness-fields').style.display = document.getElementById('fitness-required').value === 'not_required' ? 'none' : 'block';
+function changeBoardYear(step) {
+  boardYear += step;
+  renderStatusBoard();
 }
-async function saveFitnessFromModal() {
-  if (editingFitnessEmployeeId === null || !editingFitnessType) return;
-  const required = document.getElementById('fitness-required').value;
-  await saveFitnessTest(editingFitnessEmployeeId, editingFitnessType, required === 'not_required' ? '' : document.getElementById('fitness-date').value, required === 'not_required' ? 'not_required' : document.getElementById('fitness-grade').value);
-  closeModal('fitness-modal');
+function openRequirementDefinitionModal(requirementId = null) {
+  editingRequirementId = requirementId;
+  const requirement = requirementId === null ? null : requirements.find(item => item.id === requirementId);
+  document.getElementById('req-def-modal-title').textContent = requirement ? 'Edit requirement' : 'Add requirement';
+  document.getElementById('req-def-delete-btn').style.display = requirement ? 'inline-block' : 'none';
+  document.getElementById('req-def-name').value = requirement?.name || '';
+  document.getElementById('req-def-modal').classList.add('open');
 }
-async function saveFitnessTest(employeeId, testType, date, grade) {
+async function saveRequirementFromModal() {
+  const name = document.getElementById('req-def-name').value.trim();
+  if (!name) { alert('Requirement name is required.'); return; }
+  if (requirements.some(requirement => requirement.id !== editingRequirementId && requirement.name.toLowerCase() === name.toLowerCase())) {
+    alert('A requirement with this name already exists.');
+    return;
+  }
   recordUndo();
-  const key = `${employeeId}_${testType}`;
-  const required = grade !== 'not_required';
-  if (!required) fitnessTests[key] = { date: '', grade: '', required: false };
-  else if (!date && !grade) delete fitnessTests[key];
-  else fitnessTests[key] = { date: date || '', grade: grade || '', required: true };
-  markUnsaved(); await saveState(); renderStatusBoard();
+  if (editingRequirementId === null) {
+    const nextId = requirements.reduce((max, requirement) => Math.max(max, Number(requirement.id) || 0), 0) + 1;
+    requirements.push({ id: nextId, name });
+  } else {
+    const requirement = requirements.find(item => item.id === editingRequirementId);
+    if (requirement) requirement.name = name;
+  }
+  markUnsaved();
+  await saveState();
+  closeModal('req-def-modal');
+  renderStatusBoard();
 }
-function renderStatusBoard() {
+async function deleteRequirementFromModal() {
+  if (editingRequirementId === null) return;
+  const requirement = requirements.find(item => item.id === editingRequirementId);
+  if (!requirement || !confirm(`Delete requirement "${requirement.name}" and all of its employee records?`)) return;
+  recordUndo();
+  requirements = requirements.filter(item => item.id !== editingRequirementId);
+  Object.keys(requirementRecords).forEach(key => {
+    if (key.startsWith(`${editingRequirementId}_`)) delete requirementRecords[key];
+  });
+  markUnsaved();
+  await saveState();
+  closeModal('req-def-modal');
+  renderStatusBoard();
+}
+function openRequirementRecordModal(requirementId, employeeId) {
+  editingRequirementId = requirementId;
+  editingRequirementEmployeeId = employeeId;
+  const requirement = requirements.find(item => item.id === requirementId);
+  const record = requirementRecordFor(requirementId, employeeId);
+  document.getElementById('req-record-modal-title').textContent = `${empById(employeeId)?.name || 'Employee'} · ${requirement?.name || 'Requirement'} · ${boardYear}`;
+  document.getElementById('req-record-required').value = record.required === false ? 'not_required' : 'required';
+  document.getElementById('req-record-completed').value = record.completedDate || '';
+  document.getElementById('req-record-due').value = record.dueDate || '';
+  document.getElementById('req-record-result').value = record.result || '';
+  toggleRequirementFields();
+  document.getElementById('req-record-modal').classList.add('open');
+}
+function toggleRequirementFields() {
+  document.getElementById('req-record-fields').style.display = document.getElementById('req-record-required').value === 'not_required' ? 'none' : 'block';
+}
+async function saveRequirementRecordFromModal() {
+  if (editingRequirementId === null || editingRequirementEmployeeId === null) return;
+  const required = document.getElementById('req-record-required').value !== 'not_required';
+  const completedDate = required ? document.getElementById('req-record-completed').value : '';
+  const dueDate = required ? document.getElementById('req-record-due').value : '';
+  const result = required ? document.getElementById('req-record-result').value.trim() : '';
+  const key = `${editingRequirementId}_${editingRequirementEmployeeId}_${boardYear}`;
+  recordUndo();
+  if (!required) requirementRecords[key] = { completedDate: '', dueDate: '', result: '', required: false };
+  else if (!completedDate && !dueDate && !result) delete requirementRecords[key];
+  else requirementRecords[key] = { completedDate, dueDate, result, required: true };
+  markUnsaved();
+  await saveState();
+  closeModal('req-record-modal');
+  renderStatusBoard();
+}
+function renderLegacyStatusBoard() {
   const employeeList = [...employees].sort((a, b) =>
     a.department.localeCompare(b.department) ||
     ((a.sortOrder ?? 99) - (b.sortOrder ?? 99)) ||
@@ -3136,6 +3671,58 @@ function renderStatusBoard() {
       <tbody>${courseRows.length ? courseRows.map(course => `<tr style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px"><button class="btn btn-sm" onclick="openCourseModal(${course.id})" style="text-align:left;max-width:220px;white-space:normal">${esc(course.name)}${course.code ? `<span class="muted" style="display:block;font-size:10px;margin-top:2px">${esc(course.code)}</span>` : ''}</button></td>${employeeList.map(employee => { const record = courseStatusFor(course.id, employee.id); const compliance = courseComplianceMeta(record.status); return `<td style="padding:8px 12px;vertical-align:top"><div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:${compliance.color};font-size:10px;font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:${compliance.color};display:inline-block"></span>${compliance.label}</div><select class="plain-select" style="width:100%;font-size:11px" onchange="saveCourseStatus(${course.id},${employee.id},this.value,this.nextElementSibling.value)"><option value="not_relevant"${record.status === 'not_relevant' ? ' selected' : ''}>Not relevant</option><option value="mandatory"${record.status === 'mandatory' ? ' selected' : ''}>Mandatory, not planned</option><option value="planned"${record.status === 'planned' ? ' selected' : ''}>Planned</option><option value="taken"${record.status === 'taken' ? ' selected' : ''}>Taken</option></select><input type="date" value="${esc(record.plannedDate || '')}" ${record.status === 'planned' ? '' : 'disabled'} style="width:100%;margin-top:5px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--surface);color:var(--text)" onchange="saveCourseStatus(${course.id},${employee.id},this.previousElementSibling.value,this.value)" title="Planned date"></td>`; }).join('')}</tr>`).join('') : `<tr><td colspan="${employeeList.length + 1}" class="empty-note">No courses yet. Add a course to start tracking.</td></tr>`}</tbody>
     </table></div>
     <div class="card" style="margin-top:24px;padding:0;overflow:auto"><div style="padding:14px 12px 8px;font-weight:600">Fitness Tests</div><table style="width:100%;border-collapse:collapse;min-width:${180 + employeeList.length * 130}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:10px 12px;min-width:150px">Test</th>${employeeList.map(employee => `<th style="padding:10px 8px;min-width:125px;white-space:nowrap">${esc(employee.name)}</th>`).join('')}</tr></thead><tbody>${['condition', 'strength'].map(testType => `<tr style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px;font-weight:600">${testType === 'condition' ? 'Condition' : 'Strength'}</td>${employeeList.map(employee => { const record = fitnessFor(employee.id, testType); const label = record.required === false ? 'Not required' : (record.grade ? `Grade ${esc(record.grade)}` : 'Not entered'); const color = record.required === false ? 'var(--muted)' : (record.grade ? '#16a34a' : '#dc2626'); return `<td style="padding:8px;vertical-align:top"><button class="btn btn-sm" onclick="openFitnessModal(${employee.id},'${testType}')" style="width:100%;text-align:left;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="Click to edit date and grade">${label}</button></td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+function annualRequirementCell(requirement, employee) {
+  const record = requirementRecordFor(requirement.id, employee.id);
+  if (record.required === false) {
+    return `<button class="btn btn-sm" onclick="openRequirementRecordModal(${requirement.id},${employee.id})" style="width:100%;height:auto;min-height:54px;padding:7px 9px;text-align:left;white-space:normal;color:var(--muted)" title="Edit annual requirement">Not required</button>`;
+  }
+  const overdue = Boolean(record.dueDate && record.dueDate < todayStr());
+  const isCompleted = Boolean(record.completedDate || record.result);
+  const accent = overdue ? 'var(--destructive)' : (isCompleted ? '#16a34a' : '#dc2626');
+  const status = overdue ? 'Overdue' : (record.result ? esc(record.result) : (record.completedDate ? 'Completed' : 'Not entered'));
+  const completed = record.completedDate ? `<div class="muted" style="font-size:10px;margin-top:3px">Completed ${fmtMed(record.completedDate)}</div>` : '';
+  const due = record.dueDate ? `<div style="font-size:10px;margin-top:2px;color:${overdue ? 'var(--destructive)' : 'var(--muted)'}">Due ${fmtMed(record.dueDate)}</div>` : '';
+  return `<button class="btn btn-sm" onclick="openRequirementRecordModal(${requirement.id},${employee.id})" style="width:100%;height:auto;min-height:54px;padding:7px 9px;text-align:left;white-space:normal;border-color:${overdue ? 'var(--destructive)' : 'var(--border)'};background:${overdue ? 'color-mix(in srgb,var(--destructive) 9%,var(--surface))' : 'var(--surface)'}" title="Edit annual requirement"><strong style="color:${accent}">${status}</strong>${completed}${due}</button>`;
+}
+function renderStatusBoard() {
+  const employeeList = [...employees].sort((a, b) =>
+    a.department.localeCompare(b.department, 'nb', { sensitivity: 'base' }) ||
+    ((a.sortOrder ?? 99) - (b.sortOrder ?? 99)) ||
+    a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
+  const courseRows = [...courses].sort((a, b) => a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
+  const requirementColumns = [...requirements].sort((a, b) => a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
+  const courseBoardWidth = 260 + employeeList.length * 190;
+  const requirementBoardWidth = 230 + requirementColumns.length * 190;
+  const courseBody = courseRows.length ? courseRows.map(course => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px">
+        <button class="btn btn-sm" onclick="openCourseModal(${course.id})" style="text-align:left;max-width:220px;white-space:normal">${esc(course.name)}${course.code ? `<span class="muted" style="display:block;font-size:10px;margin-top:2px">${esc(course.code)}</span>` : ''}</button>
+      </td>
+      ${employeeList.map(employee => {
+        const record = courseStatusFor(course.id, employee.id);
+        const compliance = courseComplianceMeta(record.status);
+        return `<td style="padding:8px 12px;vertical-align:top"><div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:${compliance.color};font-size:10px;font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:${compliance.color};display:inline-block"></span>${compliance.label}</div><select class="plain-select" style="width:100%;font-size:11px" onchange="saveCourseStatus(${course.id},${employee.id},this.value,this.nextElementSibling.value)"><option value="not_relevant"${record.status === 'not_relevant' ? ' selected' : ''}>Not relevant</option><option value="mandatory"${record.status === 'mandatory' ? ' selected' : ''}>Mandatory, not planned</option><option value="planned"${record.status === 'planned' ? ' selected' : ''}>Planned</option><option value="taken"${record.status === 'taken' ? ' selected' : ''}>Taken</option></select><input type="date" value="${esc(record.plannedDate || '')}" ${record.status === 'planned' ? '' : 'disabled'} style="width:100%;margin-top:5px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--surface);color:var(--text)" onchange="saveCourseStatus(${course.id},${employee.id},this.previousElementSibling.value,this.value)" title="Planned date"></td>`;
+      }).join('')}
+    </tr>`).join('') : `<tr><td colspan="${employeeList.length + 1}" class="empty-note">No courses yet. Add a course to start tracking.</td></tr>`;
+  const requirementBody = employeeList.length && requirementColumns.length
+    ? employeeList.map(employee => `<tr data-employee-id="${employee.id}" style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px"><div style="font-weight:600">${esc(employee.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${esc(employee.department)}</div></td>${requirementColumns.map(requirement => `<td data-requirement-id="${requirement.id}" style="padding:8px;vertical-align:top">${annualRequirementCell(requirement, employee)}</td>`).join('')}</tr>`).join('')
+    : `<tr><td colspan="${requirementColumns.length + 1}" class="empty-note">${employeeList.length ? 'No annual requirements yet. Add one to start tracking.' : 'Add employees before tracking annual requirements.'}</td></tr>`;
+
+  document.getElementById('content').innerHTML = `
+    <div class="flex items-center justify-between mb-6" style="gap:12px;flex-wrap:wrap">
+      <div><div class="page-title">Personnel Status Board</div><div class="page-sub">Track courses, planned training, annual certifications, and recurring requirements.</div></div>
+      <div class="year-nav" style="gap:8px;background:var(--surface);padding:4px 8px;border-radius:8px;border:1px solid var(--border)">
+        <button class="btn btn-icon" onclick="changeBoardYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
+        <span class="year-label" style="min-width:60px">${boardYear}</span>
+        <button class="btn btn-icon" onclick="changeBoardYear(1)" aria-label="Next year">${svgIcon('chevronRight')}</button>
+      </div>
+    </div>
+    <div class="flex items-center justify-between mb-4" style="gap:12px;flex-wrap:wrap"><div class="card-title" style="font-size:15px">Courses (${courses.length})</div><button class="btn btn-primary" onclick="openCourseModal()">Add course</button></div>
+    <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:${courseBoardWidth}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:10px 12px;min-width:240px">Course</th>${employeeList.map(employee => `<th style="padding:10px 12px;min-width:180px;vertical-align:top"><div>${esc(employee.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${esc(employee.department)}</div></th>`).join('')}</tr></thead><tbody>${courseBody}</tbody></table></div>
+    <div class="flex items-center justify-between" style="gap:12px;flex-wrap:wrap;margin:24px 0 16px"><div><div class="card-title" style="font-size:15px">Annual Requirements (${requirements.length})</div><div class="muted text-sm" style="margin-top:3px">Records shown for ${boardYear}.</div></div><button class="btn btn-primary" onclick="openRequirementDefinitionModal()">Add requirement</button></div>
+    <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:${requirementBoardWidth}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:10px 12px;min-width:210px">Employee</th>${requirementColumns.map(requirement => `<th data-requirement-id="${requirement.id}" style="padding:8px;min-width:180px;vertical-align:top"><button class="btn btn-sm" onclick="openRequirementDefinitionModal(${requirement.id})" style="width:100%;height:auto;text-align:left;white-space:normal">${esc(requirement.name)}</button></th>`).join('')}</tr></thead><tbody>${requirementBody}</tbody></table></div>`;
 }
 
 // ═══ PERSONNEL ═══════════════════════════════════════════════════════════════
@@ -3427,7 +4014,7 @@ function confirmDelete(kind, id) {
     await saveState();
     updateSbStatus();
     closeModal('confirm-modal');
-    if (kind === 'status') { renderStatusList(); if (currentPage === 'grid') renderPage(); }
+    if (kind === 'status') { renderDailyStatusList(); if (currentPage === 'grid') renderPage(); }
     else if (kind === 'category') { renderCategoryList(); if (currentPage === 'employees') renderEmployees(); }
     else renderPage();
   };
@@ -3491,21 +4078,16 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
     }
 
     let dayActivityHours = 0;
-    const dayActivityIntervals = [];
     Object.entries(activityShiftsMap).forEach(([key, shift]) => {
       if (dayUnavailable) return;
       if (!key.startsWith(`${emp.id}_${ds}_`)) return;
       const activityId = +key.split('_')[2];
       const activity = activities.find(act => act.id === activityId);
       if (activity && !activityCountsTowardLoad(activity)) return;
-          const shiftRange = participantActivityShift(activity, emp.id, ds);
-          const interval = timeRangeInterval(shiftRange);
-          if (interval) dayActivityIntervals.push(interval);
-          dayActivityHours += activityShiftHours(activity, emp.id, shiftRange || '');
+          dayActivityHours += activityShiftHours(activity, emp.id, ds);
         });
     activityHours += dayActivityHours;
-    const dayExtraHours = activityExtraHoursOutsideBaseline(dayActivityIntervals, appSettings.coreWorkdayRange || '0730-1500');
-    const dayPlannedHours = dayBaselineHours + dayExtraHours;
+    const dayPlannedHours = dayBaselineHours + dayActivityHours;
     loadHours += dayPlannedHours;
   });
 
@@ -3531,7 +4113,7 @@ function workloadBalanceMeta(extraHours, absenceHours) {
   const absence = Math.max(0, absenceHours || 0);
   const balanceHours = extra - absence;
   if (extra === 0 && absence === 0) return { label: 'Net 0', color: '#22c55e', summary: 'No extra load or absence', balanceHours };
-  if (balanceHours > 0) return { label: 'Net +', color: '#ef4444', summary: `+${fmtDaysHours(balanceHours)} net extra`, balanceHours };
+  if (balanceHours > 0) return { label: 'Net +', color: '#ef4444', summary: `+${fmtFIF(balanceHours)} net extra`, balanceHours };
   if (balanceHours < 0) return { label: 'Net -', color: '#f59e0b', summary: `-${fmtDaysHours(-balanceHours)} net absence`, balanceHours };
   return { label: 'Net 0', color: '#3b82f6', summary: 'Extra load matches absence', balanceHours };
 }
@@ -3726,7 +4308,7 @@ function renderDashboard() {
               </div>
               <div class="muted text-sm">${esc(row.emp.role)} · ${esc(row.emp.department)}</div>
               <div class="muted text-sm" style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap">
-                <span>${row.extraHours > 0 ? `${fmtDaysHours(row.extraHours)} extra load` : 'No extra load'}</span>
+                <span>${row.extraHours > 0 ? `${fmtFIF(row.extraHours)} extra load` : 'No extra load'}</span>
                 <span>${row.absenceHours > 0 ? `${fmtDaysHours(row.absenceHours)} absent` : 'No absence'}</span>
               </div>
             </div>
@@ -3769,7 +4351,7 @@ function renderDashboard() {
           </div>
           <div class="card-value" style="margin-top:6px">${counts[st.key] || 0}</div>
         </div>`).join('')}
-      ${cardStatuses.length === 0 ? '<div class="card"><div class="card-title-muted">Statuses</div><div class="muted text-sm" style="margin-top:8px">Define statuses from Grid View → Manage statuses.</div></div>' : ''}
+      ${cardStatuses.length === 0 ? '<div class="card"><div class="card-title-muted">Statuses</div><div class="muted text-sm" style="margin-top:8px">No daily statuses configured.</div></div>' : ''}
     </div>
     <div class="card mb-6" style="padding:20px 18px 12px;">
       <div class="flex items-center justify-between mb-3" style="gap:12px;flex-wrap:wrap;">
@@ -3836,7 +4418,7 @@ function renderDashboard() {
           </div>
         </div>
         <div class="muted text-sm" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap">
-          <span>${workloadTeamTotals.extraHours > 0 ? `${fmtDaysHours(workloadTeamTotals.extraHours)} team extra load` : 'No team extra load'}</span>
+          <span>${workloadTeamTotals.extraHours > 0 ? `${fmtFIF(workloadTeamTotals.extraHours)} team extra load` : 'No team extra load'}</span>
           <span>${workloadTeamTotals.absenceHours > 0 ? `${fmtDaysHours(workloadTeamTotals.absenceHours)} team absence` : 'No team absence'}</span>
           <span style="font-weight:600;color:${workloadTeamBalance.color}">${esc(workloadTeamBalance.label)} · ${esc(workloadTeamBalance.summary)}</span>
         </div>
@@ -3844,14 +4426,14 @@ function renderDashboard() {
         <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
           <div class="flex items-center justify-between" style="gap:8px;flex-wrap:wrap">
             <div class="card-title" style="font-size:13px">Yearly load balance (${wlRange.anchorYear})</div>
-            ${yearPeak ? `<div class="muted text-sm">Peak: <b style="color:${yearPeak.balanceMeta.color}">${yearPeak.label} (${fmtDaysHours(yearPeak.pressureHours)})</b> · Lowest: <b style="color:${yearLow.balanceMeta.color}">${yearLow.label} (${fmtDaysHours(yearLow.pressureHours)})</b></div>` : ''}
+            ${yearPeak ? `<div class="muted text-sm">Peak: <b style="color:${yearPeak.balanceMeta.color}">${yearPeak.label} (${fmtFIF(yearPeak.pressureHours)})</b> · Lowest: <b style="color:${yearLow.balanceMeta.color}">${yearLow.label} (${fmtFIF(yearLow.pressureHours)})</b></div>` : ''}
           </div>
           <div class="trend-wrap" style="height:160px;margin-top:8px;gap:5px">
             ${yearlyWorkload.map(m => `
               <div style="flex:1;display:flex;flex-direction:column;align-items:stretch;min-width:0;height:160px">
                 <div class="trend-col">
                   <div class="trend-seg" style="height:${m.pressureHours > 0 ? Math.max(2, (m.pressureHours / yearMaxPressure) * 100) : 0}%;background:${m.balanceMeta.color};opacity:.92;border-radius:3px 3px 0 0"></div>
-                  <div class="trend-tip"><b>${m.label} ${wlRange.anchorYear}</b><div>Extra load: <b>${fmtDaysHours(m.extraHours)}</b></div><div>Absence: <b>${fmtDaysHours(m.absenceHours)}</b></div><div>Balance: <b>${esc(m.balanceMeta.summary)}</b></div></div>
+                  <div class="trend-tip"><b>${m.label} ${wlRange.anchorYear}</b><div>Extra load: <b>${fmtFIF(m.extraHours)}</b></div><div>Absence: <b>${fmtDaysHours(m.absenceHours)}</b></div><div>Balance: <b>${esc(m.balanceMeta.summary)}</b></div></div>
                 </div>
                 <div class="trend-x">${m.label}</div>
               </div>
@@ -3964,7 +4546,7 @@ function setSummaryWeek(value) {
   renderSummary();
 }
 function computeSummaryRows(startDate, endDate) {
-  const rows = employees.map(emp => ({ emp, counts: {}, activityHours: {}, absenceTotal: 0, oooTotal: 0, total: 0 }));
+  const rows = employees.map(emp => ({ emp, counts: {}, activityHours: {}, activityDays: {}, absenceTotal: 0, oooTotal: 0, total: 0 }));
   const rowByEmp = new Map(rows.map(r => [r.emp.id, r]));
   const statusKeySet = new Set(statuses.map(s => s.key));
   const rangeDates = datesInRange(startDate, endDate);
@@ -3998,12 +4580,13 @@ function computeSummaryRows(startDate, endDate) {
       continue;
     }
 
-    const hrs = activityShiftHours(act, empId, shift);
+    const hrs = activityShiftHours(act, empId, date);
     if (act.type && statusKeySet.has(act.type)) {
       row.counts[act.type] = (row.counts[act.type] || 0) + hrs;
       row.total += hrs;
     } else {
       row.activityHours[act.id] = (row.activityHours[act.id] || 0) + hrs;
+      row.activityDays[act.id] = (row.activityDays[act.id] || 0) + 1;
       row.total += hrs;
     }
   }
@@ -4020,7 +4603,8 @@ function summaryActivityGroups(startDate, endDate) {
     const typeKey = (act.type || '').trim();
     if (typeKey && statusKeySet.has(typeKey)) continue;
     const gk = typeKey || '__other__';
-    const g = groups.get(gk) ?? { typeKey: gk, label: typeKey || 'Other', color: act.color, actIds: [], names: [] };
+    const activityType = (appSettings.activityTypes || []).find(type => type.key === typeKey);
+    const g = groups.get(gk) ?? { typeKey: gk, label: activityType?.name || typeKey || 'Other', color: activityType?.color || act.color, actIds: [], names: [] };
     g.actIds.push(act.id); g.names.push(act.name);
     groups.set(gk, g);
   }
@@ -4036,9 +4620,14 @@ function renderSummary() {
   const rows = computeSummaryRows(range.start, range.end);
   const groups = summaryActivityGroups(range.start, range.end);
   const groupHours = (row, g) => g.actIds.reduce((s, id) => s + (row.activityHours[id] || 0), 0);
+  const groupDays = (row, g) => g.actIds.reduce((s, id) => s + (row.activityDays[id] || 0), 0);
 
   const flagTotalOf = (row, flag) => statuses.reduce((s, st) => s + (st[flag] ? (row.counts[st.key] || 0) : 0), 0);
-  const sorted = [...rows].sort((a, b) => {
+  const peopleOrder = (a, b) =>
+    ((a.emp.sortOrder ?? 99) - (b.emp.sortOrder ?? 99)) ||
+    a.emp.name.localeCompare(b.emp.name, 'nb', { sensitivity: 'base' });
+  const compareRows = (a, b) => {
+    if (summarySortKey === 'people') return peopleOrder(a, b);
     let av, bv;
     if (summarySortKey === 'name') { av = a.emp.name; bv = b.emp.name; }
     else if (summarySortKey === 'total') { av = a.total; bv = b.total; }
@@ -4046,31 +4635,48 @@ function renderSummary() {
     else if (summarySortKey === '__ooo') { av = flagTotalOf(a, 'isOutOfOffice'); bv = flagTotalOf(b, 'isOutOfOffice'); }
     else if (summarySortKey.startsWith('act:')) {
       const g = groups.find(x => x.typeKey === summarySortKey.slice(4));
-      av = g ? groupHours(a, g) : 0; bv = g ? groupHours(b, g) : 0;
+      av = g ? groupDays(a, g) : 0; bv = g ? groupDays(b, g) : 0;
     } else { av = a.counts[summarySortKey] || 0; bv = b.counts[summarySortKey] || 0; }
-    if (typeof av === 'string') return summarySortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-    return summarySortDir === 'asc' ? av - bv : bv - av;
-  });
+    const compared = typeof av === 'string'
+      ? av.localeCompare(bv, 'nb', { sensitivity: 'base' })
+      : av - bv;
+    return (summarySortDir === 'asc' ? compared : -compared) || peopleOrder(a, b);
+  };
+  const teamGroups = [...rows.reduce((teams, row) => {
+    const team = row.emp.department || 'No team';
+    if (!teams.has(team)) teams.set(team, []);
+    teams.get(team).push(row);
+    return teams;
+  }, new Map()).entries()]
+    .sort(([a], [b]) => a.localeCompare(b, 'nb', { sensitivity: 'base' }))
+    .map(([team, teamRows]) => ({ team, rows: teamRows.sort(compareRows) }));
+  const sorted = teamGroups.flatMap(group => group.rows);
 
   const sortIcon = col => svgIcon(summarySortKey !== col ? 'sort' : (summarySortDir === 'asc' ? 'chevronUp' : 'chevronDown'));
   const pill = (hrs, color) => hrs > 0
     ? `<span class="sum-pill" style="color:${color};background:${color}18;border-color:${color}40">${fmtDaysHours(hrs)}</span>`
+    : '<span class="sum-dash">—</span>';
+  const activityPill = (days, hours, color) => days > 0
+    ? `<span class="sum-pill" style="color:${color};background:${color}18;border-color:${color}40" title="${days} assigned days, ${hours} compensated hours">${days}d · ${fmtFIF(hours)}</span>`
+    : '<span class="sum-dash">—</span>';
+  const hourPill = hours => hours > 0
+    ? `<span class="sum-pill" style="background:color-mix(in srgb,var(--text) 10%,transparent);color:var(--text);font-weight:700">${fmtFIF(hours)}</span>`
     : '<span class="sum-dash">—</span>';
 
   const hasAbsence = statuses.some(s => s.isAbsence);
   const hasOoo = statuses.some(s => s.isOutOfOffice);
 
   const headHtml = `<tr>
-    <th data-sort="name">Employee <span style="opacity:.55">${sortIcon('name')}</span></th>
-    ${statuses.map(s => `<th class="num" data-sort="${esc(s.key)}">${esc(s.label)} <span style="opacity:.55">${sortIcon(s.key)}</span></th>`).join('')}
-    ${hasAbsence ? `<th class="num" data-sort="__absence" title="Total hours of absence-flagged statuses">Absence <span style="opacity:.55">${sortIcon('__absence')}</span></th>` : ''}
-    ${hasOoo ? `<th class="num" data-sort="__ooo" title="Total hours of Out of Office statuses">OOO <span style="opacity:.55">${sortIcon('__ooo')}</span></th>` : ''}
-    ${groups.map(g => `<th class="num" style="color:${g.color}" title="${esc(g.names.join(', '))}" data-sort="act:${esc(g.typeKey)}">${esc(g.label)} <span style="opacity:.55">${sortIcon('act:' + g.typeKey)}</span></th>`).join('')}
-    <th class="num" data-sort="total" title="Extra work above scheduled 7.5 hours">Total <span style="opacity:.55">${sortIcon('total')}</span></th>
+    <th data-sort="name" onclick="setSummarySort(this.dataset.sort)">Employee <span style="opacity:.55">${sortIcon('name')}</span></th>
+    ${statuses.map(s => `<th class="num" data-sort="${esc(s.key)}" onclick="setSummarySort(this.dataset.sort)">${esc(s.label)} <span style="opacity:.55">${sortIcon(s.key)}</span></th>`).join('')}
+    ${hasAbsence ? `<th class="num" data-sort="__absence" onclick="setSummarySort(this.dataset.sort)" title="Total hours of absence-flagged statuses">Absence <span style="opacity:.55">${sortIcon('__absence')}</span></th>` : ''}
+    ${hasOoo ? `<th class="num" data-sort="__ooo" onclick="setSummarySort(this.dataset.sort)" title="Total hours of Out of Office statuses">OOO <span style="opacity:.55">${sortIcon('__ooo')}</span></th>` : ''}
+    ${groups.map(g => `<th class="num" style="color:${g.color}" title="${esc(g.names.join(', '))}" data-sort="act:${esc(g.typeKey)}" onclick="setSummarySort(this.dataset.sort)">${esc(g.label)} <span style="opacity:.55">${sortIcon('act:' + g.typeKey)}</span></th>`).join('')}
+    <th class="num" data-sort="total" onclick="setSummarySort(this.dataset.sort)" title="Extra work above scheduled 7.5 hours">Total <span style="opacity:.55">${sortIcon('total')}</span></th>
   </tr>`;
 
   const totalCols = 2 + statuses.length + groups.length + (hasAbsence ? 1 : 0) + (hasOoo ? 1 : 0);
-  const bodyHtml = sorted.length ? sorted.map(row => {
+  const employeeRowHtml = row => {
     const cats = (row.emp.categoryIds || []).map(catById).filter(Boolean);
     const statusTotal = statuses.reduce((s, st) => s + (row.counts[st.key] || 0), 0);
     const minibar = statusTotal > 0
@@ -4078,7 +4684,7 @@ function renderSummary() {
           const pct = ((row.counts[st.key] || 0) / statusTotal) * 100;
           return pct > 0 ? `<div style="width:${pct}%;background:${st.color}" title="${esc(st.label)}: ${fmtDaysHours(row.counts[st.key])}"></div>` : '';
         }).join('')}</div>` : '';
-    return `<tr>
+    return `<tr data-employee-id="${row.emp.id}">
       <td>
         <div style="font-weight:500">${esc(row.emp.name)}</div>
         <div class="muted" style="font-size:11.5px">${esc(row.emp.role)} · ${esc(row.emp.department)}</div>
@@ -4088,25 +4694,29 @@ function renderSummary() {
       ${statuses.map(st => `<td class="num">${pill(row.counts[st.key] || 0, st.color)}</td>`).join('')}
       ${hasAbsence ? `<td class="num">${pill(flagTotalOf(row, 'isAbsence'), '#dc2626')}</td>` : ''}
       ${hasOoo ? `<td class="num">${pill(flagTotalOf(row, 'isOutOfOffice'), '#7c3aed')}</td>` : ''}
-      ${groups.map(g => `<td class="num" title="${esc(g.names.join(', '))}">${pill(groupHours(row, g), g.color)}</td>`).join('')}
-      <td class="num">${row.total > 0 ? `<span class="sum-pill" style="background:color-mix(in srgb,var(--text) 10%,transparent);color:var(--text);font-weight:700">${fmtDaysHours(row.total)}</span>` : '<span class="sum-dash">—</span>'}</td>
+      ${groups.map(g => `<td class="num" title="${esc(g.names.join(', '))}">${activityPill(groupDays(row, g), groupHours(row, g), g.color)}</td>`).join('')}
+      <td class="num">${hourPill(row.total)}</td>
     </tr>`;
-  }).join('') : `<tr><td colspan="${totalCols}" class="empty-note">No data found for ${range.label}.</td></tr>`;
+  };
+  const bodyHtml = sorted.length ? teamGroups.map(group => `
+    <tr class="sum-team-row" data-team="${esc(group.team)}"><td colspan="${totalCols}">${esc(group.team)} · ${group.rows.length} ${group.rows.length === 1 ? 'employee' : 'employees'}</td></tr>
+    ${group.rows.map(employeeRowHtml).join('')}`).join('') : `<tr><td colspan="${totalCols}" class="empty-note">No data found for ${range.label}.</td></tr>`;
 
   const totals = sorted.reduce((acc, row) => {
     statuses.forEach(st => { acc.status[st.key] = (acc.status[st.key] || 0) + (row.counts[st.key] || 0); });
     groups.forEach(g => { acc.groups[g.typeKey] = (acc.groups[g.typeKey] || 0) + groupHours(row, g); });
+    groups.forEach(g => { acc.groupDays[g.typeKey] = (acc.groupDays[g.typeKey] || 0) + groupDays(row, g); });
     acc.total += row.total;
     return acc;
-  }, { status: {}, groups: {}, total: 0 });
+  }, { status: {}, groups: {}, groupDays: {}, total: 0 });
   const footerHtml = sorted.length ? `<tfoot>
     <tr>
       <td style="font-weight:700">Total (${sorted.length} employees)</td>
       ${statuses.map(st => `<td class="num">${pill(totals.status[st.key] || 0, st.color)}</td>`).join('')}
       ${hasAbsence ? `<td class="num">${pill(statuses.reduce((s, st) => s + (st.isAbsence ? (totals.status[st.key] || 0) : 0), 0), '#dc2626')}</td>` : ''}
       ${hasOoo ? `<td class="num">${pill(statuses.reduce((s, st) => s + (st.isOutOfOffice ? (totals.status[st.key] || 0) : 0), 0), '#7c3aed')}</td>` : ''}
-      ${groups.map(g => `<td class="num">${pill(totals.groups[g.typeKey] || 0, g.color)}</td>`).join('')}
-      <td class="num"><span class="sum-pill" style="background:color-mix(in srgb,var(--text) 10%,transparent);color:var(--text);font-weight:700">${fmtDaysHours(totals.total)}</span></td>
+      ${groups.map(g => `<td class="num">${activityPill(totals.groupDays[g.typeKey] || 0, totals.groups[g.typeKey] || 0, g.color)}</td>`).join('')}
+      <td class="num">${hourPill(totals.total)}</td>
     </tr>
   </tfoot>` : '';
 
@@ -4115,14 +4725,15 @@ function renderSummary() {
     return `<span><span class="dot" style="background:${st.color}"></span>${esc(st.label)}: <b style="color:var(--text)">${fmtDaysHours(total)}</b></span>`;
   }).join('') + (groups.length ? '<span style="opacity:.4">|</span>' + groups.map(g => {
     const total = sorted.reduce((s, r) => s + groupHours(r, g), 0);
-    return `<span><span class="dot" style="background:${g.color}"></span>${esc(g.label)}: <b style="color:var(--text)">${fmtDaysHours(total)}</b></span>`;
+    const days = sorted.reduce((s, r) => s + groupDays(r, g), 0);
+    return `<span><span class="dot" style="background:${g.color}"></span>${esc(g.label)}: <b style="color:var(--text)">${days}d · ${fmtFIF(total)}</b></span>`;
   }).join('') : '');
 
   document.getElementById('content').innerHTML = `
     <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:12px">
       <div>
         <div class="page-title">Summary</div>
-        <div class="page-sub">Status day counts and activity hours per employee for ${range.label}. Period: ${range.subtitle}. Activity hours are derived from shift time ranges (e.g. 0800–1600 = 8h), grouped by type.</div>
+        <div class="page-sub">Status time, assigned activity days, and compensation hours per employee for ${range.label}. Period: ${range.subtitle}. Activities are grouped by type.</div>
       </div>
       <div class="year-nav" style="gap:8px">
         <select class="plain-select" onchange="setSummaryPeriod(this.value)" aria-label="Summary period">
@@ -4148,12 +4759,18 @@ function renderSummary() {
 // ═══ MODAL PLUMBING ══════════════════════════════════════════════════════════
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-bg').forEach(bg => {
-  bg.addEventListener('mousedown', e => { if (e.target === bg) bg.classList.remove('open'); });
+  bg.addEventListener('mousedown', e => {
+    // Lukk modalen ved klikk utenfor, MEN IKKE hvis det er innloggingsskjermen
+    if (e.target === bg && bg.id !== 'login-modal') bg.classList.remove('open');
+  });
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closePicker();
-    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.modal-bg.open').forEach(m => {
+      // Ignorer Escape-knappen for innloggingsskjermen
+      if (m.id !== 'login-modal') m.classList.remove('open');
+    });
   }
 });
 

@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcrypt');
@@ -37,22 +38,27 @@ if (!adminExists) {
 }
 
 // Middleware
-app.use((req, res, next) => {
+app.use(express.json({ limit: '50mb' }));
+app.set('trust proxy', 1);
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 1000 * 60 * 60 * 24 * 7
+  } // 1 uke logget inn
+}));
+
+// Sikre statiske filer (krever innlogging for å se appen)
+app.use(express.static('public'));
+
+app.use('/api', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   next();
 });
-app.use(express.json({ limit: '50mb' }));
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 * 7 } // 1 uke logget inn
-}));
-
-// Sikre statiske filer (krever innlogging for å se appen)
-app.use(express.static('public'));
 
 // Sjekker om brukeren er logget inn
 const requireAuth = (req, res, next) => {
@@ -60,8 +66,14 @@ const requireAuth = (req, res, next) => {
   else res.status(401).json({ error: 'Unauthorized' });
 };
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'For mange innloggingsforsøk. Prøv igjen senere.' }
+});
+
 // API: Innlogging
-app.post('/api/login', (req, res) => {
+app.post('/api/login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
   if (user && bcrypt.compareSync(password, user.password_hash)) {
