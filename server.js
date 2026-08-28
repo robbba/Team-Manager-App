@@ -34,7 +34,7 @@ const adminExists = db.prepare('SELECT * FROM users WHERE username = ?').get('ad
 if (!adminExists) {
   const hash = bcrypt.hashSync('admin123', 10); // Standard passord: admin123
   db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run('admin', hash);
-  console.log('Standardbruker opprettet: admin / admin123');
+  console.log('Default user created: admin / admin123');
 }
 
 // Middleware
@@ -69,7 +69,7 @@ const requireAuth = (req, res, next) => {
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: { error: 'For mange innloggingsforsøk. Prøv igjen senere.' }
+  message: { error: 'Too many login attempts. Please try again later.' }
 });
 
 // API: Innlogging
@@ -80,7 +80,7 @@ app.post('/api/login', loginLimiter, (req, res) => {
     req.session.userId = user.id;
     res.json({ success: true });
   } else {
-    res.status(401).json({ error: 'Feil brukernavn eller passord' });
+    res.status(401).json({ error: 'Invalid username or password' });
   }
 });
 
@@ -97,11 +97,11 @@ app.post('/api/change-password', requireAuth, (req, res) => {
 
   // Sjekk om nåværende passord stemmer
   if (!user || !bcrypt.compareSync(currentPassword, user.password_hash)) {
-    return res.status(401).json({ error: 'Feil nåværende passord' });
+    return res.status(401).json({ error: 'Incorrect current password' });
   }
 
   if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'Nytt passord må ha minst 6 tegn' });
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
   }
 
   // Hash det nye passordet og lagre
@@ -129,5 +129,5 @@ app.post('/api/state', requireAuth, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server kjører på http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
