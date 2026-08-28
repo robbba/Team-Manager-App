@@ -666,6 +666,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="form-hint" id="set-storage-hint">Choose where data is persisted.</div>
       <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
         <button class="btn btn-sm" type="button" onclick="exportData()">Export JSON</button>
+        <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save locally as...</button>
         <button class="btn btn-sm" type="button" onclick="importData()">Import JSON</button>
         <button class="btn btn-sm" id="upload-server-btn" type="button" onclick="uploadCurrentDataToServer()">Upload current data to server</button>
       </div>
@@ -729,6 +730,10 @@ const STORAGE_MODE_KEY = 'team-manager-storage-mode';
 const LOCAL_STATE_KEY = 'team-manager-local-state';
 const STORAGE_MODE_SERVER = 'server';
 const STORAGE_MODE_LOCAL = 'local';
+const LOCAL_BACKUP_HANDLE_DB = 'team-manager-file-handles';
+const LOCAL_BACKUP_HANDLE_STORE = 'handles';
+const LOCAL_BACKUP_HANDLE_KEY = 'local-backup-json';
+let localBackupFileHandle = null;
 function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 function svgIcon(name, title = '') {
   const paths = {
@@ -947,23 +952,26 @@ function applyStorageModeControls() {
   const hint = document.getElementById('set-storage-hint');
   const uploadButton = document.getElementById('upload-server-btn');
   const uploadHint = document.getElementById('upload-server-hint');
+  const saveLocalAsButton = document.getElementById('save-local-as-btn');
   if (!select || !hint) return;
   if (window.location.protocol === 'file:') {
     storageMode = STORAGE_MODE_LOCAL;
     select.value = STORAGE_MODE_LOCAL;
     select.disabled = true;
-    hint.textContent = 'Direct file mode is locked to Local JSON mode because server APIs are unavailable from file:// URLs.';
+    hint.textContent = 'Direct file mode is locked to Local JSON mode. Save locally writes a JSON backup file, and Save locally as... lets you choose a new file.';
     if (uploadButton) uploadButton.style.display = 'none';
     if (uploadHint) uploadHint.style.display = 'none';
+    if (saveLocalAsButton) saveLocalAsButton.style.display = '';
     return;
   }
   select.disabled = false;
   select.value = storageMode;
   hint.textContent = storageMode === STORAGE_MODE_SERVER
     ? 'Online SQLite mode uses the authenticated server/database.'
-    : 'Local JSON mode stores planner data in your browser and supports export/import JSON backups.';
+    : 'Local JSON mode stores planner data in your browser. Save locally writes to a backup JSON file after you choose it once.';
   if (uploadButton) uploadButton.style.display = '';
   if (uploadHint) uploadHint.style.display = '';
+  if (saveLocalAsButton) saveLocalAsButton.style.display = storageMode === STORAGE_MODE_LOCAL ? '' : 'none';
 }
 const GRID_YEAR_KEY = 'teamManagerGridYear';
 const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
@@ -1416,6 +1424,174 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
+function canUseFileSystemSave() {
+  return typeof window.showSaveFilePicker === 'function';
+}
+
+function openLocalBackupHandleDb() {
+  if (!window.indexedDB) return Promise.resolve(null);
+  return new Promise(resolve => {
+    try {
+      const request = window.indexedDB.open(LOCAL_BACKUP_HANDLE_DB, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(LOCAL_BACKUP_HANDLE_STORE)) db.createObjectStore(LOCAL_BACKUP_HANDLE_STORE);
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    } catch (err) {
+      resolve(null);
+    }
+  });
+}
+
+async function storeLocalBackupHandle(handle) {
+  localBackupFileHandle = handle || null;
+  const db = await openLocalBackupHandleDb();
+  if (!db) return;
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(LOCAL_BACKUP_HANDLE_STORE, 'readwrite');
+      tx.objectStore(LOCAL_BACKUP_HANDLE_STORE).put(handle || null, LOCAL_BACKUP_HANDLE_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error('Failed to store file handle'));
+      tx.onabort = () => reject(tx.error || new Error('Failed to store file handle'));
+    });
+  } catch (err) {
+    console.warn('Could not store local backup file handle:', err.message);
+  } finally {
+    db.close();
+  }
+}
+
+async function clearStoredLocalBackupHandle() {
+  localBackupFileHandle = null;
+  const db = await openLocalBackupHandleDb();
+  if (!db) return;
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(LOCAL_BACKUP_HANDLE_STORE, 'readwrite');
+      tx.objectStore(LOCAL_BACKUP_HANDLE_STORE).delete(LOCAL_BACKUP_HANDLE_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error('Failed to clear file handle'));
+      tx.onabort = () => reject(tx.error || new Error('Failed to clear file handle'));
+    });
+  } catch (err) {
+    console.warn('Could not clear local backup file handle:', err.message);
+  } finally {
+    db.close();
+  }
+}
+
+async function loadStoredLocalBackupHandle() {
+  if (localBackupFileHandle) return localBackupFileHandle;
+  const db = await openLocalBackupHandleDb();
+  if (!db) return null;
+  try {
+    const handle = await new Promise(resolve => {
+      const tx = db.transaction(LOCAL_BACKUP_HANDLE_STORE, 'readonly');
+      const req = tx.objectStore(LOCAL_BACKUP_HANDLE_STORE).get(LOCAL_BACKUP_HANDLE_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+    localBackupFileHandle = handle || null;
+    return localBackupFileHandle;
+  } finally {
+    db.close();
+  }
+}
+
+async function ensureLocalBackupPermission(handle) {
+  if (!handle) return false;
+  if (typeof handle.queryPermission !== 'function') return true;
+  let permission = await handle.queryPermission({ mode: 'readwrite' });
+  if (permission !== 'granted' && typeof handle.requestPermission === 'function') {
+    permission = await handle.requestPermission({ mode: 'readwrite' });
+  }
+  return permission === 'granted';
+}
+
+async function requestLocalBackupHandle() {
+  const handle = await window.showSaveFilePicker({
+    suggestedName: `team-manager-backup-${todayStr()}.json`,
+    types: [{
+      description: 'JSON backup',
+      accept: { 'application/json': ['.json'] },
+    }],
+  });
+  await storeLocalBackupHandle(handle);
+  return handle;
+}
+
+async function writeLocalBackupFile(handle) {
+  const writable = await handle.createWritable();
+  try {
+    await writable.write(JSON.stringify(snapshotData(), null, 2));
+    await writable.close();
+  } catch (err) {
+    try { await writable.abort(); } catch (abortErr) { }
+    throw err;
+  }
+}
+
+async function saveLocalBackupFile(forcePrompt = false) {
+  if (!canUseFileSystemSave()) {
+    exportData();
+    return;
+  }
+  let handle = null;
+  if (!forcePrompt) {
+    handle = await loadStoredLocalBackupHandle();
+    if (handle) {
+      const hasPermission = await ensureLocalBackupPermission(handle);
+      if (!hasPermission) handle = null;
+    }
+  }
+  if (!handle) {
+    handle = await requestLocalBackupHandle();
+    const hasPermission = await ensureLocalBackupPermission(handle);
+    if (!hasPermission) {
+      await clearStoredLocalBackupHandle();
+      throw new Error('No local backup file permission');
+    }
+  }
+  try {
+    await writeLocalBackupFile(handle);
+  } catch (err) {
+    const shouldRePrompt = !forcePrompt && (err?.name === 'NotAllowedError' || err?.name === 'NotFoundError' || err?.name === 'SecurityError');
+    if (shouldRePrompt) {
+      await clearStoredLocalBackupHandle();
+      await saveLocalBackupFile(true);
+      return;
+    }
+    throw err;
+  }
+}
+
+async function saveDataAs() {
+  if (storageMode !== STORAGE_MODE_LOCAL) {
+    await saveData();
+    return;
+  }
+  const btn = document.getElementById('save-btn');
+  const originalText = btn ? btn.innerHTML : '';
+  try {
+    if (btn) btn.innerHTML = 'Saving...';
+    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+    await saveState(true);
+    await saveLocalBackupFile(true);
+    hasUnsavedChanges = false;
+    updateSaveButton();
+    updateSbStatus();
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    alert('Could not save local backup file.');
+    updateSaveButton();
+  } finally {
+    if (btn) btn.innerHTML = originalText;
+  }
+}
+
 function importData() {
   const input = document.getElementById('import-json-file');
   if (!input) return;
@@ -1554,7 +1730,7 @@ function updateSaveButton() {
   const manualSaveVisible = appSettings.autoSaveEnabled === false;
   button.style.display = manualSaveVisible ? '' : 'none';
   if (!manualSaveVisible) return;
-  const baseLabel = storageMode === STORAGE_MODE_LOCAL ? 'Save Local Copy' : 'Save to Server';
+  const baseLabel = storageMode === STORAGE_MODE_LOCAL ? 'Save locally' : 'Save to Server';
   button.innerHTML = `${svgIcon('save')} ${baseLabel}`;
   button.style.background = '';
   button.style.color = '';
@@ -1779,16 +1955,23 @@ async function saveState(force = false) {
 }
 
 async function saveData() {
+  const btn = document.getElementById('save-btn');
+  const originalText = btn ? btn.innerHTML : '';
+  const saveMode = storageMode;
   try {
-    const btn = document.getElementById('save-btn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = 'Lagrer...';
+    if (btn) btn.innerHTML = 'Saving...';
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
     await saveState(true);
-    btn.innerHTML = originalText;
-  } catch (err) { 
-    alert(storageMode === STORAGE_MODE_LOCAL ? 'Could not save local JSON data.' : 'Could not save to server.'); 
+    if (saveMode === STORAGE_MODE_LOCAL) await saveLocalBackupFile(false);
+    hasUnsavedChanges = false;
     updateSaveButton();
+    updateSbStatus();
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    alert(saveMode === STORAGE_MODE_LOCAL ? 'Could not save local backup file.' : 'Could not save to server.');
+    updateSaveButton();
+  } finally {
+    if (btn) btn.innerHTML = originalText;
   }
 }
 
