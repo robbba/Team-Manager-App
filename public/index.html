@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Team Manager</title>
-<script>if (window.location.protocol === 'file:') window.location.replace('public/index.html');</script>
 <style>
 :root {
   --bg: #fbfaf8; --surface: #ffffff; --muted-bg: #eef0f3; --border: #e3e6ea;
@@ -759,7 +758,7 @@ function lsGet(key) { try { return window.localStorage.getItem(key); } catch (er
 function lsSet(key, value) { try { window.localStorage.setItem(key, value); } catch (err) { } }
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 const DATA_VERSION = 5;
 const DEFAULT_WORK_CODES = [
   { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', hours: 12, color: '#3b82f6' },
