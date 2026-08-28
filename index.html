@@ -1892,7 +1892,7 @@ async function saveData() {
   const originalText = btn ? btn.innerHTML : '';
   const saveMode = storageMode;
   try {
-    if (btn) btn.innerHTML = 'Lagrer...';
+    if (btn) btn.innerHTML = 'Saving...';
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
     await saveState(true);
     if (saveMode === STORAGE_MODE_LOCAL) await saveLocalBackupFile(false);
@@ -2022,8 +2022,13 @@ async function requestLocalBackupHandle() {
 
 async function writeLocalBackupFile(handle) {
   const writable = await handle.createWritable();
-  await writable.write(JSON.stringify(snapshotData(), null, 2));
-  await writable.close();
+  try {
+    await writable.write(JSON.stringify(snapshotData(), null, 2));
+    await writable.close();
+  } catch (err) {
+    try { await writable.abort(); } catch (abortErr) { }
+    throw err;
+  }
 }
 
 async function saveLocalBackupFile(forcePrompt = false) {
@@ -2042,7 +2047,10 @@ async function saveLocalBackupFile(forcePrompt = false) {
   if (!handle) {
     handle = await requestLocalBackupHandle();
     const hasPermission = await ensureLocalBackupPermission(handle);
-    if (!hasPermission) throw new Error('No local backup file permission');
+    if (!hasPermission) {
+      await clearStoredLocalBackupHandle();
+      throw new Error('No local backup file permission');
+    }
   }
   try {
     await writeLocalBackupFile(handle);
@@ -2065,7 +2073,7 @@ async function saveDataAs() {
   const btn = document.getElementById('save-btn');
   const originalText = btn ? btn.innerHTML : '';
   try {
-    if (btn) btn.innerHTML = 'Lagrer...';
+    if (btn) btn.innerHTML = 'Saving...';
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
     await saveState(true);
     await saveLocalBackupFile(true);
