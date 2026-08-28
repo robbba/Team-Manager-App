@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Team Manager</title>
-<script>if (window.location.protocol === 'file:') window.location.replace('public/index.html');</script>
 <style>
 :root {
   --bg: #fbfaf8; --surface: #ffffff; --muted-bg: #eef0f3; --border: #e3e6ea;
@@ -789,7 +788,7 @@ function lsGet(key) { try { return window.localStorage.getItem(key); } catch (er
 function lsSet(key, value) { try { window.localStorage.setItem(key, value); } catch (err) { } }
 function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 const DATA_VERSION = 5;
 const DEFAULT_WORK_CODES = [
   { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', hours: 12, color: '#3b82f6' },
@@ -2870,7 +2869,8 @@ async function saveActivityAssignment(empId, actId) {
   const isCalendarOnly = !customShift && selectedShift === 'na';
   const shift = isCalendarOnly ? '' : (customShift || template?.category || selectedShift);
   const shiftTemplateId = customShift || isCalendarOnly ? null : (template?.id || legacyShiftTemplateId(shift));
-  if (!activity || (!shift && !isCalendarOnly)) { alert('Select a Shift Type or NA / Calendar only.'); return; }
+  const requiresWorkCode = !isCalendarOnly && selectedShift !== 'normal';
+  if (!activity || (!shift && !isCalendarOnly) || (requiresWorkCode && !workCodeId)) { alert('Select a Work Code and Shift Type, or use Normal Arbeidstid / NA / Calendar only.'); return; }
   const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
   if (!confirmActivityReplacement(empId, dates, actId)) return;
   recordUndo();

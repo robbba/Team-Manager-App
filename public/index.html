@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Team Manager</title>
-<script>if (window.location.protocol === 'file:') window.location.replace('public/index.html');</script>
 <style>
 :root {
   --bg: #fbfaf8; --surface: #ffffff; --muted-bg: #eef0f3; --border: #e3e6ea;
@@ -759,7 +758,7 @@ function lsGet(key) { try { return window.localStorage.getItem(key); } catch (er
 function lsSet(key, value) { try { window.localStorage.setItem(key, value); } catch (err) { } }
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 const DATA_VERSION = 5;
 const DEFAULT_WORK_CODES = [
   { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', hours: 12, color: '#3b82f6' },
@@ -2826,7 +2825,8 @@ async function saveActivityAssignment(empId, actId) {
   const workCodeId = document.getElementById(`pk-code-${actId}`)?.value || '';
   const customShift = document.getElementById(`pk-custom-shift-${actId}`)?.value.trim() || '';
   const shift = customShift || document.getElementById(`pk-shifts-${actId}`)?.dataset.shift || '';
-  if (!activity || !workCodeId || !shift) { alert('Select both a Work Code and a Shift Type.'); return; }
+  const requiresWorkCode = shift !== 'normal';
+  if (!activity || !shift || (requiresWorkCode && !workCodeId)) { alert('Select a Shift Type. For non-normal shifts, a Work Code is also required.'); return; }
   const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
   if (!confirmActivityReplacement(empId, dates, actId)) return;
   recordUndo();
