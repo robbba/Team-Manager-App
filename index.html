@@ -2870,7 +2870,8 @@ async function saveActivityAssignment(empId, actId) {
   const isCalendarOnly = !customShift && selectedShift === 'na';
   const shift = isCalendarOnly ? '' : (customShift || template?.category || selectedShift);
   const shiftTemplateId = customShift || isCalendarOnly ? null : (template?.id || legacyShiftTemplateId(shift));
-  if (!activity || (!shift && !isCalendarOnly)) { alert('Select a Shift Type or NA / Calendar only.'); return; }
+  const requiresWorkCode = !isCalendarOnly && selectedShift !== 'normal';
+  if (!activity || (!shift && !isCalendarOnly) || (requiresWorkCode && !workCodeId)) { alert('Select a Work Code and Shift Type, or use Normal Arbeidstid / NA / Calendar only.'); return; }
   const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
   if (!confirmActivityReplacement(empId, dates, actId)) return;
   recordUndo();

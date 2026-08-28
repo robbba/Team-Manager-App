@@ -2826,7 +2826,8 @@ async function saveActivityAssignment(empId, actId) {
   const workCodeId = document.getElementById(`pk-code-${actId}`)?.value || '';
   const customShift = document.getElementById(`pk-custom-shift-${actId}`)?.value.trim() || '';
   const shift = customShift || document.getElementById(`pk-shifts-${actId}`)?.dataset.shift || '';
-  if (!activity || !workCodeId || !shift) { alert('Select both a Work Code and a Shift Type.'); return; }
+  const requiresWorkCode = shift !== 'normal';
+  if (!activity || !shift || (requiresWorkCode && !workCodeId)) { alert('Select both a Work Code and a Shift Type.'); return; }
   const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
   if (!confirmActivityReplacement(empId, dates, actId)) return;
   recordUndo();
