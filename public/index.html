@@ -195,6 +195,7 @@ tr:hover .act-cell-actions { opacity: 1; }
 .form-row input, .form-row select, .form-row textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13.5px; font-family: inherit; outline: none; background: var(--surface); color: var(--text); }
 .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--accent-blue); }
 .form-row textarea { resize: vertical; min-height: 56px; }
+.shift-template-color { height: 35px; padding: 2px !important; cursor: pointer; }
 .form-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 13px; }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 13px; }
@@ -589,10 +590,13 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     <p class="modal-desc">Describes the planned work performed during an activity. The code defines whether the employee is out of office; Shift Type alone determines scheduled hours.</p>
     <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
       <input id="wcf-id" type="hidden">
-      <div class="form-row-3" style="margin-bottom:10px">
+      <div class="form-row-2" style="margin-bottom:10px">
         <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Name *</label><input id="wcf-name" placeholder="Exercise Day"></div>
         <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Abbreviation *</label><input id="wcf-abbr" maxlength="12" placeholder="EX D" style="text-transform:uppercase"></div>
+      </div>
+      <div class="form-row-2" style="margin-bottom:10px">
         <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Out of office while assigned</label><select id="wcf-staffing-impact"><option value="available">No</option><option value="unavailable">Yes</option></select></div>
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Count as</label><select id="wcf-aggregation-mode"><option value="hours">Hours</option><option value="units">Units</option></select></div>
       </div>
       <div class="swatches" id="wcf-swatches" style="margin-bottom:10px"></div>
       <div class="flex gap-2" style="justify-content:flex-end">
@@ -601,6 +605,28 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       </div>
     </div>
     <div id="work-code-list" style="max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <div style="height:1px;background:var(--border);margin:18px 0"></div>
+    <h3 style="font-size:16px">Shift Templates</h3>
+    <p class="modal-desc">Define reusable shifts for hospitals, turnus, on-call work, and other schedules.</p>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px" id="shf-form-title">Add a shift template</div>
+      <input id="shf-id" type="hidden">
+      <div class="form-row-2" style="margin-bottom:10px">
+        <div class="form-row" style="margin:0"><label>Name *</label><input id="shf-name" placeholder="e.g. Late shift"></div>
+        <div class="form-row" style="margin:0"><label>Category</label><select id="shf-category"><option value="day">Day</option><option value="middle">Middle</option><option value="evening">Evening</option><option value="night">Night</option><option value="continuous">Continuous</option><option value="standby">Standby</option><option value="other">Other</option></select></div>
+      </div>
+      <div class="form-row-3" style="margin-bottom:10px">
+        <div class="form-row" style="margin:0"><label>Start</label><input id="shf-start" type="time" value="07:00"></div>
+        <div class="form-row" style="margin:0"><label>End</label><input id="shf-end" type="time" value="15:00"></div>
+        <div class="form-row" style="margin:0"><label>Color</label><input id="shf-color" class="shift-template-color" type="color" value="#3b82f6"></div>
+      </div>
+      <div id="shf-hours" class="form-hint" style="margin-bottom:10px">8 h</div>
+      <div class="flex gap-2" style="justify-content:flex-end">
+        <button class="btn btn-sm" id="shf-cancel" style="display:none" onclick="resetShiftTemplateForm()">Cancel edit</button>
+        <button class="btn btn-sm btn-primary" onclick="saveShiftTemplate()" id="shf-save">Add shift template</button>
+      </div>
+    </div>
+    <div id="shift-template-list" style="max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('status-modal')">Done</button>
     </div>
@@ -660,7 +686,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     </div>
     <div class="form-row">
       <label>Planning configuration</label>
-      <button class="btn" type="button" onclick="closeModal('settings-modal');openStatusManager()">Manage Activity Categories, Daily Deviations &amp; Work Time Codes</button>
+      <button class="btn" type="button" onclick="closeModal('settings-modal');openStatusManager()">Manage Planning Options</button>
     </div>
     <div class="form-row">
       <label>Planning Horizon</label>
@@ -779,8 +805,14 @@ function lsSet(key, value) { try { window.localStorage.setItem(key, value); } ca
 const APP_VERSION = '1.1.1';
 const DATA_VERSION = 6;
 const DEFAULT_WORK_CODES = [
-  { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', staffingImpact: 'available', color: '#3b82f6' },
-  { id: 'wc2', name: 'Turnusfri', abbreviation: 'TF', staffingImpact: 'available', color: '#64748b' },
+  { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', staffingImpact: 'available', aggregationMode: 'hours', color: '#3b82f6' },
+  { id: 'wc2', name: 'Turnusfri', abbreviation: 'TF', staffingImpact: 'available', aggregationMode: 'hours', color: '#64748b' },
+];
+const DEFAULT_SHIFT_TEMPLATES = [
+  { id: 'day', name: 'Dagvakt', start: '0700', end: '1500', category: 'day', color: '#3b82f6', hours: 8 },
+  { id: 'middle', name: 'Mellomvakt', start: '1200', end: '2000', category: 'middle', color: '#f97316', hours: 8 },
+  { id: 'night', name: 'Nattevakt', start: '2300', end: '0700', category: 'night', color: '#1e293b', hours: 8 },
+  { id: 'continuous', name: 'Døgnvakt', start: '0700', end: '0700', category: 'continuous', color: '#4f46e5', hours: 24 },
 ];
 
 let appSettings = {
@@ -798,6 +830,8 @@ let appSettings = {
   departmentColors: {},
   activityTypes: [],
   workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })),
+  shiftTemplates: DEFAULT_SHIFT_TEMPLATES.map(shift => ({ ...shift })),
+  summaryColumns: null,
 };
 let storageMode = STORAGE_MODE_SERVER;
 
@@ -834,8 +868,36 @@ function normalizeWorkCodes(value) {
     name: String(code.name || 'Work Code').trim(),
     abbreviation: String(code.abbreviation || code.abbr || '').trim().toUpperCase().slice(0, 12),
     staffingImpact: code.staffingImpact === 'unavailable' ? 'unavailable' : 'available',
+    aggregationMode: code.aggregationMode === 'units' ? 'units' : 'hours',
     color: normalizeHexColor(code.color, '#3b82f6'),
   }));
+}
+function normalizeShiftTemplates(value) {
+  const source = Array.isArray(value) && value.length ? value : DEFAULT_SHIFT_TEMPLATES;
+  return source.map((shift, index) => {
+    const start = String(shift.start || '').replace(':', '').padStart(4, '0');
+    const end = String(shift.end || '').replace(':', '').padStart(4, '0');
+    const calculatedHours = timeRangeHours(`${start}-${end}`);
+    return {
+      id: String(shift.id || `shift-${index + 1}`),
+      name: String(shift.name || 'Shift'),
+      start: /^\d{4}$/.test(start) ? start : '0700',
+      end: /^\d{4}$/.test(end) ? end : '1500',
+      category: String(shift.category || 'other'),
+      color: normalizeHexColor(shift.color, '#3b82f6'),
+      hours: Number.isFinite(Number(shift.hours)) ? Number(shift.hours) : (calculatedHours || 0),
+    };
+  });
+}
+function normalizeSummaryColumns(value) {
+  if (!value || typeof value !== 'object' || value.configured !== true) return null;
+  return {
+    configured: true,
+    statusKeys: [...new Set((Array.isArray(value.statusKeys) ? value.statusKeys : []).map(String))],
+    showAbsence: value.showAbsence === true,
+    showOoo: value.showOoo === true,
+    workCodeIds: [...new Set((Array.isArray(value.workCodeIds) ? value.workCodeIds : []).map(String))],
+  };
 }
 function normalizeAnnualRequirements(raw) {
   const existingRequirements = Array.isArray(raw.requirements)
@@ -916,6 +978,8 @@ function normalizeStateVersion(data) {
   normalized.appVersion = raw.appVersion || APP_VERSION;
   normalized.activityTypes = normalizeActivityTypes(raw.activityTypes || raw.appSettings?.activityTypes || []);
   normalized.workCodes = normalizeWorkCodes(raw.workCodes || raw.appSettings?.workCodes);
+  normalized.shiftTemplates = normalizeShiftTemplates(raw.shiftTemplates || raw.appSettings?.shiftTemplates);
+  normalized.summaryColumns = normalizeSummaryColumns(raw.summaryColumns ?? raw.appSettings?.summaryColumns);
   const annualRequirements = normalizeAnnualRequirements(raw);
   normalized.requirements = annualRequirements.requirements;
   normalized.requirementRecords = annualRequirements.requirementRecords;
@@ -947,6 +1011,8 @@ function loadSettings() {
         : {};
       appSettings.activityTypes = normalizeActivityTypes(parsed.activityTypes);
       appSettings.workCodes = normalizeWorkCodes(parsed.workCodes);
+      appSettings.shiftTemplates = normalizeShiftTemplates(parsed.shiftTemplates);
+      appSettings.summaryColumns = normalizeSummaryColumns(parsed.summaryColumns);
       if (legacyRaw) {
         lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
         lsRemove(LEGACY_SETTINGS_KEY);
@@ -1697,6 +1763,7 @@ let workloadPeriod = 'year';
 let workloadAnchorDate = fmt(new Date());
 let boardYear = new Date().getFullYear();
 let summarySortKey = 'people', summarySortDir = 'asc';
+let summaryColumnsDraft = null;
 let empSearch = '', empFilterDept = '', empFilterCatId = null;
 let deptColorsExpanded = false;
 let hiddenEmployees = new Set();
@@ -1718,7 +1785,7 @@ let activityRangeSelection = { active: false, rowKey: null, startDate: null, end
 let suppressCellClick = false;
 let suppressActivityCellClick = false;
 let pendingRangeSelection = null;
-let editingEmpId = null, editingActId = null, editingStatusId = null, editingDailyStatusId = null, editingCatId = null;
+let editingEmpId = null, editingActId = null, editingStatusId = null, editingDailyStatusId = null, editingCatId = null, editingShiftTemplateId = null;
 let selectedActColor = PALETTE[0], selectedParticipants = [], selectedStatusColor = PALETTE[0], selectedDailyStatusColor = PALETTE[0], selectedWorkCodeColor = '#3b82f6', selectedCatColor = PALETTE[7], selectedEmpCatIds = [];
 let hasUnsavedChanges = false;
 let undoStack = [];
@@ -1794,6 +1861,8 @@ function loadFromData(data) {
     ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
     : {};
   appSettings.workCodes = normalizeWorkCodes(normalized.workCodes);
+  appSettings.shiftTemplates = normalizeShiftTemplates(normalized.shiftTemplates);
+  appSettings.summaryColumns = normalizeSummaryColumns(normalized.summaryColumns ?? appSettings.summaryColumns);
   courses = (normalized.courses || []).map(course => ({ ...course, id: +course.id }));
   courseStatuses = normalized.courseStatuses && typeof normalized.courseStatuses === 'object' ? { ...normalized.courseStatuses } : {};
   requirements = normalized.requirements;
@@ -1849,13 +1918,13 @@ function loadFromData(data) {
   } else entriesMap = {};
   if (normalized.activityShiftsMap && typeof normalized.activityShiftsMap === 'object' && !Array.isArray(normalized.activityShiftsMap)) {
     activityShiftsMap = Object.fromEntries(Object.entries(normalized.activityShiftsMap).map(([key, value]) => [key,
-      typeof value === 'string' ? { shift: value || 'normal', workCodeId: null, staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), workCodeId: value?.workCodeId || null, staffingImpactOverride: null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
+      typeof value === 'string' ? { shift: value || 'normal', shiftTemplateId: legacyShiftTemplateId(value || 'normal'), workCodeId: null, staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), shiftTemplateId: value?.shiftTemplateId || legacyShiftTemplateId(value?.shift || ''), workCodeId: value?.workCodeId || null, staffingImpactOverride: null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
     ]));
   } else if (Array.isArray(normalized.activityShifts)) {
     activityShiftsMap = {};
     normalized.activityShifts.forEach(s => {
       const eid = +s.employeeId, pid = +s.projectId;
-      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: s.workCodeId || null, staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
+      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), shiftTemplateId: s.shiftTemplateId || legacyShiftTemplateId(s.shift || ''), workCodeId: s.workCodeId || null, staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
     });
   } else activityShiftsMap = {};
   const rawStatuses = Array.isArray(normalized.statuses) && normalized.statuses.length
@@ -1949,6 +2018,8 @@ function snapshotData() {
     departmentColors: appSettings.departmentColors || {},
     activityTypes: appSettings.activityTypes || [],
     workCodes: appSettings.workCodes || [],
+    shiftTemplates: appSettings.shiftTemplates || [],
+    summaryColumns: appSettings.summaryColumns,
     employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   };
@@ -2106,9 +2177,13 @@ function activityExtraHoursOutsideBaseline(shiftIntervals, baselineShift) {
 }
 function shiftHours(shift) {
   if (!shift || shift === 'fullday') return appSettings.coreHoursPerDay;
+  const template = shiftTemplateById(shift);
+  if (template) return shiftTemplateHours(template);
   return timeRangeHours(shift) ?? appSettings.coreHoursPerDay;
 }
 function activityDefaultShift(shiftType, act = null) {
+  const template = shiftTemplateById(shiftType);
+  if (template) return shiftTemplateTime(template);
   if (shiftType === 'normal') return act?.normalShift || appSettings.coreWorkdayRange || '0730-1500';
   return shiftType === 'night' ? (act?.nightShift || '0000-0730') : (act?.dayShift || '0730-2400');
 }
@@ -2116,18 +2191,24 @@ function activityShiftHours(act, empId, date) {
   if (activityStatus(act) !== 'confirmed') return 0;
   const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
   if (!assignment.assigned || assignment.excluded || !assignment.shift) return 0;
-  const shiftStr = assignment.shift || 'normal';
+  const template = shiftTemplateById(assignment.shiftTemplateId);
+  const shiftStr = template ? template.id : (assignment.shift || 'normal');
+  if (template) return shiftTemplateHours(template);
   if (shiftStr === 'turn') return 0;
+  if (shiftStr === 'continuous') return 24;
   if (['normal', 'day', 'night'].includes(shiftStr)) {
     return timeRangeHours(activityDefaultShift(shiftStr, act)) ?? 0;
   }
   return timeRangeHours(shiftStr) ?? 0;
 }
 function activityShiftMeta(act, shift) {
+  const template = shiftTemplateById(shift);
+  if (template) return { key: template.id, label: template.name, range: shiftTemplateTime(template), category: template.category, color: template.color, icon: template.category === 'night' ? svgIcon('moon', template.name) : (template.category === 'day' ? svgIcon('sun', template.name) : '') };
   if (shift === 'normal') return { key: 'normal', label: 'Normal Working Hours', range: activityDefaultShift('normal', act), icon: '' };
   if (shift === 'day') return { key: 'day', label: 'Day', range: activityDefaultShift('day', act), icon: svgIcon('sun', 'Day') };
   if (shift === 'night') return { key: 'night', label: 'Night', range: activityDefaultShift('night', act), icon: svgIcon('moon', 'Night') };
   if (shift === 'turn') return { key: 'turn', label: 'Turnaround', range: '', icon: shiftChangeIcon('Turnaround') };
+  if (shift === 'continuous') return { key: 'continuous', label: '24h / unspecified working hours', range: '', icon: '' };
   return shift ? { key: shift, label: 'Custom', range: shift, icon: '' } : null;
 }
 function activityAssignmentInfo(act, empId, date) {
@@ -2136,10 +2217,8 @@ function activityAssignmentInfo(act, empId, date) {
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId)
     || (assignment.shift === 'normal' ? { id: null, name: 'Normal Working Hours', abbreviation: 'NA', color: act.color } : null);
   if (!assignment.assigned || assignment.excluded || !assignment.shift || !workCode) return null;
-  const shiftMeta = activityShiftMeta(act, assignment.shift);
-  const physicalShift = ['normal', 'day', 'night'].includes(assignment.shift)
-    ? `${shiftMeta.label} (${shiftMeta.range})`
-    : (assignment.shift === 'turn' ? shiftMeta.label : (assignment.shift || 'Not specified'));
+  const shiftMeta = activityShiftMeta(act, assignment.shiftTemplateId || assignment.shift);
+  const physicalShift = shiftMeta?.range ? `${shiftMeta.label} (${shiftMeta.range})` : (shiftMeta?.label || assignment.shift || 'Not specified');
   return { assignment, workCode, physicalShift, hours: activityShiftHours(act, empId, date) };
 }
 function assignmentShiftType(shift, participant = null) {
@@ -2178,16 +2257,16 @@ function activityTypeMeta(act) {
 }
 function activityAssignment(key) {
   const value = activityShiftsMap[key];
-  if (!value) return { shift: '', workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: false };
-  return typeof value === 'string'
-    ? { shift: value, workCodeId: null, staffingImpactOverride: null, assigned: true, excluded: false }
-    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: value.workCodeId || null, staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
+  if (!value) return { shift: '', shiftTemplateId: null, workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: false };
+  if (typeof value === 'string') return { shift: value || 'normal', shiftTemplateId: legacyShiftTemplateId(value), workCodeId: null, staffingImpactOverride: null, assigned: true, excluded: false };
+  const shift = value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : '');
+  return { shift, shiftTemplateId: value.shiftTemplateId || legacyShiftTemplateId(shift), workCodeId: value.workCodeId || null, staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
 }
 function activityAssignmentShift(key) {
   return activityAssignment(key).shift;
 }
 function excludeActivityAssignment(key) {
-  activityShiftsMap[key] = { shift: '', workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: true };
+  activityShiftsMap[key] = { shift: '', shiftTemplateId: null, workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: true };
 }
 function participantActivityShift(act, empId, dateString) {
   const participant = participantFor(act, empId);
@@ -2748,7 +2827,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
 
   const tipParts = [];
   acts.forEach(act => {
-    const shift = activityShiftMeta(act, act.assignment.shift);
+    const shift = activityShiftMeta(act, act.assignment.shiftTemplateId || act.assignment.shift);
     let detail = `Activity: ${act.name}`;
     if (act.workCode) detail += `\nCode: ${act.workCode.name} (${act.workCode.abbreviation})`;
     else detail += '\nCode: None';
@@ -2768,10 +2847,14 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const activeWorkCode = primaryActivity?.workCode || null;
   let cellText = '', cellStyleStr = '';
   if (primaryActivity) {
+    const template = shiftTemplateById(primaryActivity.assignment.shiftTemplateId);
+    const shiftCategory = template?.category || primaryActivity.assignment.shift || 'normal';
+    const shiftColor = template?.color || activeWorkCode?.color || primaryActivity.color;
+    const shade = shiftCategory === 'night' ? '4d' : (shiftCategory === 'day' ? '14' : (shiftCategory === 'continuous' ? '30' : '20'));
     cellText = !activeWorkCode && primaryActivity.assignment.shift === 'normal'
       ? (primaryActivity.abbreviation || primaryActivity.name.slice(0, 4).toUpperCase())
       : (activeWorkCode?.abbreviation || primaryActivity.abbreviation || primaryActivity.name.slice(0, 4).toUpperCase());
-    cellStyleStr = `background:${activeWorkCode?.color || primaryActivity.color}20;color:${activeWorkCode?.color || primaryActivity.color}`;
+    cellStyleStr = `background:${shiftColor}${shade};color:${activeWorkCode?.color || template?.color || primaryActivity.color}`;
   } else if (!isPartial && si) {
     cellText = si.abbr;
     cellStyleStr = statusStyle(si.color);
@@ -2780,12 +2863,13 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     cellStyleStr = `color:${si.color}`;
   }
 
-  const customActivityShift = primaryActivity?.assignment.shift && !['normal', 'day', 'night', 'turn'].includes(primaryActivity.assignment.shift);
+  const primaryShiftTemplate = shiftTemplateById(primaryActivity?.assignment.shiftTemplateId);
+  const customActivityShift = primaryActivity?.assignment.shift && !primaryShiftTemplate && !['normal', 'day', 'night', 'turn', 'continuous'].includes(primaryActivity.assignment.shift);
   const dot = customActivityShift
     ? `<div class="status-dot" style="background:${activeWorkCode?.color || primaryActivity.color}"></div>`
     : ((isPartial && si && !primaryActivity) ? `<div class="status-dot" style="background:${si.color}"></div>` : '');
   const activityStatusBadge = primaryActivity && si ? `<div class="activity-status-badge" title="${esc(si.label)}" style="color:${si.color}">${esc(si.abbr)}</div>` : '';
-  const shiftMeta = primaryActivity ? activityShiftMeta(primaryActivity, primaryActivity.assignment.shift) : null;
+  const shiftMeta = primaryActivity ? activityShiftMeta(primaryActivity, primaryActivity.assignment.shiftTemplateId || primaryActivity.assignment.shift) : null;
   const shiftSymbol = !customActivityShift && shiftMeta?.icon ? `<span class="shift-symbol">${shiftMeta.icon}</span>` : '';
   const activityUnderline = acts.length && primaryActivity ? `box-shadow: inset 0 -3px 0 ${primaryActivity.color};` : '';
   const holidayTint = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
@@ -2994,9 +3078,10 @@ function _showPicker(event, empId, dates) {
       const rawShift = assignment.shift || '';
       const selectedShift = !assignment.assigned || assignment.excluded
         ? ''
-        : (!assignment.shift
+        : (!assignment.shift && !assignment.shiftTemplateId
           ? 'normal'
-          : (['normal', 'day', 'night', 'turn'].includes(rawShift) ? rawShift : 'custom'));
+          : (assignment.shiftTemplateId || legacyShiftTemplateId(rawShift) || (['normal', 'turn'].includes(rawShift) ? rawShift : 'custom')));
+      const shiftTemplates = appSettings.shiftTemplates || [];
       return `<div class="pk-shift-box">
         <div class="pk-shift-title"><span class="act-dot" style="background:${act.color};width:9px;height:9px"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(act.name)}${act.abbreviation ? ` (${esc(act.abbreviation)})` : ''}</span></div>
         <div class="pk-field"><span class="pk-field-label">Work Code</span>
@@ -3008,8 +3093,7 @@ function _showPicker(event, empId, dates) {
         </div>
         <div class="pk-field"><span class="pk-field-label">Shift Type</span><div class="pk-shift-options" id="pk-shifts-${act.id}" data-shift="${esc(selectedShift === 'custom' ? assignment.shift : selectedShift)}">
           <button class="pk-chip${selectedShift === 'normal' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'normal')">Normal Working Hours (NA)</button>
-          <button class="pk-chip${selectedShift === 'day' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'day')">${svgIcon('sun')} Day</button>
-          <button class="pk-chip${selectedShift === 'night' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'night')">${svgIcon('moon')} Night</button>
+          ${shiftTemplates.map(template => `<button class="pk-chip${selectedShift === template.id ? ' sel' : ''}" title="${esc(`${template.name} (${template.start}-${template.end})`)}" onclick="selectPickerShift(${act.id},'${esc(template.id)}')">${template.category === 'night' ? svgIcon('moon') : (template.category === 'day' ? svgIcon('sun') : '')} ${esc(template.name)}</button>`).join('')}
           <button class="pk-chip${selectedShift === 'turn' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'turn')">${shiftChangeIcon('')} Turnaround</button>
           <button class="pk-chip${selectedShift === 'custom' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'custom')">Custom</button>
         </div><div id="pk-custom-shift-wrap-${act.id}" style="display:${selectedShift === 'custom' ? 'block' : 'none'}"><input class="pk-input" id="pk-custom-shift-${act.id}" type="text" placeholder="1500-2000" value="${esc(selectedShift === 'custom' ? assignment.shift : '')}" oninput="document.getElementById('pk-shifts-${act.id}').dataset.shift=this.value.trim()"><div class="form-hint">Expected format: HHMM-HHMM, for example 1500-2000.</div></div></div>
@@ -3133,8 +3217,10 @@ async function saveActivityAssignment(empId, actId) {
   const workCodeId = document.getElementById(`pk-code-${actId}`)?.value || '';
   const customShift = document.getElementById(`pk-custom-shift-${actId}`)?.value.trim() || '';
   const selectedShift = document.getElementById(`pk-shifts-${actId}`)?.dataset.shift || '';
+  const template = shiftTemplateById(selectedShift);
   const isNormalWorkingHours = !customShift && selectedShift === 'normal';
-  const shift = customShift || selectedShift;
+  const shift = customShift || template?.category || selectedShift;
+  const shiftTemplateId = customShift ? null : (template?.id || legacyShiftTemplateId(shift));
   if (!activity) { alert('Select a Shift Type.'); return; }
   const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
   if (!shift) {
@@ -3151,7 +3237,7 @@ async function saveActivityAssignment(empId, actId) {
   recordUndo();
   dates.forEach(date => {
     removeConflictingActivityAssignments(empId, date, actId);
-    activityShiftsMap[`${empId}_${date}_${actId}`] = { shift, workCodeId: workCodeId || null, staffingImpactOverride: null, assigned: true, excluded: false };
+    activityShiftsMap[`${empId}_${date}_${actId}`] = { shift, shiftTemplateId, workCodeId: workCodeId || null, staffingImpactOverride: null, assigned: true, excluded: false };
   });
   if (pickerSelectedStatus) {
     dates.forEach(date => {
@@ -3306,9 +3392,11 @@ function openStatusManager() {
   resetStatusForm();
   resetDailyStatusForm();
   resetWorkCodeForm();
+  resetShiftTemplateForm();
   renderStatusList();
   renderDailyStatusList();
   renderWorkCodeList();
+  renderShiftTemplateList();
   document.getElementById('status-modal').classList.add('open');
 }
 function resetStatusForm() {
@@ -3440,6 +3528,7 @@ function resetWorkCodeForm() {
   document.getElementById('wcf-name').value = '';
   document.getElementById('wcf-abbr').value = '';
   document.getElementById('wcf-staffing-impact').value = 'available';
+  document.getElementById('wcf-aggregation-mode').value = 'hours';
   selectedWorkCodeColor = '#3b82f6';
   buildSwatchRow('wcf-swatches', selectedWorkCodeColor, color => { selectedWorkCodeColor = color; markSwatch('wcf-swatches', color); });
   document.getElementById('wcf-cancel').style.display = 'none';
@@ -3448,7 +3537,7 @@ function resetWorkCodeForm() {
 function renderWorkCodeList() {
   const list = document.getElementById('work-code-list');
   const workCodes = sortedPlanningItems(appSettings.workCodes);
-  list.innerHTML = workCodes.length ? workCodes.map(code => `<div class="flex items-center justify-between" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px"><span class="flex items-center gap-2"><span style="width:8px;height:8px;border-radius:50%;background:${code.color};flex:none"></span><span><b>${esc(code.abbreviation)}</b> · ${esc(code.name)} <span class="muted text-sm">· ${code.staffingImpact === 'unavailable' ? 'Out of office' : 'Available for regular duties'}</span></span></span><span class="flex gap-2"><button class="icon-btn" title="Edit" onclick="editWorkCode('${esc(code.id)}')">${svgIcon('edit')}</button><button class="icon-btn danger" title="Delete" onclick="deleteWorkCode('${esc(code.id)}')">${svgIcon('trash')}</button></span></div>`).join('') : '<div class="empty-note" style="padding:22px">No work codes yet.</div>';
+  list.innerHTML = workCodes.length ? workCodes.map(code => `<div class="flex items-center justify-between" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px"><span class="flex items-center gap-2"><span style="width:8px;height:8px;border-radius:50%;background:${code.color};flex:none"></span><span><b>${esc(code.abbreviation)}</b> · ${esc(code.name)} <span class="muted text-sm">· ${code.aggregationMode === 'units' ? 'Units' : 'Hours'} · ${code.staffingImpact === 'unavailable' ? 'Out of office' : 'Available for regular duties'}</span></span></span><span class="flex gap-2"><button class="icon-btn" title="Edit" onclick="editWorkCode('${esc(code.id)}')">${svgIcon('edit')}</button><button class="icon-btn danger" title="Delete" onclick="deleteWorkCode('${esc(code.id)}')">${svgIcon('trash')}</button></span></div>`).join('') : '<div class="empty-note" style="padding:22px">No work codes yet.</div>';
 }
 function editWorkCode(id) {
   const code = (appSettings.workCodes || []).find(item => item.id === id);
@@ -3457,6 +3546,7 @@ function editWorkCode(id) {
   document.getElementById('wcf-name').value = code.name;
   document.getElementById('wcf-abbr').value = code.abbreviation;
   document.getElementById('wcf-staffing-impact').value = code.staffingImpact;
+  document.getElementById('wcf-aggregation-mode').value = code.aggregationMode === 'units' ? 'units' : 'hours';
   selectedWorkCodeColor = code.color;
   buildSwatchRow('wcf-swatches', selectedWorkCodeColor, color => { selectedWorkCodeColor = color; markSwatch('wcf-swatches', color); });
   document.getElementById('wcf-cancel').style.display = '';
@@ -3467,11 +3557,12 @@ async function saveWorkCode() {
   const name = document.getElementById('wcf-name').value.trim();
   const abbreviation = document.getElementById('wcf-abbr').value.trim().toUpperCase();
   const staffingImpact = document.getElementById('wcf-staffing-impact').value;
+  const aggregationMode = document.getElementById('wcf-aggregation-mode').value === 'units' ? 'units' : 'hours';
   if (!name || !abbreviation) { alert('Work code name and abbreviation are required.'); return; }
   const workCodes = appSettings.workCodes || (appSettings.workCodes = []);
   const index = workCodes.findIndex(code => code.id === id);
-  if (id && index !== -1) workCodes[index] = { id, name, abbreviation, staffingImpact, color: selectedWorkCodeColor };
-  else workCodes.push({ id: `wc${Date.now()}`, name, abbreviation, staffingImpact, color: selectedWorkCodeColor });
+  if (id && index !== -1) workCodes[index] = { id, name, abbreviation, staffingImpact, aggregationMode, color: selectedWorkCodeColor };
+  else workCodes.push({ id: `wc${Date.now()}`, name, abbreviation, staffingImpact, aggregationMode, color: selectedWorkCodeColor });
   persistSettings(); markUnsaved(); await saveState(); resetWorkCodeForm(); renderWorkCodeList();
 }
 async function deleteWorkCode(id) {
@@ -3482,6 +3573,84 @@ async function deleteWorkCode(id) {
   Object.keys(activityShiftsMap).forEach(key => { if (activityAssignment(key).workCodeId === id) activityShiftsMap[key] = { ...activityAssignment(key), workCodeId: null }; });
   persistSettings(); markUnsaved(); await saveState(); renderWorkCodeList();
 }
+function shiftTemplateById(id) {
+  return (appSettings.shiftTemplates || []).find(template => template.id === id) || null;
+}
+function shiftTemplateTime(template) { return template ? `${template.start}-${template.end}` : ''; }
+function shiftTemplateHours(template) { return template ? (template.category === 'continuous' ? 24 : (timeRangeHours(shiftTemplateTime(template)) ?? (Number(template.hours) || 0))) : 0; }
+function legacyShiftTemplateId(shift) {
+  return ['day', 'night', 'continuous'].includes(shift) ? shift : null;
+}
+function resetShiftTemplateForm() {
+  editingShiftTemplateId = null;
+  document.getElementById('shf-form-title').textContent = 'Add a shift template';
+  document.getElementById('shf-save').textContent = 'Add shift template';
+  document.getElementById('shf-cancel').style.display = 'none';
+  document.getElementById('shf-id').value = '';
+  document.getElementById('shf-name').value = '';
+  document.getElementById('shf-category').value = 'day';
+  document.getElementById('shf-start').value = '07:00';
+  document.getElementById('shf-end').value = '15:00';
+  document.getElementById('shf-color').value = '#3b82f6';
+  updateShiftTemplateHours();
+}
+function updateShiftTemplateHours() {
+  const start = document.getElementById('shf-start')?.value.replace(':', '') || '';
+  const end = document.getElementById('shf-end')?.value.replace(':', '') || '';
+  const category = document.getElementById('shf-category')?.value;
+  const hours = category === 'continuous' ? 24 : timeRangeHours(`${start}-${end}`);
+  const output = document.getElementById('shf-hours');
+  if (output) output.textContent = Number.isFinite(hours) ? `${hours} h` : 'Invalid time range';
+}
+function renderShiftTemplateList() {
+  const list = document.getElementById('shift-template-list');
+  if (!list) return;
+  const templates = sortedPlanningItems(appSettings.shiftTemplates || []);
+  list.innerHTML = templates.length ? templates.map(template => `<div class="flex items-center justify-between" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px"><span class="flex items-center gap-2"><span style="width:9px;height:9px;border-radius:50%;background:${template.color};flex:none"></span><span><b>${esc(template.name)}</b> <span class="muted text-sm">${esc(template.start)}–${esc(template.end)} · ${shiftTemplateHours(template)} h · ${esc(template.category)}</span></span></span><span class="flex gap-2"><button class="icon-btn" title="Edit" onclick="editShiftTemplate('${esc(template.id)}')">${svgIcon('edit')}</button><button class="icon-btn danger" title="Delete" onclick="deleteShiftTemplate('${esc(template.id)}')">${svgIcon('trash')}</button></span></div>`).join('') : '<div class="empty-note" style="padding:22px">No shift templates yet.</div>';
+}
+function editShiftTemplate(id) {
+  const template = shiftTemplateById(id);
+  if (!template) return;
+  editingShiftTemplateId = id;
+  document.getElementById('shf-form-title').textContent = `Edit shift template - ${template.name}`;
+  document.getElementById('shf-save').textContent = 'Save changes';
+  document.getElementById('shf-cancel').style.display = '';
+  document.getElementById('shf-id').value = id;
+  document.getElementById('shf-name').value = template.name;
+  document.getElementById('shf-category').value = template.category;
+  document.getElementById('shf-start').value = `${template.start.slice(0, 2)}:${template.start.slice(2)}`;
+  document.getElementById('shf-end').value = `${template.end.slice(0, 2)}:${template.end.slice(2)}`;
+  document.getElementById('shf-color').value = normalizeHexColor(template.color);
+  updateShiftTemplateHours();
+}
+async function saveShiftTemplate() {
+  const name = document.getElementById('shf-name').value.trim();
+  const category = document.getElementById('shf-category').value;
+  const start = document.getElementById('shf-start').value.replace(':', '');
+  const end = document.getElementById('shf-end').value.replace(':', '');
+  const color = normalizeHexColor(document.getElementById('shf-color').value);
+  if (!name || !/^\d{4}$/.test(start) || !/^\d{4}$/.test(end)) { alert('Shift name and valid start/end times are required.'); return; }
+  const hours = category === 'continuous' ? 24 : timeRangeHours(`${start}-${end}`);
+  if (!Number.isFinite(hours) || hours <= 0) { alert('End time must produce a valid shift duration.'); return; }
+  const templates = appSettings.shiftTemplates || (appSettings.shiftTemplates = []);
+  const id = editingShiftTemplateId || `shift-${Date.now()}`;
+  const value = { id, name, start, end, category, color, hours };
+  const index = templates.findIndex(template => template.id === id);
+  if (index >= 0) templates[index] = value; else templates.push(value);
+  persistSettings(); markUnsaved(); await saveState(); resetShiftTemplateForm(); renderShiftTemplateList();
+}
+async function deleteShiftTemplate(id) {
+  const template = shiftTemplateById(id);
+  if (!template || (appSettings.shiftTemplates || []).length <= 1 || !confirm(`Delete shift template "${template.name}"?`)) return;
+  recordUndo();
+  appSettings.shiftTemplates = appSettings.shiftTemplates.filter(item => item.id !== id);
+  Object.keys(activityShiftsMap).forEach(key => {
+    const assignment = activityAssignment(key);
+    if (assignment.shiftTemplateId === id) activityShiftsMap[key] = { ...assignment, shiftTemplateId: null, shift: '' };
+  });
+  persistSettings(); markUnsaved(); await saveState(); renderShiftTemplateList();
+}
+['shf-start', 'shf-end', 'shf-category'].forEach(id => document.getElementById(id)?.addEventListener('input', updateShiftTemplateHours));
 
 // ═══ SWATCH HELPERS ══════════════════════════════════════════════════════════
 const swatchHandlers = {};
@@ -4404,79 +4573,76 @@ function isNormalWorkDate(dateString) {
   const holiday = holidayFor(dateString);
   return !isWknd(date) && (!holiday || holiday.nonWorking !== true);
 }
+function statusLoadMeasure(entry) {
+  if (!entry || entry.status === 'at_work') return { units: 0, hours: 0 };
+  return entry.durationType === 'time'
+    ? { units: 0, hours: timeRangeHours(entry.time) ?? 0 }
+    : { units: 1, hours: 0 };
+}
+function activityLoadMeasure(activity, empId, date) {
+  if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return { units: 0, hours: 0 };
+  const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
+  if (!assignment.assigned || assignment.excluded) return { units: 0, hours: 0 };
+  const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
+  return workCode?.aggregationMode === 'units'
+    ? { units: 1, hours: 0 }
+    : { units: 0, hours: activityShiftHours(activity, empId, date) };
+}
+function formatHoursNumber(value) { return Number(Number(value || 0).toFixed(1)); }
+function formatLoadMeasure(units, hours) {
+  const parts = [];
+  if (units > 0) parts.push(`${units} ${units === 1 ? 'unit' : 'units'}`);
+  if (hours > 0) parts.push(`${formatHoursNumber(hours)} h`);
+  return parts.join(' · ') || '0';
+}
+function addLoadMeasure(left = {}, right = {}) {
+  return { units: (left.units || 0) + (right.units || 0), hours: (left.hours || 0) + (right.hours || 0) };
+}
 function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30)) {
-  const capacityHours = dateStrings.filter(isNormalWorkDate).length * appSettings.coreHoursPerDay;
-  let baselineHours = 0;
-  let statusHours = 0;
-  let activityHours = 0;
-  let absenceHours = 0;
-  let scheduledDays = 0;
-  let loadHours = 0;
+  let statusUnits = 0;
+  let timedStatusHours = 0;
+  let activityUnits = 0;
+  let timedActivityHours = 0;
+  let absenceUnits = 0;
+  let timedAbsenceHours = 0;
+  let oooUnits = 0;
+  let oooHours = 0;
 
   dateStrings.forEach(ds => {
     const entry = getEntryObj(`${emp.id}_${ds}`);
-    const normalWorkDate = isNormalWorkDate(ds);
-    let dayBaselineHours = normalWorkDate ? appSettings.coreHoursPerDay : 0;
-    if (normalWorkDate) baselineHours += appSettings.coreHoursPerDay;
     if (entry) {
       const st = siFor(entry.status);
-      const hrs = entryHours(entry);
-      statusHours += hrs;
-      if (st && st.isAbsence && normalWorkDate) {
-        absenceHours += hrs;
-        dayBaselineHours = Math.max(0, appSettings.coreHoursPerDay - hrs);
-      } else if (normalWorkDate) {
-        scheduledDays += 1;
-      }
-    } else if (normalWorkDate) {
-      scheduledDays += 1;
+      const measure = statusLoadMeasure(entry);
+      statusUnits += measure.units;
+      timedStatusHours += measure.hours;
+      if (st?.isAbsence) { absenceUnits += measure.units; timedAbsenceHours += measure.hours; }
+      if (st?.isOutOfOffice) { oooUnits += measure.units; oooHours += measure.hours; }
     }
 
-    let dayActivityHours = 0;
     Object.entries(activityShiftsMap).forEach(([key, shift]) => {
       if (!key.startsWith(`${emp.id}_${ds}_`)) return;
       const activityId = +key.split('_')[2];
       const activity = activities.find(act => act.id === activityId);
       if (!activity || activityStatus(activity) !== 'confirmed') return;
       if (activity && !activityCountsTowardLoad(activity)) return;
-          dayActivityHours += activityShiftHours(activity, emp.id, ds);
+      const measure = activityLoadMeasure(activity, emp.id, ds);
+      activityUnits += measure.units;
+      timedActivityHours += measure.hours;
         });
-    activityHours += dayActivityHours;
-    const dayPlannedHours = dayActivityHours > 0 ? dayActivityHours : dayBaselineHours;
-    loadHours += dayPlannedHours;
   });
 
-  const totalHours = loadHours;
-  const extraHours = Math.max(0, totalHours - baselineHours);
-  const utilization = capacityHours > 0 ? (totalHours / capacityHours) * 100 : 0;
   return {
-    capacityHours,
-    baselineHours,
-    statusHours,
-    activityHours,
-    absenceHours,
-    extraHours,
-    balanceHours: extraHours - absenceHours,
-    pressureHours: extraHours + absenceHours,
-    totalHours,
-    utilization,
-    scheduledDays,
+    statusUnits,
+    statusHoursActual: timedStatusHours,
+    activityUnits,
+    activityHoursActual: timedActivityHours,
+    absenceUnits,
+    absenceHoursActual: timedAbsenceHours,
+    oooUnits,
+    oooHours,
+    totalUnits: statusUnits + activityUnits,
+    totalHoursActual: timedStatusHours + timedActivityHours,
   };
-}
-function workloadBalanceMeta(extraHours, absenceHours) {
-  const extra = Math.max(0, extraHours || 0);
-  const absence = Math.max(0, absenceHours || 0);
-  const balanceHours = extra - absence;
-  if (extra === 0 && absence === 0) return { label: 'Net 0', color: '#22c55e', summary: 'No extra load or absence', balanceHours };
-  if (balanceHours > 0) return { label: 'Net +', color: '#ef4444', summary: `+${fmtFIF(balanceHours)} net extra`, balanceHours };
-  if (balanceHours < 0) return { label: 'Net -', color: '#f59e0b', summary: `-${fmtDaysHours(-balanceHours)} net absence`, balanceHours };
-  return { label: 'Net 0', color: '#3b82f6', summary: 'Extra load matches absence', balanceHours };
-}
-function workloadUtilClass(util) {
-  if (util > appSettings.highMax) return { label: 'Overloaded', color: '#ef4444' };
-  if (util > appSettings.normalMax) return { label: 'High', color: '#f59e0b' };
-  if (util >= appSettings.lightMax) return { label: 'Normal', color: '#22c55e' };
-  return { label: 'Light', color: '#3b82f6' };
 }
 function datesInRange(startDate, endDate) {
   const dates = [];
@@ -4541,14 +4707,18 @@ function setWorkloadPeriod(period) {
 function teamWorkloadForDates(dateStrings) {
   return employees.reduce((acc, emp) => {
     const row = getEmployeeWorkload(emp, dateStrings);
-    acc.totalHours += row.totalHours;
-    acc.capacityHours += row.capacityHours;
-    acc.absenceHours += row.absenceHours;
-    acc.extraHours += row.extraHours;
-    acc.balanceHours += row.balanceHours;
-    acc.pressureHours += row.pressureHours;
+    acc.statusUnits += row.statusUnits;
+    acc.statusHours += row.statusHoursActual;
+    acc.activityUnits += row.activityUnits;
+    acc.activityHours += row.activityHoursActual;
+    acc.absenceUnits += row.absenceUnits;
+    acc.absenceHours += row.absenceHoursActual;
+    acc.oooUnits += row.oooUnits;
+    acc.oooHours += row.oooHours;
+    acc.totalUnits += row.totalUnits;
+    acc.totalHours += row.totalHoursActual;
     return acc;
-  }, { totalHours: 0, capacityHours: 0, absenceHours: 0, extraHours: 0, balanceHours: 0, pressureHours: 0 });
+  }, { statusUnits: 0, statusHours: 0, activityUnits: 0, activityHours: 0, absenceUnits: 0, absenceHours: 0, oooUnits: 0, oooHours: 0, totalUnits: 0, totalHours: 0 });
 }
 
 // ═══ DASHBOARD ═══════════════════════════════════════════════════════════════
@@ -4636,9 +4806,8 @@ function renderDashboard() {
   const wlRange = workloadRange();
   const workloadDates = datesInRange(new Date(`${wlRange.start}T00:00:00`), new Date(`${wlRange.end}T00:00:00`));
   const workloadRows = employees.map(emp => ({ emp, ...getEmployeeWorkload(emp, workloadDates) }))
-    .sort((a, b) => b.pressureHours - a.pressureHours || b.extraHours - a.extraHours || b.absenceHours - a.absenceHours);
+    .sort((a, b) => b.totalUnits - a.totalUnits || b.totalHoursActual - a.totalHoursActual || a.emp.name.localeCompare(b.emp.name, 'nb'));
   const workloadTeamTotals = teamWorkloadForDates(workloadDates);
-  const workloadTeamBalance = workloadBalanceMeta(workloadTeamTotals.extraHours, workloadTeamTotals.absenceHours);
 
   const yearlyWorkload = [];
   for (let month = 0; month < 12; month++) {
@@ -4646,39 +4815,37 @@ function renderDashboard() {
     const end = new Date(wlRange.anchorYear, month + 1, 0);
     const dates = datesInRange(start, end);
     const totals = teamWorkloadForDates(dates);
-    const balanceMeta = workloadBalanceMeta(totals.extraHours, totals.absenceHours);
     yearlyWorkload.push({
       month,
       label: start.toLocaleDateString('en-US', { month: 'short' }),
-      extraHours: totals.extraHours,
+      totalUnits: totals.totalUnits,
+      totalHours: totals.totalHours,
+      statusUnits: totals.statusUnits,
+      statusHours: totals.statusHours,
+      activityUnits: totals.activityUnits,
+      activityHours: totals.activityHours,
+      absenceUnits: totals.absenceUnits,
       absenceHours: totals.absenceHours,
-      pressureHours: totals.pressureHours,
-      balanceHours: totals.balanceHours,
-      balanceMeta,
     });
   }
-  const yearPeak = yearlyWorkload.length ? yearlyWorkload.reduce((best, cur) => cur.pressureHours > best.pressureHours ? cur : best, yearlyWorkload[0]) : null;
-  const yearLow = yearlyWorkload.length ? yearlyWorkload.reduce((best, cur) => cur.pressureHours < best.pressureHours ? cur : best, yearlyWorkload[0]) : null;
-  const yearMaxPressure = Math.max(1, ...yearlyWorkload.map(m => m.pressureHours));
+  const yearMaxUnits = Math.max(1, ...yearlyWorkload.map(m => m.totalUnits));
+  const yearMaxHours = Math.max(1, ...yearlyWorkload.map(m => m.totalHours));
 
   const workloadOverview = workloadRows.length
     ? workloadRows.map(row => {
-        const balance = workloadBalanceMeta(row.extraHours, row.absenceHours);
         return `
           <div class="absence-row" style="padding:10px 0;">
             <div style="min-width:0;flex:1;margin-right:12px;">
               <div style="display:flex;align-items:center;justify-content:space-between;">
                 <div style="font-size:13.5px;font-weight:500">${esc(row.emp.name)}</div>
-                <div style="font-size:11.5px;font-weight:600;color:${balance.color};font-variant-numeric:tabular-nums">${esc(balance.summary)}</div>
+                <div style="font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums">${formatLoadMeasure(row.totalUnits, row.totalHoursActual)}</div>
               </div>
               <div class="muted text-sm">${esc(row.emp.role)} · ${esc(row.emp.department)}</div>
               <div class="muted text-sm" style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap">
-                <span>${row.extraHours > 0 ? `${fmtFIF(row.extraHours)} extra load` : 'No extra load'}</span>
-                <span>${row.absenceHours > 0 ? `${fmtDaysHours(row.absenceHours)} absent` : 'No absence'}</span>
+                <span>Status: ${formatLoadMeasure(row.statusUnits, row.statusHoursActual)}</span>
+                <span>Activities: ${formatLoadMeasure(row.activityUnits, row.activityHoursActual)}</span>
+                <span>Absence: ${formatLoadMeasure(row.absenceUnits, row.absenceHoursActual)}</span>
               </div>
-            </div>
-            <div style="text-align:right;min-width:90px">
-              <div class="badge-status" style="border-color:${balance.color}40;color:${balance.color};background:${balance.color}16;display:inline-flex;">${balance.label}</div>
             </div>
           </div>`;
       }).join('')
@@ -4786,22 +4953,34 @@ function renderDashboard() {
           </div>
         </div>
         <div class="muted text-sm" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap">
-          <span>${workloadTeamTotals.extraHours > 0 ? `${fmtFIF(workloadTeamTotals.extraHours)} team extra load` : 'No team extra load'}</span>
-          <span>${workloadTeamTotals.absenceHours > 0 ? `${fmtDaysHours(workloadTeamTotals.absenceHours)} team absence` : 'No team absence'}</span>
-          <span style="font-weight:600;color:${workloadTeamBalance.color}">${esc(workloadTeamBalance.label)} · ${esc(workloadTeamBalance.summary)}</span>
+          <span><b style="color:var(--text)">${workloadTeamTotals.totalUnits}</b> full units/days</span>
+          <span><b style="color:var(--text)">${formatHoursNumber(workloadTeamTotals.totalHours)} h</b> timed work</span>
+          <span>Absence: ${formatLoadMeasure(workloadTeamTotals.absenceUnits, workloadTeamTotals.absenceHours)}</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:0;margin-top:12px;max-height:300px;overflow:auto;padding-right:6px">${workloadOverview}</div>
         <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
           <div class="flex items-center justify-between" style="gap:8px;flex-wrap:wrap">
-            <div class="card-title" style="font-size:13px">Yearly load balance (${wlRange.anchorYear})</div>
-            ${yearPeak ? `<div class="muted text-sm">Peak: <b style="color:${yearPeak.balanceMeta.color}">${yearPeak.label} (${fmtFIF(yearPeak.pressureHours)})</b> · Lowest: <b style="color:${yearLow.balanceMeta.color}">${yearLow.label} (${fmtFIF(yearLow.pressureHours)})</b></div>` : ''}
+            <div class="card-title" style="font-size:13px">Yearly load distribution (${wlRange.anchorYear})</div>
           </div>
+          <div class="muted text-sm" style="margin-top:8px">Full units/days</div>
           <div class="trend-wrap" style="height:160px;margin-top:8px;gap:5px">
             ${yearlyWorkload.map(m => `
               <div style="flex:1;display:flex;flex-direction:column;align-items:stretch;min-width:0;height:160px">
                 <div class="trend-col">
-                  <div class="trend-seg" style="height:${m.pressureHours > 0 ? Math.max(2, (m.pressureHours / yearMaxPressure) * 100) : 0}%;background:${m.balanceMeta.color};opacity:.92;border-radius:3px 3px 0 0"></div>
-                  <div class="trend-tip"><b>${m.label} ${wlRange.anchorYear}</b><div>Extra load: <b>${fmtFIF(m.extraHours)}</b></div><div>Absence: <b>${fmtDaysHours(m.absenceHours)}</b></div><div>Balance: <b>${esc(m.balanceMeta.summary)}</b></div></div>
+                  <div class="trend-seg" style="height:${m.totalUnits > 0 ? Math.max(2, (m.totalUnits / yearMaxUnits) * 100) : 0}%;background:#0ea5e9;opacity:.92;border-radius:3px 3px 0 0"></div>
+                  <div class="trend-tip"><b>${m.label} ${wlRange.anchorYear}</b><div>Total: <b>${m.totalUnits} units</b></div><div>Status: <b>${m.statusUnits}</b></div><div>Activities: <b>${m.activityUnits}</b></div><div>Absence: <b>${m.absenceUnits}</b></div></div>
+                </div>
+                <div class="trend-x">${m.label}</div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="muted text-sm" style="margin-top:12px">Timed hours</div>
+          <div class="trend-wrap" style="height:160px;margin-top:8px;gap:5px">
+            ${yearlyWorkload.map(m => `
+              <div style="flex:1;display:flex;flex-direction:column;align-items:stretch;min-width:0;height:160px">
+                <div class="trend-col">
+                  <div class="trend-seg" style="height:${m.totalHours > 0 ? Math.max(2, (m.totalHours / yearMaxHours) * 100) : 0}%;background:#f59e0b;opacity:.92;border-radius:3px 3px 0 0"></div>
+                  <div class="trend-tip"><b>${m.label} ${wlRange.anchorYear}</b><div>Total: <b>${formatHoursNumber(m.totalHours)} h</b></div><div>Status: <b>${formatHoursNumber(m.statusHours)} h</b></div><div>Activities: <b>${formatHoursNumber(m.activityHours)} h</b></div><div>Absence: <b>${formatHoursNumber(m.absenceHours)} h</b></div></div>
                 </div>
                 <div class="trend-x">${m.label}</div>
               </div>
@@ -4914,10 +5093,8 @@ function setSummaryWeek(value) {
   renderSummary();
 }
 function computeSummaryRows(startDate, endDate) {
-  const rows = employees.map(emp => ({ emp, counts: {}, activityHours: {}, activityDays: {}, absenceTotal: 0, oooTotal: 0, total: 0 }));
+  const rows = employees.map(emp => ({ emp, counts: {}, workCodeCounts: {} }));
   const rowByEmp = new Map(rows.map(r => [r.emp.id, r]));
-  const statusKeySet = new Set(statuses.map(s => s.key));
-  const rangeDates = datesInRange(startDate, endDate);
 
   for (const [key, raw] of Object.entries(entriesMap)) {
     const idx = key.indexOf('_');
@@ -4927,9 +5104,7 @@ function computeSummaryRows(startDate, endDate) {
     if (!row) continue;
     const entry = getEntryObj(key);
     if (!entry) continue;
-    const hrs = entryHours(entry);
-    row.counts[entry.status] = (row.counts[entry.status] || 0) + hrs;
-    row.total += hrs;
+    row.counts[entry.status] = (row.counts[entry.status] || 0) + 1;
   }
 
   for (const [key, shift] of Object.entries(activityShiftsMap)) {
@@ -4948,35 +5123,89 @@ function computeSummaryRows(startDate, endDate) {
       continue;
     }
 
-    const hrs = activityShiftHours(act, empId, date);
-    if (act.type && statusKeySet.has(act.type)) {
-      row.counts[act.type] = (row.counts[act.type] || 0) + hrs;
-      row.total += hrs;
-    } else {
-      row.activityHours[act.id] = (row.activityHours[act.id] || 0) + hrs;
-      row.activityDays[act.id] = (row.activityDays[act.id] || 0) + 1;
-      row.total += hrs;
-    }
+    const measure = activityLoadMeasure(act, empId, date);
+    if (!measure.units && !measure.hours) continue;
+    const assignment = activityAssignment(key);
+    if (assignment.workCodeId) row.workCodeCounts[assignment.workCodeId] = (row.workCodeCounts[assignment.workCodeId] || 0) + 1;
   }
-  rows.forEach(row => {
-    row.total = getEmployeeWorkload(row.emp, rangeDates).extraHours;
-  });
   return rows;
 }
-function summaryActivityGroups(startDate, endDate) {
-  const statusKeySet = new Set(statuses.map(s => s.key));
-  const groups = new Map();
-  for (const act of activities) {
-    if (act.startDate > endDate || act.endDate < startDate) continue;
-    const typeKey = (act.type || '').trim();
-    if (typeKey && statusKeySet.has(typeKey)) continue;
-    const gk = typeKey || '__other__';
-    const activityType = (appSettings.activityTypes || []).find(type => type.key === typeKey);
-    const g = groups.get(gk) ?? { typeKey: gk, label: activityType?.name || typeKey || 'Other', color: activityType?.color || act.color, actIds: [], names: [] };
-    g.actIds.push(act.id); g.names.push(act.name);
-    groups.set(gk, g);
+function defaultSummaryColumns() {
+  return { configured: false, statusKeys: [], showAbsence: true, showOoo: true, workCodeIds: (appSettings.workCodes || []).map(code => code.id) };
+}
+function effectiveSummaryColumns() {
+  const saved = normalizeSummaryColumns(appSettings.summaryColumns);
+  if (!saved) return defaultSummaryColumns();
+  const statusKeys = new Set(statuses.map(status => status.key));
+  const workCodeIds = new Set((appSettings.workCodes || []).map(code => code.id));
+  return {
+    ...saved,
+    statusKeys: saved.statusKeys.filter(key => statusKeys.has(key)),
+    workCodeIds: saved.workCodeIds.filter(id => workCodeIds.has(id)),
+  };
+}
+function renderSummaryColumnsModal() {
+  let modal = document.getElementById('summary-columns-modal');
+  if (!modal) {
+    document.body.insertAdjacentHTML('beforeend', '<div class="modal-bg" id="summary-columns-modal"><div class="modal" style="width:560px" id="summary-columns-modal-content"></div></div>');
+    modal = document.getElementById('summary-columns-modal');
   }
-  return [...groups.values()];
+  const draft = summaryColumnsDraft || { ...defaultSummaryColumns(), configured: true };
+  const statusSet = new Set(draft.statusKeys || []);
+  const workCodeSet = new Set(draft.workCodeIds || []);
+  document.getElementById('summary-columns-modal-content').innerHTML = `
+    <h3>Summary columns</h3>
+    <p class="modal-desc">Choose the optional columns shown between Employee and Total. Full units and timed hours remain separate.</p>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:7px">Daily statuses</div>
+    <div class="form-row-2" style="margin-bottom:16px">
+      ${statuses.map(status => `<label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" data-id="${esc(status.key)}" onchange="setSummaryColumnDraft('status',this.dataset.id,this.checked)" ${statusSet.has(status.key) ? 'checked' : ''}><span class="dot" style="background:${status.color}"></span>${esc(status.label)}</label>`).join('') || '<span class="muted text-sm">No daily statuses configured.</span>'}
+    </div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:7px">Aggregates</div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" onchange="setSummaryColumnDraft('absence','',this.checked)" ${draft.showAbsence ? 'checked' : ''}>Absence</label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" onchange="setSummaryColumnDraft('ooo','',this.checked)" ${draft.showOoo ? 'checked' : ''}>Out of office</label>
+    </div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:7px">Work Codes</div>
+    <div class="form-row-2" style="margin-bottom:16px">
+      ${sortedPlanningItems(appSettings.workCodes).map(code => `<label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" data-id="${esc(code.id)}" onchange="setSummaryColumnDraft('workCode',this.dataset.id,this.checked)" ${workCodeSet.has(code.id) ? 'checked' : ''}><span class="dot" style="background:${code.color}"></span><span><b>${esc(code.abbreviation)}</b> · ${esc(code.name)} <span class="muted">(Cells)</span></span></label>`).join('') || '<span class="muted text-sm">No Work Codes configured.</span>'}
+    </div>
+    <div class="muted text-sm">Employee and Total are always shown.</div>
+    <div class="modal-actions">
+      <button class="btn" onclick="resetSummaryColumns()">Reset to default</button>
+      <button class="btn" onclick="closeModal('summary-columns-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="applySummaryColumns()">Apply</button>
+    </div>`;
+}
+function openSummaryColumns() {
+  const current = effectiveSummaryColumns();
+  summaryColumnsDraft = { ...current, configured: true, statusKeys: [...current.statusKeys], workCodeIds: [...current.workCodeIds] };
+  renderSummaryColumnsModal();
+  document.getElementById('summary-columns-modal').classList.add('open');
+}
+function setSummaryColumnDraft(kind, id, checked) {
+  if (!summaryColumnsDraft) return;
+  if (kind === 'absence') summaryColumnsDraft.showAbsence = checked;
+  else if (kind === 'ooo') summaryColumnsDraft.showOoo = checked;
+  else {
+    const field = kind === 'status' ? 'statusKeys' : 'workCodeIds';
+    const values = new Set(summaryColumnsDraft[field] || []);
+    if (checked) values.add(id); else values.delete(id);
+    summaryColumnsDraft[field] = [...values];
+  }
+}
+async function applySummaryColumns() {
+  appSettings.summaryColumns = normalizeSummaryColumns(summaryColumnsDraft);
+  persistSettings(); markUnsaved(); await saveState();
+  summaryColumnsDraft = null;
+  closeModal('summary-columns-modal');
+  renderSummary();
+}
+async function resetSummaryColumns() {
+  appSettings.summaryColumns = null;
+  persistSettings(); markUnsaved(); await saveState();
+  summaryColumnsDraft = null;
+  closeModal('summary-columns-modal');
+  renderSummary();
 }
 function setSummarySort(key) {
   if (summarySortKey === key) summarySortDir = summarySortDir === 'asc' ? 'desc' : 'asc';
@@ -4986,11 +5215,20 @@ function setSummarySort(key) {
 function renderSummary() {
   const range = summaryRange();
   const rows = computeSummaryRows(range.start, range.end);
-  const groups = summaryActivityGroups(range.start, range.end);
-  const groupHours = (row, g) => g.actIds.reduce((s, id) => s + (row.activityHours[id] || 0), 0);
-  const groupDays = (row, g) => g.actIds.reduce((s, id) => s + (row.activityDays[id] || 0), 0);
-
-  const flagTotalOf = (row, flag) => statuses.reduce((s, st) => s + (st[flag] ? (row.counts[st.key] || 0) : 0), 0);
+  const columnSettings = effectiveSummaryColumns();
+  const visibleStatuses = statuses.filter(status => columnSettings.statusKeys.includes(status.key));
+  const visibleWorkCodes = sortedPlanningItems(appSettings.workCodes).filter(code => columnSettings.workCodeIds.includes(code.id));
+  const workCodeCount = (row, code) => row.workCodeCounts[code.id] || 0;
+  const flagCount = (row, flag) => statuses.reduce((total, status) => total + (status[flag] ? row.counts[status.key] || 0 : 0), 0);
+  const hasAbsence = columnSettings.showAbsence && statuses.some(status => status.isAbsence);
+  const hasOoo = columnSettings.showOoo && statuses.some(status => status.isOutOfOffice);
+  const totalStatusKeys = new Set(visibleStatuses.map(status => status.key));
+  if (hasAbsence) statuses.filter(status => status.isAbsence).forEach(status => totalStatusKeys.add(status.key));
+  if (hasOoo) statuses.filter(status => status.isOutOfOffice).forEach(status => totalStatusKeys.add(status.key));
+  const rowTotalCount = row => [...totalStatusKeys].reduce((sum, key) => sum + (row.counts[key] || 0), 0)
+    + visibleWorkCodes.reduce((sum, code) => sum + workCodeCount(row, code), 0);
+  const validSortKeys = new Set(['people', 'name', 'total', ...(hasAbsence ? ['__absence'] : []), ...(hasOoo ? ['__ooo'] : []), ...visibleStatuses.map(status => status.key), ...visibleWorkCodes.map(code => `wc:${code.id}`)]);
+  if (!validSortKeys.has(summarySortKey)) { summarySortKey = 'people'; summarySortDir = 'asc'; }
   const peopleOrder = (a, b) =>
     ((a.emp.sortOrder ?? 99) - (b.emp.sortOrder ?? 99)) ||
     a.emp.name.localeCompare(b.emp.name, 'nb', { sensitivity: 'base' });
@@ -4998,12 +5236,12 @@ function renderSummary() {
     if (summarySortKey === 'people') return peopleOrder(a, b);
     let av, bv;
     if (summarySortKey === 'name') { av = a.emp.name; bv = b.emp.name; }
-    else if (summarySortKey === 'total') { av = a.total; bv = b.total; }
-    else if (summarySortKey === '__absence') { av = flagTotalOf(a, 'isAbsence'); bv = flagTotalOf(b, 'isAbsence'); }
-    else if (summarySortKey === '__ooo') { av = flagTotalOf(a, 'isOutOfOffice'); bv = flagTotalOf(b, 'isOutOfOffice'); }
-    else if (summarySortKey.startsWith('act:')) {
-      const g = groups.find(x => x.typeKey === summarySortKey.slice(4));
-      av = g ? groupDays(a, g) : 0; bv = g ? groupDays(b, g) : 0;
+    else if (summarySortKey === 'total') { av = rowTotalCount(a); bv = rowTotalCount(b); }
+    else if (summarySortKey === '__absence') { av = flagCount(a, 'isAbsence'); bv = flagCount(b, 'isAbsence'); }
+    else if (summarySortKey === '__ooo') { av = flagCount(a, 'isOutOfOffice'); bv = flagCount(b, 'isOutOfOffice'); }
+    else if (summarySortKey.startsWith('wc:')) {
+      const code = visibleWorkCodes.find(item => item.id === summarySortKey.slice(3));
+      av = code ? workCodeCount(a, code) : 0; bv = code ? workCodeCount(b, code) : 0;
     } else { av = a.counts[summarySortKey] || 0; bv = b.counts[summarySortKey] || 0; }
     const compared = typeof av === 'string'
       ? av.localeCompare(bv, 'nb', { sensitivity: 'base' })
@@ -5021,37 +5259,34 @@ function renderSummary() {
   const sorted = teamGroups.flatMap(group => group.rows);
 
   const sortIcon = col => svgIcon(summarySortKey !== col ? 'sort' : (summarySortDir === 'asc' ? 'chevronUp' : 'chevronDown'));
-  const pill = (hrs, color) => hrs > 0
-    ? `<span class="sum-pill" style="color:${color};background:${color}18;border-color:${color}40">${fmtDaysHours(hrs)}</span>`
+  const countPill = (count, color) => count > 0
+    ? `<span class="sum-pill" style="color:${color};background:${color}18;border-color:${color}40">${count}</span>`
     : '<span class="sum-dash">—</span>';
-  const activityPill = (days, hours, color) => days > 0
-    ? `<span class="sum-pill" style="color:${color};background:${color}18;border-color:${color}40" title="${days} assigned days, ${hours} compensated hours">${days}d · ${fmtFIF(hours)}</span>`
-    : '<span class="sum-dash">—</span>';
-  const hourPill = hours => hours > 0
-    ? `<span class="sum-pill" style="background:color-mix(in srgb,var(--text) 10%,transparent);color:var(--text);font-weight:700">${fmtFIF(hours)}</span>`
-    : '<span class="sum-dash">—</span>';
-
-  const hasAbsence = statuses.some(s => s.isAbsence);
-  const hasOoo = statuses.some(s => s.isOutOfOffice);
 
   const headHtml = `<tr>
     <th data-sort="name" onclick="setSummarySort(this.dataset.sort)">Employee <span style="opacity:.55">${sortIcon('name')}</span></th>
-    ${statuses.map(s => `<th class="num" data-sort="${esc(s.key)}" onclick="setSummarySort(this.dataset.sort)">${esc(s.label)} <span style="opacity:.55">${sortIcon(s.key)}</span></th>`).join('')}
-    ${hasAbsence ? `<th class="num" data-sort="__absence" onclick="setSummarySort(this.dataset.sort)" title="Total hours of absence-flagged statuses">Absence <span style="opacity:.55">${sortIcon('__absence')}</span></th>` : ''}
-    ${hasOoo ? `<th class="num" data-sort="__ooo" onclick="setSummarySort(this.dataset.sort)" title="Total hours of Out of Office statuses">OOO <span style="opacity:.55">${sortIcon('__ooo')}</span></th>` : ''}
-    ${groups.map(g => `<th class="num" style="color:${g.color}" title="${esc(g.names.join(', '))}" data-sort="act:${esc(g.typeKey)}" onclick="setSummarySort(this.dataset.sort)">${esc(g.label)} <span style="opacity:.55">${sortIcon('act:' + g.typeKey)}</span></th>`).join('')}
-    <th class="num" data-sort="total" onclick="setSummarySort(this.dataset.sort)" title="Extra work above scheduled 7.5 hours">Total <span style="opacity:.55">${sortIcon('total')}</span></th>
+    ${visibleStatuses.map(s => `<th class="num" data-sort="${esc(s.key)}" onclick="setSummarySort(this.dataset.sort)">${esc(s.label)} <span style="opacity:.55">${sortIcon(s.key)}</span></th>`).join('')}
+    ${hasAbsence ? `<th class="num" data-sort="__absence" onclick="setSummarySort(this.dataset.sort)" title="Number of absence cells">Absence <span style="opacity:.55">${sortIcon('__absence')}</span></th>` : ''}
+    ${hasOoo ? `<th class="num" data-sort="__ooo" onclick="setSummarySort(this.dataset.sort)" title="Number of out-of-office cells">OOO <span style="opacity:.55">${sortIcon('__ooo')}</span></th>` : ''}
+    ${visibleWorkCodes.map(code => `<th class="num" style="color:${code.color}" title="${esc(code.name)} · Number of cells" data-sort="wc:${esc(code.id)}" onclick="setSummarySort(this.dataset.sort)">${esc(code.abbreviation || code.name)} <span style="opacity:.55">${sortIcon('wc:' + code.id)}</span></th>`).join('')}
+    <th class="num" data-sort="total" onclick="setSummarySort(this.dataset.sort)" title="Unique cells matching the selected columns">Total <span style="opacity:.55">${sortIcon('total')}</span></th>
   </tr>`;
 
-  const totalCols = 2 + statuses.length + groups.length + (hasAbsence ? 1 : 0) + (hasOoo ? 1 : 0);
+  const totalCols = 2 + visibleStatuses.length + visibleWorkCodes.length + (hasAbsence ? 1 : 0) + (hasOoo ? 1 : 0);
+  const minibarFor = (items, field, label) => {
+    const total = items.reduce((sum, item) => sum + (item.measure[field] || 0), 0);
+    return total > 0 ? `<div class="minibar" aria-label="${label}">${items.map(item => {
+      const value = item.measure[field] || 0;
+      return value > 0 ? `<div style="width:${(value / total) * 100}%;background:${item.color}" title="${esc(item.label)}: ${field === 'units' ? `${value} units` : `${formatHoursNumber(value)} h`}"></div>` : '';
+    }).join('')}</div>` : '';
+  };
   const employeeRowHtml = row => {
     const cats = (row.emp.categoryIds || []).map(catById).filter(Boolean);
-    const statusTotal = statuses.reduce((s, st) => s + (row.counts[st.key] || 0), 0);
-    const minibar = statusTotal > 0
-      ? `<div class="minibar">${statuses.map(st => {
-          const pct = ((row.counts[st.key] || 0) / statusTotal) * 100;
-          return pct > 0 ? `<div style="width:${pct}%;background:${st.color}" title="${esc(st.label)}: ${fmtDaysHours(row.counts[st.key])}"></div>` : '';
-        }).join('')}</div>` : '';
+    const barItems = [
+      ...visibleStatuses.map(st => ({ label: st.label, color: st.color, measure: { units: row.counts[st.key] || 0, hours: 0 } })),
+      ...visibleWorkCodes.map(code => ({ label: code.name, color: code.color, measure: { units: workCodeCount(row, code), hours: 0 } })),
+    ];
+    const minibar = minibarFor(barItems, 'units', 'Cell distribution');
     return `<tr data-employee-id="${row.emp.id}">
       <td>
         <div style="font-weight:500">${esc(row.emp.name)}</div>
@@ -5059,11 +5294,11 @@ function renderSummary() {
         ${cats.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px">${cats.map(cat => `<span class="chip" style="${chipStyle(cat.color)};font-size:10px;padding:0 7px"><span class="chip-dot" style="background:${cat.color}"></span>${esc(cat.name)}</span>`).join('')}</div>` : ''}
         ${minibar}
       </td>
-      ${statuses.map(st => `<td class="num">${pill(row.counts[st.key] || 0, st.color)}</td>`).join('')}
-      ${hasAbsence ? `<td class="num">${pill(flagTotalOf(row, 'isAbsence'), '#dc2626')}</td>` : ''}
-      ${hasOoo ? `<td class="num">${pill(flagTotalOf(row, 'isOutOfOffice'), '#7c3aed')}</td>` : ''}
-      ${groups.map(g => `<td class="num" title="${esc(g.names.join(', '))}">${activityPill(groupDays(row, g), groupHours(row, g), g.color)}</td>`).join('')}
-      <td class="num">${hourPill(row.total)}</td>
+      ${visibleStatuses.map(st => `<td class="num">${countPill(row.counts[st.key] || 0, st.color)}</td>`).join('')}
+      ${hasAbsence ? `<td class="num">${countPill(flagCount(row, 'isAbsence'), '#dc2626')}</td>` : ''}
+      ${hasOoo ? `<td class="num">${countPill(flagCount(row, 'isOutOfOffice'), '#7c3aed')}</td>` : ''}
+      ${visibleWorkCodes.map(code => `<td class="num" title="${esc(code.name)} · Number of cells">${countPill(workCodeCount(row, code), code.color)}</td>`).join('')}
+      <td class="num">${countPill(rowTotalCount(row), 'var(--text)')}</td>
     </tr>`;
   };
   const bodyHtml = sorted.length ? teamGroups.map(group => `
@@ -5072,38 +5307,37 @@ function renderSummary() {
 
   const totals = sorted.reduce((acc, row) => {
     statuses.forEach(st => { acc.status[st.key] = (acc.status[st.key] || 0) + (row.counts[st.key] || 0); });
-    groups.forEach(g => { acc.groups[g.typeKey] = (acc.groups[g.typeKey] || 0) + groupHours(row, g); });
-    groups.forEach(g => { acc.groupDays[g.typeKey] = (acc.groupDays[g.typeKey] || 0) + groupDays(row, g); });
-    acc.total += row.total;
+    visibleWorkCodes.forEach(code => { acc.workCodes[code.id] = (acc.workCodes[code.id] || 0) + workCodeCount(row, code); });
+    acc.total += rowTotalCount(row);
     return acc;
-  }, { status: {}, groups: {}, groupDays: {}, total: 0 });
+  }, { status: {}, workCodes: {}, total: 0 });
   const footerHtml = sorted.length ? `<tfoot>
     <tr>
       <td style="font-weight:700">Total (${sorted.length} employees)</td>
-      ${statuses.map(st => `<td class="num">${pill(totals.status[st.key] || 0, st.color)}</td>`).join('')}
-      ${hasAbsence ? `<td class="num">${pill(statuses.reduce((s, st) => s + (st.isAbsence ? (totals.status[st.key] || 0) : 0), 0), '#dc2626')}</td>` : ''}
-      ${hasOoo ? `<td class="num">${pill(statuses.reduce((s, st) => s + (st.isOutOfOffice ? (totals.status[st.key] || 0) : 0), 0), '#7c3aed')}</td>` : ''}
-      ${groups.map(g => `<td class="num">${activityPill(totals.groupDays[g.typeKey] || 0, totals.groups[g.typeKey] || 0, g.color)}</td>`).join('')}
-      <td class="num">${hourPill(totals.total)}</td>
+      ${visibleStatuses.map(st => `<td class="num">${countPill(totals.status[st.key] || 0, st.color)}</td>`).join('')}
+      ${hasAbsence ? `<td class="num">${countPill(statuses.reduce((sum, st) => sum + (st.isAbsence ? totals.status[st.key] || 0 : 0), 0), '#dc2626')}</td>` : ''}
+      ${hasOoo ? `<td class="num">${countPill(statuses.reduce((sum, st) => sum + (st.isOutOfOffice ? totals.status[st.key] || 0 : 0), 0), '#7c3aed')}</td>` : ''}
+      ${visibleWorkCodes.map(code => `<td class="num">${countPill(totals.workCodes[code.id], code.color)}</td>`).join('')}
+      <td class="num">${countPill(totals.total, 'var(--text)')}</td>
     </tr>
   </tfoot>` : '';
 
-  const legend = statuses.map(st => {
-    const total = sorted.reduce((s, r) => s + (r.counts[st.key] || 0), 0);
-    return `<span><span class="dot" style="background:${st.color}"></span>${esc(st.label)}: <b style="color:var(--text)">${fmtDaysHours(total)}</b></span>`;
-  }).join('') + (groups.length ? '<span style="opacity:.4">|</span>' + groups.map(g => {
-    const total = sorted.reduce((s, r) => s + groupHours(r, g), 0);
-    const days = sorted.reduce((s, r) => s + groupDays(r, g), 0);
-    return `<span><span class="dot" style="background:${g.color}"></span>${esc(g.label)}: <b style="color:var(--text)">${days}d · ${fmtFIF(total)}</b></span>`;
+  const legend = visibleStatuses.map(st => {
+    const total = sorted.reduce((sum, row) => sum + (row.counts[st.key] || 0), 0);
+    return `<span><span class="dot" style="background:${st.color}"></span>${esc(st.label)}: <b style="color:var(--text)">${total} cells</b></span>`;
+  }).join('') + (visibleWorkCodes.length ? '<span style="opacity:.4">|</span>' + visibleWorkCodes.map(code => {
+    const total = sorted.reduce((sum, row) => sum + workCodeCount(row, code), 0);
+    return `<span><span class="dot" style="background:${code.color}"></span>${esc(code.name)}: <b style="color:var(--text)">${total} cells</b></span>`;
   }).join('') : '');
 
   document.getElementById('content').innerHTML = `
     <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:12px">
       <div>
         <div class="page-title">Summary</div>
-        <div class="page-sub">Status time, assigned activity days, and compensation hours per employee for ${range.label}. Period: ${range.subtitle}. Activities are grouped by type.</div>
+        <div class="page-sub">Selected statuses, absence totals, and Work Codes for ${range.label}. Period: ${range.subtitle}.</div>
       </div>
       <div class="year-nav" style="gap:8px">
+        <button class="btn" onclick="openSummaryColumns()">${svgIcon('sliders')} Columns</button>
         <select class="plain-select" onchange="setSummaryPeriod(this.value)" aria-label="Summary period">
           <option value="year" ${summaryPeriod === 'year' ? 'selected' : ''}>Full year</option>
           <option value="month" ${summaryPeriod === 'month' ? 'selected' : ''}>Month</option>
@@ -5121,7 +5355,7 @@ function renderSummary() {
         ${footerHtml}
       </table>
     </div>
-    ${(statuses.length || groups.length) ? `<div class="legend-row">${legend}</div>` : ''}`;
+    ${(visibleStatuses.length || visibleWorkCodes.length) ? `<div class="legend-row">${legend}</div>` : ''}`;
 }
 
 // ═══ MODAL PLUMBING ══════════════════════════════════════════════════════════
