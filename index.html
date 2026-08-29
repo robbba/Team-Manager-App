@@ -45,7 +45,6 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sa
 .sb-info #db-status-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; flex: 1; min-width: 0; }
 .db-indicator { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; background: #94a3b8; vertical-align: middle; }
 .db-indicator.connected { background: #22c55e; }
-.db-indicator.local { background: #f59e0b; }
 
 /* ── Main ────────────────────────────────────────────────────── */
 #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
@@ -96,6 +95,7 @@ body.dark .gh-day.holiday-col, body.dark .gday.holiday-col { background: #451a1a
 .gday.shift-change-cell > .status-dot { z-index: 3; }
 .status-dot { position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; z-index: 3; pointer-events: none; border: 1px solid rgba(255,255,255,.6); }
 .activity-status-badge { position:absolute; right:2px; top:1px; z-index:3; font-size:6px; line-height:1; font-weight:800; pointer-events:none; color:var(--text); background:color-mix(in srgb,var(--surface) 78%,transparent); border-radius:3px; padding:1px 2px; }
+.birthday-cake { position: absolute; right: 5px; bottom: 4px; font-size: 9px; line-height: 1; z-index: 3; pointer-events: none; filter: drop-shadow(0 0 2px rgba(0,0,0,.2)); }
 .dur-tag { position: absolute; top: 1px; right: 2px; font-size: 5px; font-weight: 900; z-index: 3; pointer-events: none; opacity: .9; }
 .sect-row td { background: color-mix(in srgb, var(--muted-bg) 70%, transparent); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 5px 12px; }
 .act-cell-name { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
@@ -109,9 +109,6 @@ tr:hover .act-cell-actions { opacity: 1; }
 .holiday-add-popover.open { display: flex; }
 .holiday-add-option { border: none; background: none; text-align: left; padding: 7px 9px; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--text); font-family: inherit; }
 .holiday-add-option:hover { background: var(--muted-bg); }
-.holiday-section-control { display:flex; align-items:center; gap:5px; padding:3px 6px; border:1px solid var(--border); border-radius:5px; background:var(--surface); color:var(--muted); font-size:10px; font-weight:500; cursor:pointer; white-space:nowrap; }
-.holiday-section-control:hover { color:var(--text); background:var(--muted-bg); }
-.holiday-section-control input { width:13px; height:13px; margin:0; accent-color:var(--accent-blue); }
 .act-bar-cell { cursor: pointer; overflow: visible; }
 .act-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .act-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -198,7 +195,6 @@ tr:hover .act-cell-actions { opacity: 1; }
 .form-row input, .form-row select, .form-row textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13.5px; font-family: inherit; outline: none; background: var(--surface); color: var(--text); }
 .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--accent-blue); }
 .form-row textarea { resize: vertical; min-height: 56px; }
-.shift-template-color { height: 35px; padding: 2px !important; cursor: pointer; }
 .form-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 13px; }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 13px; }
@@ -385,7 +381,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 <div class="modal-bg" id="emp-modal">
   <div class="modal">
     <h3 id="emp-modal-title">Add Employee</h3>
-    <p class="modal-desc">Personnel details, contact numbers and category tags.</p>
+    <p class="modal-desc">Personnel details, contact numbers, address and category tags.</p>
     <div class="form-row"><label>Full name *</label><input id="ef-name" placeholder="Jane Smith"></div>
     <div class="form-row"><label>Email *</label><input id="ef-email" type="email" placeholder="jane@company.com"></div>
     <div class="form-row-2">
@@ -393,6 +389,10 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="form-row" style="margin:0"><label>Department *</label><input id="ef-dept" placeholder="Engineering"></div>
     </div>
     <div class="form-row"><label>Level <span class="muted" style="font-weight:400">(optional; e.g. Management / Senior / Associate)</span></label><input id="ef-level" placeholder="Senior"></div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label>Birthday <span class="muted" style="font-weight:400">(optional)</span></label><input id="ef-birthday" type="date"></div>
+      <div class="form-row" style="margin:0"><label>Home address <span class="muted" style="font-weight:400">(optional)</span></label><input id="ef-address" placeholder="Street, city"></div>
+    </div>
     <div class="form-row-2">
       <div class="form-row" style="margin:0"><label>Work phone</label><input id="ef-phone-work" type="tel" placeholder="+47 999 88 777"></div>
       <div class="form-row" style="margin:0"><label>Private phone</label><input id="ef-phone-priv" type="tel" placeholder="+47 111 22 333"></div>
@@ -447,14 +447,21 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   </div>
 </div>
 
+<!-- Annual requirement definition modal -->
 <div class="modal-bg" id="req-def-modal">
   <div class="modal" style="width:420px">
     <h3 id="req-def-modal-title">Add requirement</h3>
     <p class="modal-desc">Add an annual certification, review, or recurring requirement.</p>
     <div class="form-row"><label>Requirement name *</label><input id="req-def-name" placeholder="Annual safety review"></div>
-    <div class="modal-actions"><button class="btn btn-danger" id="req-def-delete-btn" style="margin-right:auto;display:none" onclick="deleteRequirementFromModal()">Delete</button><button class="btn" onclick="closeModal('req-def-modal')">Cancel</button><button class="btn btn-primary" onclick="saveRequirementFromModal()">Save</button></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="req-def-delete-btn" style="margin-right:auto;display:none" onclick="deleteRequirementFromModal()">Delete</button>
+      <button class="btn" onclick="closeModal('req-def-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRequirementFromModal()">Save</button>
+    </div>
   </div>
 </div>
+
+<!-- Annual requirement record modal -->
 <div class="modal-bg" id="req-record-modal">
   <div class="modal" style="width:420px">
     <h3 id="req-record-modal-title">Annual requirement</h3>
@@ -594,28 +601,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       </div>
     </div>
     <div id="work-code-list" style="max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
-    <div style="height:1px;background:var(--border);margin:18px 0"></div>
-    <h3 style="font-size:16px">Shift Templates</h3>
-    <p class="modal-desc">Define reusable shifts for hospitals, turnus, on-call work, and other schedules.</p>
-    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px" id="shf-form-title">Add a shift template</div>
-      <input id="shf-id" type="hidden">
-      <div class="form-row-2" style="margin-bottom:10px">
-        <div class="form-row" style="margin:0"><label>Name *</label><input id="shf-name" placeholder="e.g. Late shift"></div>
-        <div class="form-row" style="margin:0"><label>Category</label><select id="shf-category"><option value="day">Day</option><option value="middle">Middle</option><option value="evening">Evening</option><option value="night">Night</option><option value="continuous">Continuous</option><option value="standby">Standby</option><option value="other">Other</option></select></div>
-      </div>
-      <div class="form-row-3" style="margin-bottom:10px">
-        <div class="form-row" style="margin:0"><label>Start</label><input id="shf-start" class="shift-template-time" type="text" inputmode="numeric" maxlength="5" placeholder="07:00" value="07:00"></div>
-        <div class="form-row" style="margin:0"><label>End</label><input id="shf-end" class="shift-template-time" type="text" inputmode="numeric" maxlength="5" placeholder="15:00" value="15:00"></div>
-        <div class="form-row" style="margin:0"><label>Color</label><input id="shf-color" class="shift-template-color" type="color" value="#3b82f6"></div>
-      </div>
-      <div id="shf-hours" class="form-hint" style="margin-bottom:10px">8 h</div>
-      <div class="flex gap-2" style="justify-content:flex-end">
-        <button class="btn btn-sm" id="shf-cancel" style="display:none" onclick="resetShiftTemplateForm()">Cancel edit</button>
-        <button class="btn btn-sm btn-primary" onclick="saveShiftTemplate()" id="shf-save">Add shift template</button>
-      </div>
-    </div>
-    <div id="shift-template-list" style="max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('status-modal')">Done</button>
     </div>
@@ -649,23 +634,10 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   </div>
 </div>
 
-<div id="wizard-modal" class="modal-bg" style="display:none;z-index:9999;background:var(--bg)">
-  <div class="modal" style="width:500px;max-width:calc(100vw - 32px);text-align:center">
-    <h3>Welcome to the app</h3>
-    <p class="modal-desc">It looks like this is the first time you are starting the system.</p>
-    <div style="margin:20px 0;display:flex;flex-direction:column;gap:10px">
-      <button class="btn btn-primary" type="button" onclick="completeWizard(true)">Load sample data (recommended)</button>
-      <button class="btn" type="button" onclick="completeWizard(false)">Start with a blank calendar</button>
-    </div>
-    <div id="wizard-storage-info" class="muted" style="font-size:12px;margin-top:15px"></div>
-  </div>
-</div>
-
 <!-- Settings modal -->
 <div class="modal-bg" id="settings-modal">
   <div class="modal" style="width:400px">
     <h3>Application settings</h3>
-    <div id="settings-storage-status" class="badge" style="margin-bottom:15px;display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:bold"></div>
     <p class="modal-desc">Customise the app name and working-hours configuration.</p>
     <div class="form-row">
       <label>Application name</label>
@@ -709,7 +681,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
         <button class="btn btn-sm" type="button" onclick="exportData()">Export JSON</button>
         <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save locally as...</button>
         <button class="btn btn-sm" type="button" onclick="importData()">Import JSON</button>
-        <button class="btn btn-sm" type="button" onclick="clearAllData()">Clear all data</button>
         <button class="btn btn-sm" id="upload-server-btn" type="button" onclick="uploadCurrentDataToServer()">Upload current data to server</button>
       </div>
       <div class="form-hint" id="upload-server-hint" style="margin-top:6px">Uploads the currently loaded offline/local data snapshot to the server and replaces the server copy.</div>
@@ -765,7 +736,8 @@ const DEPT_BG_LIGHT  = ['#f0fdf4','#eff6ff','#fdf4ff','#fff7ed','#f0f9ff','#fefc
 const DEPT_ACC_LIGHT = ['#86efac','#93c5fd','#d8b4fe','#fdba74','#7dd3fc','#fde047','#f9a8d4','#a3e635','#fda4af','#c4b5fd','#6ee7b7','#7dd3fc'];
 const DEPT_BG_DARK   = ['#052e16','#1e3a5f','#2e1065','#431407','#082f49','#422006','#500724','#1a2e05','#4c0519','#1e1b4b','#064e3b','#0c2340'];
 const DEPT_ACC_DARK  = ['#166534','#1d4ed8','#6d28d9','#c2410c','#0369a1','#a16207','#be185d','#4d7c0f','#be123c','#4c1d95','#065f46','#0e7490'];
-const SETTINGS_KEY = 'team-status-app-settings';
+const SETTINGS_KEY = 'team-manager-app-settings';
+const LEGACY_SETTINGS_KEY = 'team-status-app-settings';
 const LEGACY_THEME_KEY = 'team-status-theme';
 const STORAGE_MODE_KEY = 'team-manager-storage-mode';
 const LOCAL_STATE_KEY = 'team-manager-local-state';
@@ -775,7 +747,7 @@ const LOCAL_BACKUP_HANDLE_DB = 'team-manager-file-handles';
 const LOCAL_BACKUP_HANDLE_STORE = 'handles';
 const LOCAL_BACKUP_HANDLE_KEY = 'local-backup-json';
 let localBackupFileHandle = null;
-const DataManager = { mode: STORAGE_MODE_LOCAL };
+function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 function svgIcon(name, title = '') {
   const paths = {
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -802,31 +774,23 @@ function shiftChangeIcon(title = 'Night shift change') {
 // ═══ SAFE STORAGE ════════════════════════════════════════════════════════════
 function lsGet(key) { try { return window.localStorage.getItem(key); } catch (err) { return null; } }
 function lsSet(key, value) { try { window.localStorage.setItem(key, value); } catch (err) { } }
-function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 
+// ═══ APP SETTINGS ════════════════════════════════════════════════════════════
 const APP_VERSION = '1.1.1';
 const DATA_VERSION = 6;
 const DEFAULT_WORK_CODES = [
   { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', staffingImpact: 'available', color: '#3b82f6' },
   { id: 'wc2', name: 'Turnusfri', abbreviation: 'TF', staffingImpact: 'available', color: '#64748b' },
 ];
-const DEFAULT_SHIFT_TEMPLATES = [
-  { id: 'day', name: 'Dagvakt', start: '0700', end: '1500', category: 'day', color: '#3b82f6', hours: 8 },
-  { id: 'middle', name: 'Mellomvakt', start: '1200', end: '2000', category: 'middle', color: '#f97316', hours: 8 },
-  { id: 'night', name: 'Nattevakt', start: '2300', end: '0700', category: 'night', color: '#1e293b', hours: 8 },
-  { id: 'continuous', name: 'Døgnvakt', start: '0700', end: '0700', category: 'continuous', color: '#4f46e5', hours: 24 },
-];
 
-// ═══ APP SETTINGS ════════════════════════════════════════════════════════════
-let appSettings = { 
-  appName: 'Team Manager', 
-  darkMode: false, 
+let appSettings = {
+  appName: 'Team Manager',
+  darkMode: false,
   autoSaveEnabled: true,
-  isFirstRunComplete: false,
-  coreHoursPerDay: 7.5, 
+  coreHoursPerDay: 7.5,
   coreWorkdayRange: '0730-1500',
-  lightMax: 70, 
-  normalMax: 100, 
+  lightMax: 70,
+  normalMax: 100,
   highMax: 110,
   planningHorizonDays: 14,
   planningHorizonColor: '#ef4444',
@@ -834,7 +798,6 @@ let appSettings = {
   departmentColors: {},
   activityTypes: [],
   workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })),
-  shiftTemplates: DEFAULT_SHIFT_TEMPLATES.map(shift => ({ ...shift })),
 };
 let storageMode = STORAGE_MODE_SERVER;
 
@@ -843,53 +806,6 @@ function normalizeHexColor(color, fallback = '#3b82f6') {
   const value = color.trim();
   return /^#[0-9a-fA-F]{3,8}$/.test(value) ? value : fallback;
 }
-function normalizeShiftTemplates(value) {
-  const source = Array.isArray(value) && value.length ? value : DEFAULT_SHIFT_TEMPLATES;
-  return source.map((shift, index) => {
-    const start = String(shift.start || '').replace(':', '').padStart(4, '0');
-    const end = String(shift.end || '').replace(':', '').padStart(4, '0');
-    const calculatedHours = timeRangeHours(`${start}-${end}`);
-    return {
-      id: String(shift.id || `shift-${index + 1}`),
-      name: String(shift.name || 'Shift'),
-      start: /^\d{4}$/.test(start) ? start : '0700',
-      end: /^\d{4}$/.test(end) ? end : '1500',
-      category: String(shift.category || 'other'),
-      color: normalizeHexColor(shift.color, '#3b82f6'),
-      hours: Number.isFinite(Number(shift.hours)) ? Number(shift.hours) : (calculatedHours || 0),
-    };
-  });
-}
-
-function loadSettings() {
-  try {
-    const raw = lsGet(SETTINGS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
-      appSettings.darkMode = parsed.darkMode === true;
-      appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
-      appSettings.isFirstRunComplete = parsed.isFirstRunComplete === true;
-      appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(parsed.coreWorkdayRange, '0730-1500');
-      appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || (typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5);
-      appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
-      appSettings.normalMax = typeof parsed.normalMax === 'number' ? parsed.normalMax : 100;
-      appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 110;
-      appSettings.planningHorizonDays = Number.isFinite(Number(parsed.planningHorizonDays)) ? Math.max(0, Math.min(365, Math.round(Number(parsed.planningHorizonDays)))) : 14;
-      appSettings.planningHorizonColor = normalizeHexColor(parsed.planningHorizonColor, '#ef4444');
-      appSettings.holidays = Array.isArray(parsed.holidays) ? parsed.holidays : [];
-      appSettings.activityTypes = normalizeActivityTypes(parsed.activityTypes);
-      appSettings.workCodes = normalizeWorkCodes(parsed.workCodes);
-      appSettings.shiftTemplates = normalizeShiftTemplates(parsed.shiftTemplates);
-      appSettings.departmentColors = parsed.departmentColors && typeof parsed.departmentColors === 'object'
-        ? Object.fromEntries(Object.entries(parsed.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
-        : {};
-      return;
-    }
-    appSettings.darkMode = lsGet(LEGACY_THEME_KEY) === 'dark';
-  } catch (err) { }
-}
-function persistSettings() { lsSet(SETTINGS_KEY, JSON.stringify(appSettings)); }
 function normalizeCoreWorkdayRange(value, fallback = '0730-1500') {
   const normalized = String(value || '').trim().replace(/\s+/g, '').replace('–', '-');
   const m = normalized.match(/^(\d{1,2}):?(\d{2})-(\d{1,2}):?(\d{2})$/);
@@ -908,7 +824,7 @@ function normalizeActivityTypes(value) {
     key: String(type.key || type.name || type.label || `activity_type_${index + 1}`).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''),
     name: String(type.name || type.label || 'Activity Type').trim(),
     abbreviation: String(type.abbreviation || type.abbr || '').trim().toUpperCase().slice(0, 8),
-    color: safeColor(type.color),
+    color: normalizeHexColor(type.color),
   }));
 }
 function normalizeWorkCodes(value) {
@@ -918,14 +834,23 @@ function normalizeWorkCodes(value) {
     name: String(code.name || 'Work Code').trim(),
     abbreviation: String(code.abbreviation || code.abbr || '').trim().toUpperCase().slice(0, 12),
     staffingImpact: code.staffingImpact === 'unavailable' ? 'unavailable' : 'available',
-    color: /^#[0-9a-fA-F]{3,8}$/.test(String(code.color || '')) ? code.color : '#3b82f6',
+    color: normalizeHexColor(code.color, '#3b82f6'),
   }));
 }
 function normalizeAnnualRequirements(raw) {
   const existingRequirements = Array.isArray(raw.requirements)
-    ? raw.requirements.map((requirement, index) => ({ id: Number.isFinite(Number(requirement.id)) ? Number(requirement.id) : index + 1, name: String(requirement.name || `Requirement ${index + 1}`).trim() }))
+    ? raw.requirements.map((requirement, index) => ({
+        id: Number.isFinite(Number(requirement.id)) ? Number(requirement.id) : index + 1,
+        name: String(requirement.name || `Requirement ${index + 1}`).trim(),
+      }))
     : null;
-  if (existingRequirements) return { requirements: existingRequirements, requirementRecords: raw.requirementRecords && typeof raw.requirementRecords === 'object' ? { ...raw.requirementRecords } : {} };
+  if (existingRequirements) {
+    return {
+      requirements: existingRequirements,
+      requirementRecords: raw.requirementRecords && typeof raw.requirementRecords === 'object' ? { ...raw.requirementRecords } : {},
+    };
+  }
+
   const legacy = raw.fitnessTests && typeof raw.fitnessTests === 'object' ? raw.fitnessTests : null;
   if (!legacy) return { requirements: [], requirementRecords: {} };
   const requirements = [{ id: 1, name: 'Condition' }, { id: 2, name: 'Strength' }];
@@ -933,10 +858,16 @@ function normalizeAnnualRequirements(raw) {
   Object.entries(legacy).forEach(([key, record]) => {
     const match = key.match(/^(\d+)_(condition|strength)$/);
     if (!match || !record || typeof record !== 'object') return;
+    const employeeId = Number(match[1]);
+    const requirementId = match[2] === 'condition' ? 1 : 2;
     const completedDate = /^\d{4}-\d{2}-\d{2}$/.test(record.date || '') ? record.date : '';
     const year = completedDate ? Number(completedDate.slice(0, 4)) : new Date().getFullYear();
-    const requirementId = match[2] === 'condition' ? 1 : 2;
-    requirementRecords[`${requirementId}_${Number(match[1])}_${year}`] = { completedDate, dueDate: '', result: record.grade ? `Grade ${record.grade}` : '', required: record.required !== false };
+    requirementRecords[`${requirementId}_${employeeId}_${year}`] = {
+      completedDate,
+      dueDate: '',
+      result: record.grade ? `Grade ${record.grade}` : '',
+      required: record.required !== false,
+    };
   });
   return { requirements, requirementRecords };
 }
@@ -958,14 +889,15 @@ function dailyDeviationLabel(empId, date) {
   if (entry.durationType === '24hours') return `${status.label} (24 hours)`;
   return status.label;
 }
-function ensureTravelStatus() {
-  if (statuses.some(status => status.key === 'reise-utland')) return;
-  statuses.push({ id: nextStatusId++, key: 'reise-utland', label: 'Reise utland', abbr: 'RU', color: '#22c55e', isAbsence: false, isOutOfOffice: true });
-}
 function sortDailyStatuses() {
   statuses.sort((a, b) => a.label.localeCompare(b.label, 'nb', { sensitivity: 'base' }));
 }
+function sortedPlanningItems(items) {
+  return [...(items || [])].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'nb', { sensitivity: 'base' }));
+}
 function updateCoreHoursDisplayFromRangeInput() {
+  const input = document.getElementById('set-core-time');
+  const output = document.getElementById('set-core-hours-display');
   if (!output || !input) return;
   const normalized = normalizeCoreWorkdayRange(input.value, '');
   if (!normalized) {
@@ -975,15 +907,66 @@ function updateCoreHoursDisplayFromRangeInput() {
   const hours = timeRangeHours(normalized);
   output.textContent = hours ? `= ${hours} h/day` : 'Invalid range';
 }
+
+function normalizeStateVersion(data) {
+  const raw = data && typeof data === 'object' ? data : {};
+  const normalized = { ...raw };
+  const detectedVersion = Number(raw.dataVersion ?? raw.version ?? 1);
+  normalized.dataVersion = Math.max(DATA_VERSION, detectedVersion);
+  normalized.appVersion = raw.appVersion || APP_VERSION;
+  normalized.activityTypes = normalizeActivityTypes(raw.activityTypes || raw.appSettings?.activityTypes || []);
+  normalized.workCodes = normalizeWorkCodes(raw.workCodes || raw.appSettings?.workCodes);
+  const annualRequirements = normalizeAnnualRequirements(raw);
+  normalized.requirements = annualRequirements.requirements;
+  normalized.requirementRecords = annualRequirements.requirementRecords;
+  if (!normalized.departmentColors || typeof normalized.departmentColors !== 'object') normalized.departmentColors = {};
+  normalized.departmentColors = Object.fromEntries(Object.entries(normalized.departmentColors || {}).map(([dept, value]) => [String(dept), normalizeHexColor(value)]));
+  return normalized;
+}
+
+function loadSettings() {
+  try {
+    const newRaw = lsGet(SETTINGS_KEY);
+    const legacyRaw = newRaw ? null : lsGet(LEGACY_SETTINGS_KEY);
+    const raw = newRaw || legacyRaw;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
+      appSettings.darkMode = parsed.darkMode === true;
+      appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
+      appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(parsed.coreWorkdayRange, '0730-1500');
+      appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || (typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5);
+      appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
+      appSettings.normalMax = typeof parsed.normalMax === 'number' ? parsed.normalMax : 100;
+      appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 110;
+      appSettings.planningHorizonDays = Number.isFinite(Number(parsed.planningHorizonDays)) ? Math.max(0, Math.min(365, Math.round(Number(parsed.planningHorizonDays)))) : 14;
+      appSettings.planningHorizonColor = normalizeHexColor(parsed.planningHorizonColor, '#ef4444');
+      appSettings.holidays = Array.isArray(parsed.holidays) ? parsed.holidays : [];
+      appSettings.departmentColors = parsed.departmentColors && typeof parsed.departmentColors === 'object'
+        ? Object.fromEntries(Object.entries(parsed.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
+        : {};
+      appSettings.activityTypes = normalizeActivityTypes(parsed.activityTypes);
+      appSettings.workCodes = normalizeWorkCodes(parsed.workCodes);
+      if (legacyRaw) {
+        lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
+        lsRemove(LEGACY_SETTINGS_KEY);
+      }
+      return;
+    }
+    appSettings.darkMode = lsGet(LEGACY_THEME_KEY) === 'dark';
+  } catch (err) { }
+}
+function persistSettings() {
+  lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
+  lsRemove(LEGACY_SETTINGS_KEY);
+}
 function loadStorageMode() {
   const saved = lsGet(STORAGE_MODE_KEY);
   storageMode = saved === STORAGE_MODE_LOCAL ? STORAGE_MODE_LOCAL : STORAGE_MODE_SERVER;
   if (window.location.protocol === 'file:') storageMode = STORAGE_MODE_LOCAL;
-  DataManager.mode = storageMode;
 }
 function persistStorageMode() {
   lsSet(STORAGE_MODE_KEY, storageMode);
-  DataManager.mode = storageMode;
 }
 function applyStorageModeControls() {
   const select = document.getElementById('set-storage-mode');
@@ -1011,6 +994,20 @@ function applyStorageModeControls() {
   if (uploadHint) uploadHint.style.display = '';
   if (saveLocalAsButton) saveLocalAsButton.style.display = storageMode === STORAGE_MODE_LOCAL ? '' : 'none';
 }
+const GRID_YEAR_KEY = 'teamManagerGridYear';
+const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
+function loadGridPreferences() {
+  const savedYear = parseInt(lsGet(GRID_YEAR_KEY), 10);
+  if (Number.isInteger(savedYear)) gridYear = savedYear;
+  try {
+    const savedHidden = JSON.parse(lsGet(GRID_HIDDEN_EMPLOYEES_KEY) || '[]');
+    hiddenEmployees = new Set(Array.isArray(savedHidden) ? savedHidden.map(Number).filter(Number.isFinite) : []);
+  } catch (err) { hiddenEmployees = new Set(); }
+}
+function saveGridPreferences() {
+  lsSet(GRID_YEAR_KEY, String(gridYear));
+  lsSet(GRID_HIDDEN_EMPLOYEES_KEY, JSON.stringify([...hiddenEmployees]));
+}
 function applyTheme() {
   document.body.classList.toggle('dark', appSettings.darkMode);
   const toggle = document.getElementById('theme-toggle');
@@ -1025,6 +1022,10 @@ function updateAutoSaveButton() {
 }
 async function toggleAutoSave() {
   appSettings.autoSaveEnabled = appSettings.autoSaveEnabled === false;
+  if (appSettings.autoSaveEnabled === false && autoSaveTimer) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+  }
   persistSettings();
   updateAutoSaveButton();
   updateSaveButton();
@@ -1101,18 +1102,6 @@ function openSettings() {
   const storageSelect = document.getElementById('set-storage-mode');
   if (storageSelect) storageSelect.value = storageMode;
   applyStorageModeControls();
-  const statusEl = document.getElementById('settings-storage-status');
-  if (statusEl) {
-    if (DataManager.mode === STORAGE_MODE_SERVER) {
-      statusEl.textContent = 'Connected to Server Database';
-      statusEl.style.backgroundColor = '#dcfce7';
-      statusEl.style.color = '#166534';
-    } else {
-      statusEl.textContent = 'Local Browser Storage (No Server)';
-      statusEl.style.backgroundColor = '#fef9c3';
-      statusEl.style.color = '#854d0e';
-    }
-  }
   renderHolidaySettings();
   const about = document.getElementById('set-about-version');
   if (about) about.textContent = `Team Manager v${APP_VERSION} · Data format v${DATA_VERSION}`;
@@ -1121,7 +1110,7 @@ function openSettings() {
 function renderHolidaySettings() {
   const list = document.getElementById('set-holiday-list');
   if (!list) return;
-  list.innerHTML = appSettings.holidays.length ? appSettings.holidays.map((holiday, index) => `<div class="flex items-center justify-between" style="padding:5px 8px;background:var(--muted-bg);border-radius:5px;font-size:12px"><span><b>${esc(fmtMed(holiday.date))}</b> · ${esc(holiday.name || 'Holiday')} <span class="muted">(${holiday.nonWorking === false ? 'highlight only' : 'non-working'})</span></span><button class="icon-btn danger" type="button" title="Remove" onclick="removeHolidaySetting(${index})">&times;</button></div>`).join('') : '<div class="muted text-sm">No calendar markers added.</div>';
+  list.innerHTML = appSettings.holidays.length ? appSettings.holidays.map((holiday, index) => `<div class="flex items-center justify-between" style="padding:5px 8px;background:var(--muted-bg);border-radius:5px;font-size:12px"><span><b>${esc(fmtMed(holiday.date))}</b> · ${esc(holiday.name || 'Holiday')} <span class="muted">(${holiday.nonWorking === false ? 'highlight only' : 'non-working'})</span></span><button class="icon-btn danger" type="button" title="Remove" onclick="removeHolidaySetting(${index})">&times;</button></div>`).join('') : '<div class="muted text-sm">No red dates added.</div>';
 }
 function addHolidaySetting() {
   const date = document.getElementById('set-holiday-date').value;
@@ -1207,6 +1196,7 @@ function deleteHolidayFromModal() {
   closeModal('holiday-modal');
   renderPage();
 }
+
 let importedHolidayEvents = [];
 
 function parseIcsDateValue(value) {
@@ -1405,7 +1395,7 @@ function confirmHolidayImport() {
   closeHolidayImportModal();
   renderPage();
 }
-async function saveSettings() {
+function saveSettings() {
   const name = document.getElementById('set-app-name').value.trim();
   if (name) appSettings.appName = name;
   const coreTime = normalizeCoreWorkdayRange(document.getElementById('set-core-time').value, '');
@@ -1438,498 +1428,14 @@ async function saveSettings() {
   } else {
     storageMode = STORAGE_MODE_LOCAL;
   }
-  DataManager.mode = storageMode;
   persistSettings();
   persistStorageMode();
-  if (storageMode === STORAGE_MODE_LOCAL) await persistData();
+  if (storageMode === STORAGE_MODE_LOCAL) lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()));
   applyAppName();
   updateSaveButton();
   updateSbStatus();
   closeModal('settings-modal');
   renderPage();
-}
-
-function renderAll() {
-  nav('grid');
-}
-
-function checkFirstRun() {
-  const wizard = document.getElementById('wizard-modal');
-  if (!wizard) {
-    renderAll();
-    return;
-  }
-  if (!appSettings.isFirstRunComplete || employees.length === 0) {
-    wizard.style.display = 'flex';
-    const infoEl = document.getElementById('wizard-storage-info');
-    if (infoEl) {
-      infoEl.textContent = DataManager.mode === STORAGE_MODE_SERVER
-        ? 'Connected to server database'
-        : 'Running in local mode (browser storage)';
-    }
-    renderAll();
-  } else {
-    wizard.style.display = 'none';
-    renderAll();
-  }
-}
-
-async function completeWizard(loadDemo) {
-  if (loadDemo) {
-    employees = [];
-    categories = [];
-    statuses = [];
-    activities = [];
-    courses = [];
-    courseStatuses = {};
-    requirements = [];
-    requirementRecords = {};
-    entriesMap = {};
-    activityShiftsMap = {};
-    nextEmpId = 1;
-    nextActId = 1;
-    nextStatusId = 1;
-    nextCatId = 1;
-    appSettings.departmentColors = {
-      Operasjon: '#2563eb',
-      Logistikk: '#10b981',
-      Plan: '#f59e0b',
-    };
-    appSettings.activityTypes = [{
-      id: 'at_demo_ovelse',
-      key: 'ovelse',
-      name: 'Øvelse',
-      abbreviation: 'ØV',
-      color: '#0ea5e9',
-    }];
-    appSettings.workCodes = [
-      { id: 'wc_demo_atf_dogn', name: 'ATF Døgn', abbreviation: 'ATF D', hours: 24, color: '#2563eb' },
-      { id: 'wc_demo_tf', name: 'Turnusfri', abbreviation: 'TF', hours: 0, color: '#64748b' },
-    ];
-    const demoEmployees = [
-      { name: 'Ansatt 01', department: 'Operasjon', role: 'Operatør' },
-      { name: 'Ansatt 02', department: 'Operasjon', role: 'Operatør' },
-      { name: 'Ansatt 03', department: 'Logistikk', role: 'Logistikkoffiser' },
-      { name: 'Ansatt 04', department: 'Logistikk', role: 'Koordinator' },
-      { name: 'Ansatt 05', department: 'Plan', role: 'Planlegger' },
-      { name: 'Ansatt 06', department: 'Plan', role: 'Analytiker' },
-    ];
-    employees = demoEmployees.map((employee, index) => ({
-      id: nextEmpId++,
-      name: employee.name,
-      email: `ansatt${String(index + 1).padStart(2, '0')}@example.com`,
-      role: employee.role,
-      department: employee.department,
-      level: '',
-      phoneWork: '',
-      phonePrivate: '',
-      sortOrder: index + 1,
-      categoryIds: [],
-    }));
-
-    statuses = [
-      { id: nextStatusId++, key: 'fri', label: 'Fri', abbr: 'FRI', color: '#22c55e', isAbsence: false, isOutOfOffice: false },
-      { id: nextStatusId++, key: 'syk', label: 'Syk', abbr: 'SYK', color: '#ef4444', isAbsence: true, isOutOfOffice: false },
-    ];
-
-    const startDate = todayStr();
-    const endDateObj = new Date(`${startDate}T00:00:00`);
-    endDateObj.setDate(endDateObj.getDate() + 6);
-    const endDate = fmt(endDateObj);
-    const demoParticipants = employees.slice(0, 4).map(employee => ({ id: employee.id }));
-    const demoActivityId = nextActId++;
-    activities = [{
-      id: demoActivityId,
-      name: 'Cold Response',
-      abbreviation: 'CR',
-      project: 'CR2026',
-      order: '1001',
-      billing: 'Øvelsesaktivitet',
-      type: 'ovelse',
-      countsTowardLoad: true,
-      dayShift: '0730-2400',
-      nightShift: '0000-0730',
-      includeWeekends: true,
-      color: '#0ea5e9',
-      startDate,
-      endDate,
-      participants: demoParticipants,
-      notes: 'Eksempelaktivitet opprettet av wizard.',
-    }];
-
-    demoParticipants.forEach((participant, index) => {
-      const demoShift = index < Math.ceil(demoParticipants.length / 2) ? 'day' : 'night';
-      for (const day = new Date(`${startDate}T00:00:00`); fmt(day) <= endDate; day.setDate(day.getDate() + 1)) {
-        const date = fmt(day);
-        activityShiftsMap[`${participant.id}_${date}_${demoActivityId}`] = {
-          shift: demoShift,
-          workCodeId: 'wc_demo_atf_dogn',
-          excluded: false,
-        };
-      }
-    });
-  }
-  appSettings.isFirstRunComplete = true;
-  persistSettings();
-  await persistData();
-  const wizard = document.getElementById('wizard-modal');
-  if (wizard) wizard.style.display = 'none';
-  renderAll();
-}
-
-async function clearAllData() {
-  if (!confirm('Are you sure you want to delete all data? This cannot be undone.')) return;
-  employees = [];
-  categories = [];
-  statuses = [];
-  activities = [];
-  courses = [];
-  courseStatuses = {};
-  requirements = [];
-  requirementRecords = {};
-  entriesMap = {};
-  activityShiftsMap = {};
-  appSettings.holidays = [];
-  appSettings.departmentColors = {};
-  appSettings.activityTypes = [];
-  appSettings.workCodes = DEFAULT_WORK_CODES.map(code => ({ ...code }));
-  nextEmpId = 1;
-  nextActId = 1;
-  nextStatusId = 1;
-  nextCatId = 1;
-  appSettings.isFirstRunComplete = false;
-  persistSettings();
-  await persistData();
-  window.location.reload();
-}
-
-// ═══ DATA STATE ══════════════════════════════════════════════════════════════
-let currentPage = 'grid';
-let gridYear = new Date().getFullYear();
-let summaryYear = new Date().getFullYear();
-let summaryPeriod = 'year';
-let summaryMonthValue = `${summaryYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-let summaryWeekValue = isoWeekStringFromDate(new Date());
-let workloadPeriod = 'year';
-let workloadAnchorDate = fmt(new Date());
-let boardYear = new Date().getFullYear();
-let summarySortKey = 'people', summarySortDir = 'asc';
-let empSearch = '', empFilterDept = '', empFilterCatId = null;
-let pastActivitiesExpanded = false;
-let activityPageOffset = 0;
-let activityPageSize = activityPageCapacity();
-let deptColorsExpanded = false;
-
-let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, requirements = [], requirementRecords = {};
-let entriesMap = {}, activityShiftsMap = {};
-let nextEmpId = 1, nextActId = 1, nextStatusId = 1, nextCatId = 1;
-
-let pickerEmpId = null, pickerDate = null, pickerSelectedStatus = null;
-let pickerDates = [];
-let pendingActivityPreset = null;
-let quickActivityTypeReturn = false;
-let cellSelection = { active: false, empId: null, startDate: null, endDate: null, dates: [] };
-let activityRangeSelection = { active: false, rowKey: null, startDate: null, endDate: null, dates: [] };
-let suppressCellClick = false;
-let suppressActivityCellClick = false;
-let pendingRangeSelection = null;
-let editingEmpId = null, editingActId = null, editingStatusId = null, editingDailyStatusId = null, editingCatId = null, editingShiftTemplateId = null;
-let selectedActColor = PALETTE[0], selectedParticipants = [], selectedStatusColor = PALETTE[0], selectedDailyStatusColor = PALETTE[0], selectedWorkCodeColor = '#3b82f6', selectedCatColor = PALETTE[7], selectedEmpCatIds = [];
-let hasUnsavedChanges = false;
-let undoStack = [];
-
-function updateUndoButton() {
-  const button = document.getElementById('undo-btn');
-  if (!button) return;
-  button.disabled = undoStack.length === 0;
-  button.style.opacity = button.disabled ? '.5' : '';
-}
-function recordUndo() {
-  undoStack.push(JSON.parse(JSON.stringify({ employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, nextEmpId, nextActId, nextStatusId, nextCatId })));
-  if (undoStack.length > 20) undoStack.shift();
-  updateUndoButton();
-}
-async function undoLastChange() {
-  const previous = undoStack.pop();
-  if (!previous) return;
-  ({ employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
-  markUnsaved();
-  await saveState();
-  updateUndoButton();
-  updateSbStatus();
-  renderPage();
-}
-
-function updateSaveButton() {
-  const button = document.getElementById('save-btn');
-  if (!button) return;
-  const manualSaveVisible = appSettings.autoSaveEnabled === false;
-  button.style.display = manualSaveVisible ? '' : 'none';
-  if (!manualSaveVisible) return;
-  const baseLabel = storageMode === STORAGE_MODE_LOCAL ? 'Save locally' : 'Save to Server';
-  button.innerHTML = `${svgIcon('save')} ${baseLabel}`;
-  button.style.background = '';
-  button.style.color = '';
-  button.style.fontWeight = '';
-}
-function markUnsaved() {
-  hasUnsavedChanges = true;
-  updateSaveButton();
-  updateSbStatus();
-}
-window.addEventListener('beforeunload', event => {
-  if (!hasUnsavedChanges) return;
-  event.preventDefault();
-  event.returnValue = 'You have unsaved changes.';
-});
-
-function safeColor(c) { return /^#[0-9a-fA-F]{3,8}$/.test(String(c || '')) ? c : PALETTE[0]; }
-function loadFromData(data) {
-  undoStack = [];
-  updateUndoButton();
-  appSettings.workCodes = normalizeWorkCodes(data.workCodes || data.appSettings?.workCodes);
-  appSettings.departmentColors = data.departmentColors && typeof data.departmentColors === 'object'
-    ? Object.fromEntries(Object.entries(data.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
-    : (data.appSettings?.departmentColors && typeof data.appSettings.departmentColors === 'object'
-      ? Object.fromEntries(Object.entries(data.appSettings.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
-      : (appSettings.departmentColors || {}));
-  courses = (data.courses || []).map(course => ({ ...course, id: +course.id }));
-  courseStatuses = data.courseStatuses && typeof data.courseStatuses === 'object' ? { ...data.courseStatuses } : {};
-  const annualRequirements = normalizeAnnualRequirements(data);
-  requirements = annualRequirements.requirements;
-  requirementRecords = annualRequirements.requirementRecords;
-  const joinCatIds = {};
-  if (Array.isArray(data.employeeCategories)) {
-    for (const ec of data.employeeCategories) {
-      const eid = +ec.employeeId, cid = +ec.categoryId;
-      if (Number.isFinite(eid) && Number.isFinite(cid)) (joinCatIds[eid] = joinCatIds[eid] || []).push(cid);
-    }
-  }
-  employees = (data.employees || []).map(e => ({
-    ...e,
-    id: +e.id,
-    email: e.email || '',
-    phoneWork: e.phoneWork || '',
-    phonePrivate: e.phonePrivate || '',
-    categoryIds: Array.isArray(e.categoryIds) && e.categoryIds.length
-      ? e.categoryIds.map(Number).filter(Number.isFinite)
-      : (joinCatIds[+e.id] || []),
-    sortOrder: Number.isFinite(e.sortOrder) ? e.sortOrder : undefined,
-  }));
-  categories = (data.categories || []).map(c => ({ ...c, id: +c.id, color: safeColor(c.color) }));
-  activities = (data.activities || data.projects || []).map(act => {
-    const a = { ...act, id: +act.id, color: safeColor(act.color) };
-    if ((!Array.isArray(a.participants) || !a.participants.length) && Array.isArray(a.employeeIds)) {
-      a.participants = a.employeeIds.map(id => ({ id, shift: '' }));
-    }
-    a.participants = (a.participants || []).map(p => ({ id: +p.id })).filter(p => Number.isFinite(p.id));
-    a.abbreviation = a.abbreviation || '';
-    a.project = a.project || '';
-    a.order = a.order || '';
-    a.billing = a.billing || '';
-    a.type = a.type || '';
-    a.status = activityStatus(a);
-    return a;
-  });
-  if (data.entriesMap && typeof data.entriesMap === 'object' && !Array.isArray(data.entriesMap)) {
-    entriesMap = { ...data.entriesMap };
-  } else if (Array.isArray(data.entries) && data.entries.length) {
-    entriesMap = {}; data.entries.forEach(e => { entriesMap[e.key] = e.status; });
-  } else if (Array.isArray(data.statusEntries) && data.statusEntries.length) {
-    entriesMap = {};
-    data.statusEntries.forEach(e => {
-      entriesMap[`${+e.employeeId}_${e.date}`] = {
-        status: e.status,
-        durationType: e.durationType || 'fullday',
-        time: e.time || null,
-      };
-    });
-  } else entriesMap = {};
-  if (data.activityShiftsMap && typeof data.activityShiftsMap === 'object' && !Array.isArray(data.activityShiftsMap)) {
-    activityShiftsMap = Object.fromEntries(Object.entries(data.activityShiftsMap).map(([key, value]) => [key,
-      typeof value === 'string' ? { shift: value || 'normal', shiftTemplateId: legacyShiftTemplateId(value || 'normal'), workCodeId: null, staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), shiftTemplateId: value?.shiftTemplateId || legacyShiftTemplateId(value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : '')), workCodeId: value?.workCodeId || null, staffingImpactOverride: null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
-    ]));
-  } else if (Array.isArray(data.activityShifts)) {
-    activityShiftsMap = {};
-    data.activityShifts.forEach(s => {
-      const eid = +s.employeeId, pid = +s.projectId;
-      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), shiftTemplateId: legacyShiftTemplateId(s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : '')), workCodeId: s.workCodeId || null, staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
-    });
-  } else activityShiftsMap = {};
-  const rawStatuses = Array.isArray(data.statuses) && data.statuses.length
-    ? data.statuses
-    : (Array.isArray(data.statusTypes) ? data.statusTypes.map(st => ({
-        id: st.id, key: st.key, label: st.label, abbr: st.initial || st.abbr,
-        color: st.color, isAbsence: st.isAbsence, isOutOfOffice: st.isOutOfOffice,
-      })) : []);
-  statuses = rawStatuses.map(s => ({
-    ...s, id: +s.id, color: safeColor(s.color),
-    abbr: String(s.abbr || '?').slice(0, 3),
-    isAbsence: s.isAbsence === true, isOutOfOffice: s.isOutOfOffice === true,
-  }));
-  appSettings.activityTypes = normalizeActivityTypes((data.activityTypes || data.appSettings?.activityTypes || []).length ? (data.activityTypes || data.appSettings?.activityTypes) : rawStatuses);
-  const maxId = arr => arr.length ? Math.max(...arr.map(x => x.id || 0)) : 0;
-  nextEmpId    = Math.max(data.nextEmpId    || 1, maxId(employees) + 1);
-  nextActId    = Math.max(data.nextActId    || 1, maxId(activities) + 1);
-  nextStatusId = Math.max(data.nextStatusId || 1, maxId(statuses) + 1);
-  nextCatId    = Math.max(data.nextCatId    || 1, maxId(categories) + 1);
-  if (data.dailyStatusesSeparated !== true) migrateLegacyDailyStatuses(appSettings.activityTypes);
-  ensureTravelStatus();
-  sortDailyStatuses();
-  pruneImplicitDefaultActivityShifts();
-  employees.sort((a, b) => a.name.localeCompare(b.name));
-  activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
-}
-function updateSbStatus() {
-  const dot = document.getElementById('db-dot');
-  const text = document.getElementById('db-status-text');
-  const autoSaveOn = appSettings.autoSaveEnabled !== false;
-  if (storageMode === STORAGE_MODE_LOCAL) {
-    dot.className = 'db-indicator local';
-    text.textContent = autoSaveOn ? 'Standalone mode · Local JSON' : 'Standalone mode · Manual save';
-  } else {
-    dot.className = 'db-indicator connected';
-    text.textContent = autoSaveOn
-      ? (hasUnsavedChanges ? 'Server mode · SQLite · Syncing' : 'Server mode · SQLite')
-      : 'Server mode · SQLite · Manual sync';
-  }
-  renderSbToday();
-}
-function renderSbToday() {
-  const el = document.getElementById('sb-today');
-  const now = new Date();
-  el.innerHTML = `
-    <div class="today-date">${now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</div>
-    <div style="display:flex;align-items:baseline;gap:6px;margin-top:2px">
-      <span class="today-count">${employees.length}</span>
-      <span class="today-sub">total personnel</span>
-    </div>`;
-}
-
-// ═══ SERVER PERSISTENCE & LOGIN ══════════════════════════════════════════════
-async function doLogin() {
-  const u = document.getElementById('login-user').value;
-  const p = document.getElementById('login-pass').value;
-  try {
-    const res = await fetch('/api/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: u, password: p })
-    });
-    if (res.ok) {
-      document.getElementById('login-modal').classList.remove('open');
-      document.getElementById('login-err').style.display = 'none';
-      initializeApp();
-    } else {
-      document.getElementById('login-err').style.display = 'block';
-    }
-  } catch (e) {
-    document.getElementById('login-err').textContent = "Connection error";
-    document.getElementById('login-err').style.display = 'block';
-  }
-}
-
-async function doLogout() {
-  await fetch('/api/logout', { method: 'POST' });
-  window.location.reload();
-}
-
-function snapshotData() {
-  return {
-    appVersion: APP_VERSION, dataVersion: DATA_VERSION, version: DATA_VERSION, savedAt: new Date().toISOString(), dailyStatusesSeparated: true,
-    departmentColors: appSettings.departmentColors || {},
-    activityTypes: appSettings.activityTypes || [], workCodes: appSettings.workCodes || [],
-    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap,
-    nextEmpId, nextActId, nextStatusId, nextCatId,
-  };
-}
-
-async function saveState(force = false) {
-  if (!force && appSettings.autoSaveEnabled === false) {
-    markUnsaved();
-    return;
-  }
-  if (storageMode === STORAGE_MODE_LOCAL) {
-    try {
-      lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()));
-      return;
-    } catch (err) {
-      console.warn('Local JSON save failed:', err.message);
-      throw err;
-    }
-  }
-  try {
-    await saveSnapshotToServer(snapshotData());
-  } catch (err) {
-    console.warn('Server save failed, switching to Local JSON mode:', err.message);
-    DataManager.mode = STORAGE_MODE_LOCAL;
-    storageMode = STORAGE_MODE_LOCAL;
-    persistStorageMode();
-    applyStorageModeControls();
-    try {
-      lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()));
-      updateSbStatus();
-      return;
-    } catch (localErr) {
-      console.warn('Local fallback save failed:', localErr.message);
-      throw err;
-    }
-  }
-}
-
-async function loadData() {
-  if (DataManager.mode === STORAGE_MODE_SERVER) {
-    try {
-      const res = await fetch('/api/state');
-      if (res.status === 401) {
-        document.getElementById('login-modal').classList.add('open');
-        return false;
-      }
-      const data = await res.json();
-      if (data && typeof data === 'object' && Object.keys(data).length > 0) loadFromData(data);
-      return true;
-    } catch (err) {
-      console.warn('Could not load from server. Falling back to Local JSON mode.');
-      DataManager.mode = STORAGE_MODE_LOCAL;
-      storageMode = STORAGE_MODE_LOCAL;
-      persistStorageMode();
-      applyStorageModeControls();
-    }
-  }
-  try {
-    const rawLocalState = lsGet(LOCAL_STATE_KEY);
-    if (rawLocalState) {
-      const parsedLocalState = JSON.parse(rawLocalState);
-      if (parsedLocalState && typeof parsedLocalState === 'object') loadFromData(parsedLocalState);
-    }
-  } catch (err) {
-    console.warn('Could not load local JSON data.');
-  }
-  return true;
-}
-
-async function persistData() {
-  await saveState(true);
-}
-
-async function saveData() {
-  const btn = document.getElementById('save-btn');
-  const originalText = btn ? btn.innerHTML : '';
-  const saveMode = storageMode;
-  try {
-    if (btn) btn.innerHTML = 'Saving...';
-    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
-    await saveState(true);
-    if (saveMode === STORAGE_MODE_LOCAL) await saveLocalBackupFile(false);
-    hasUnsavedChanges = false;
-    updateSaveButton();
-    updateSbStatus();
-  } catch (err) {
-    if (err && err.name === 'AbortError') return;
-    alert(saveMode === STORAGE_MODE_LOCAL ? 'Could not save local backup file.' : 'Could not save to server.');
-    updateSaveButton();
-  } finally {
-    if (btn) btn.innerHTML = originalText;
-  }
 }
 
 function exportData() {
@@ -2135,10 +1641,9 @@ async function handleImportDataFile(event) {
     const text = await file.text();
     const parsed = JSON.parse(text);
     loadFromData(parsed);
-    await persistData();
-    hasUnsavedChanges = false;
-    updateSaveButton();
-    updateSbStatus();
+    hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
+    saveGridPreferences();
+    await saveState(true);
     closeModal('settings-modal');
     renderPage();
   } catch (err) {
@@ -2163,7 +1668,6 @@ async function uploadCurrentDataToServer() {
       button.textContent = 'Uploading...';
     }
     await saveSnapshotToServer(snapshotData());
-    DataManager.mode = STORAGE_MODE_SERVER;
     storageMode = STORAGE_MODE_SERVER;
     persistStorageMode();
     hasUnsavedChanges = false;
@@ -2179,6 +1683,326 @@ async function uploadCurrentDataToServer() {
       button.disabled = false;
       button.textContent = originalLabel;
     }
+  }
+}
+
+// ═══ DATA STATE ══════════════════════════════════════════════════════════════
+let currentPage = 'grid';
+let gridYear = new Date().getFullYear();
+let summaryYear = new Date().getFullYear();
+let summaryPeriod = 'year';
+let summaryMonthValue = `${summaryYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+let summaryWeekValue = isoWeekStringFromDate(new Date());
+let workloadPeriod = 'year';
+let workloadAnchorDate = fmt(new Date());
+let boardYear = new Date().getFullYear();
+let summarySortKey = 'people', summarySortDir = 'asc';
+let empSearch = '', empFilterDept = '', empFilterCatId = null;
+let deptColorsExpanded = false;
+let hiddenEmployees = new Set();
+let hiddenEmployeesDraft = null;
+let pastActivitiesExpanded = false;
+let activityPageOffset = 0;
+let activityPageSize = activityPageCapacity();
+
+let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, requirements = [], requirementRecords = {};
+let entriesMap = {}, activityShiftsMap = {};
+let nextEmpId = 1, nextActId = 1, nextStatusId = 1, nextCatId = 1;
+
+let pickerEmpId = null, pickerDate = null, pickerSelectedStatus = null;
+let pickerDates = [];
+let pendingActivityPreset = null;
+let quickActivityTypeReturn = false;
+let cellSelection = { active: false, empId: null, startDate: null, endDate: null, dates: [] };
+let activityRangeSelection = { active: false, rowKey: null, startDate: null, endDate: null, dates: [] };
+let suppressCellClick = false;
+let suppressActivityCellClick = false;
+let pendingRangeSelection = null;
+let editingEmpId = null, editingActId = null, editingStatusId = null, editingDailyStatusId = null, editingCatId = null;
+let selectedActColor = PALETTE[0], selectedParticipants = [], selectedStatusColor = PALETTE[0], selectedDailyStatusColor = PALETTE[0], selectedWorkCodeColor = '#3b82f6', selectedCatColor = PALETTE[7], selectedEmpCatIds = [];
+let hasUnsavedChanges = false;
+let undoStack = [];
+let autoSaveTimer = null;
+
+function updateUndoButton() {
+  const button = document.getElementById('undo-btn');
+  if (!button) return;
+  button.disabled = undoStack.length === 0;
+  button.style.opacity = button.disabled ? '.5' : '';
+}
+function recordUndo() {
+  undoStack.push(JSON.parse(JSON.stringify({
+    appSettings: { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } },
+    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap,
+    nextEmpId, nextActId, nextStatusId, nextCatId,
+  })));
+  if (undoStack.length > 20) undoStack.shift();
+  updateUndoButton();
+}
+async function undoLastChange() {
+  const previous = undoStack.pop();
+  if (!previous) return;
+  ({ appSettings, employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
+  if (appSettings && typeof appSettings === 'object') {
+    const merged = { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } };
+    Object.assign(appSettings, merged);
+  }
+  markUnsaved();
+  await saveState();
+  updateUndoButton();
+  updateSbStatus();
+  renderPage();
+}
+
+function updateSaveButton() {
+  const button = document.getElementById('save-btn');
+  if (!button) return;
+  const manualSaveVisible = appSettings.autoSaveEnabled === false;
+  button.style.display = manualSaveVisible ? '' : 'none';
+  if (!manualSaveVisible) return;
+  const baseLabel = storageMode === STORAGE_MODE_LOCAL ? 'Save locally' : 'Save to Server';
+  button.innerHTML = `${svgIcon('save')} ${baseLabel}`;
+  button.style.background = '';
+  button.style.color = '';
+  button.style.fontWeight = '';
+}
+function markUnsaved() {
+  hasUnsavedChanges = true;
+  updateSaveButton();
+  updateSbStatus();
+}
+function scheduleAutoSave() {
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  markUnsaved();
+  if (appSettings.autoSaveEnabled === false) return;
+  autoSaveTimer = setTimeout(() => {
+    saveState(true).catch(err => console.warn('Auto-save failed:', err.message));
+  }, 800);
+}
+window.addEventListener('beforeunload', event => {
+  if (!hasUnsavedChanges) return;
+  event.preventDefault();
+  event.returnValue = 'You have unsaved changes.';
+});
+
+function safeColor(c) { return /^#[0-9a-fA-F]{3,8}$/.test(String(c || '')) ? c : PALETTE[0]; }
+function loadFromData(data) {
+  const normalized = normalizeStateVersion(data || {});
+  undoStack = [];
+  updateUndoButton();
+  appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
+    ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
+    : {};
+  appSettings.workCodes = normalizeWorkCodes(normalized.workCodes);
+  courses = (normalized.courses || []).map(course => ({ ...course, id: +course.id }));
+  courseStatuses = normalized.courseStatuses && typeof normalized.courseStatuses === 'object' ? { ...normalized.courseStatuses } : {};
+  requirements = normalized.requirements;
+  requirementRecords = normalized.requirementRecords;
+  const joinCatIds = {};
+  if (Array.isArray(normalized.employeeCategories)) {
+    for (const ec of normalized.employeeCategories) {
+      const eid = +ec.employeeId, cid = +ec.categoryId;
+      if (Number.isFinite(eid) && Number.isFinite(cid)) (joinCatIds[eid] = joinCatIds[eid] || []).push(cid);
+    }
+  }
+  employees = (normalized.employees || []).map(e => ({
+    ...e,
+    id: +e.id,
+    email: e.email || '',
+    phoneWork: e.phoneWork || '',
+    phonePrivate: e.phonePrivate || '',
+    birthday: e.birthday || '',
+    homeAddress: e.homeAddress || '',
+    categoryIds: Array.isArray(e.categoryIds) && e.categoryIds.length
+      ? e.categoryIds.map(Number).filter(Number.isFinite)
+      : (joinCatIds[+e.id] || []),
+    sortOrder: Number.isFinite(e.sortOrder) ? e.sortOrder : undefined,
+  }));
+  categories = (normalized.categories || []).map(c => ({ ...c, id: +c.id, color: safeColor(c.color) }));
+  activities = (normalized.activities || normalized.projects || []).map(act => {
+    const a = { ...act, id: +act.id, color: safeColor(act.color) };
+    if ((!Array.isArray(a.participants) || !a.participants.length) && Array.isArray(a.employeeIds)) {
+      a.participants = a.employeeIds.map(id => ({ id, shift: '' }));
+    }
+    a.participants = (a.participants || []).map(p => ({ id: +p.id })).filter(p => Number.isFinite(p.id));
+    a.abbreviation = a.abbreviation || '';
+    a.project = a.project || '';
+    a.order = a.order || '';
+    a.billing = a.billing || '';
+    a.type = a.type || '';
+    a.status = activityStatus(a);
+    return a;
+  });
+  if (normalized.entriesMap && typeof normalized.entriesMap === 'object' && !Array.isArray(normalized.entriesMap)) {
+    entriesMap = { ...normalized.entriesMap };
+  } else if (Array.isArray(normalized.entries) && normalized.entries.length) {
+    entriesMap = {}; normalized.entries.forEach(e => { entriesMap[e.key] = e.status; });
+  } else if (Array.isArray(normalized.statusEntries) && normalized.statusEntries.length) {
+    entriesMap = {};
+    normalized.statusEntries.forEach(e => {
+      entriesMap[`${+e.employeeId}_${e.date}`] = {
+        status: e.status,
+        durationType: e.durationType || 'fullday',
+        time: e.time || null,
+      };
+    });
+  } else entriesMap = {};
+  if (normalized.activityShiftsMap && typeof normalized.activityShiftsMap === 'object' && !Array.isArray(normalized.activityShiftsMap)) {
+    activityShiftsMap = Object.fromEntries(Object.entries(normalized.activityShiftsMap).map(([key, value]) => [key,
+      typeof value === 'string' ? { shift: value || 'normal', workCodeId: null, staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), workCodeId: value?.workCodeId || null, staffingImpactOverride: null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
+    ]));
+  } else if (Array.isArray(normalized.activityShifts)) {
+    activityShiftsMap = {};
+    normalized.activityShifts.forEach(s => {
+      const eid = +s.employeeId, pid = +s.projectId;
+      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: s.workCodeId || null, staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
+    });
+  } else activityShiftsMap = {};
+  const rawStatuses = Array.isArray(normalized.statuses) && normalized.statuses.length
+    ? normalized.statuses
+    : (Array.isArray(normalized.statusTypes) ? normalized.statusTypes.map(st => ({
+        id: st.id, key: st.key, label: st.label, abbr: st.initial || st.abbr,
+        color: st.color, isAbsence: st.isAbsence, isOutOfOffice: st.isOutOfOffice,
+      })) : []);
+  statuses = rawStatuses.map(s => ({
+    ...s, id: +s.id, color: safeColor(s.color),
+    abbr: String(s.abbr || '?').slice(0, 3),
+    isAbsence: s.isAbsence === true, isOutOfOffice: s.isOutOfOffice === true,
+  }));
+  appSettings.activityTypes = normalizeActivityTypes(normalized.activityTypes.length ? normalized.activityTypes : rawStatuses);
+  const maxId = arr => arr.length ? Math.max(...arr.map(x => x.id || 0)) : 0;
+  nextEmpId    = Math.max(normalized.nextEmpId    || 1, maxId(employees) + 1);
+  nextActId    = Math.max(normalized.nextActId    || 1, maxId(activities) + 1);
+  nextStatusId = Math.max(normalized.nextStatusId || 1, maxId(statuses) + 1);
+  nextCatId    = Math.max(normalized.nextCatId    || 1, maxId(categories) + 1);
+  if (normalized.dailyStatusesSeparated !== true) migrateLegacyDailyStatuses(appSettings.activityTypes);
+  sortDailyStatuses();
+  pruneImplicitDefaultActivityShifts();
+  employees.sort((a, b) => a.name.localeCompare(b.name));
+  activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
+}
+function updateSbStatus() {
+  const dot = document.getElementById('db-dot');
+  const text = document.getElementById('db-status-text');
+  const autoSaveOn = appSettings.autoSaveEnabled !== false;
+  if (storageMode === STORAGE_MODE_LOCAL) {
+    dot.className = 'db-indicator';
+    if (autoSaveOn) text.textContent = 'Local synced';
+    else text.textContent = 'Manual save';
+  } else {
+    dot.className = 'db-indicator connected';
+    if (autoSaveOn) {
+      text.textContent = hasUnsavedChanges
+        ? 'Syncing changes...'
+        : 'All data synced';
+    } else {
+      text.textContent = 'Manual sync';
+    }
+  }
+  renderSbToday();
+}
+function renderSbToday() {
+  const el = document.getElementById('sb-today');
+  const now = new Date();
+  el.innerHTML = `
+    <div class="today-date">${now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</div>
+    <div style="display:flex;align-items:baseline;gap:6px;margin-top:2px">
+      <span class="today-count">${employees.length}</span>
+      <span class="today-sub">total personnel</span>
+    </div>`;
+}
+
+// ═══ SERVER PERSISTENCE & LOGIN ══════════════════════════════════════════════
+async function doLogin() {
+  const u = document.getElementById('login-user').value;
+  const p = document.getElementById('login-pass').value;
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p })
+    });
+    if (res.ok) {
+      document.getElementById('login-modal').classList.remove('open');
+      document.getElementById('login-err').style.display = 'none';
+      bootApp();
+    } else {
+      document.getElementById('login-err').style.display = 'block';
+    }
+  } catch (e) {
+    document.getElementById('login-err').textContent = "Connection error";
+    document.getElementById('login-err').style.display = 'block';
+  }
+}
+
+async function doLogout() {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.reload();
+}
+
+function snapshotData() {
+  return {
+    appVersion: APP_VERSION,
+    dataVersion: DATA_VERSION,
+    version: DATA_VERSION,
+    savedAt: new Date().toISOString(),
+    dailyStatusesSeparated: true,
+    departmentColors: appSettings.departmentColors || {},
+    activityTypes: appSettings.activityTypes || [],
+    workCodes: appSettings.workCodes || [],
+    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap,
+    nextEmpId, nextActId, nextStatusId, nextCatId,
+  };
+}
+
+async function saveState(force = false) {
+  if (!force && appSettings.autoSaveEnabled === false) {
+    markUnsaved();
+    return;
+  }
+  if (storageMode === STORAGE_MODE_LOCAL) {
+    try {
+      lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()));
+      hasUnsavedChanges = false;
+      updateSaveButton();
+      updateSbStatus();
+      if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+    } catch (err) {
+      console.warn('Local JSON save failed:', err.message);
+      throw err;
+    }
+    return;
+  }
+  if (!force) {
+    scheduleAutoSave();
+    return;
+  }
+  try {
+    await saveSnapshotToServer(snapshotData());
+    hasUnsavedChanges = false;
+    updateSaveButton();
+    updateSbStatus();
+    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+  } catch (err) { console.warn('Auto-save feilet:', err.message); throw err; }
+}
+
+async function saveData() {
+  const btn = document.getElementById('save-btn');
+  const originalText = btn ? btn.innerHTML : '';
+  const saveMode = storageMode;
+  try {
+    if (btn) btn.innerHTML = 'Saving...';
+    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+    await saveState(true);
+    if (saveMode === STORAGE_MODE_LOCAL) await saveLocalBackupFile(false);
+    hasUnsavedChanges = false;
+    updateSaveButton();
+    updateSbStatus();
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    alert(saveMode === STORAGE_MODE_LOCAL ? 'Could not save local backup file.' : 'Could not save to server.');
+    updateSaveButton();
+  } finally {
+    if (btn) btn.innerHTML = originalText;
   }
 }
 
@@ -2282,13 +2106,9 @@ function activityExtraHoursOutsideBaseline(shiftIntervals, baselineShift) {
 }
 function shiftHours(shift) {
   if (!shift || shift === 'fullday') return appSettings.coreHoursPerDay;
-  const template = shiftTemplateById(shift);
-  if (template) return shiftTemplateHours(template);
   return timeRangeHours(shift) ?? appSettings.coreHoursPerDay;
 }
 function activityDefaultShift(shiftType, act = null) {
-  const template = shiftTemplateById(shiftType);
-  if (template) return shiftTemplateTime(template);
   if (shiftType === 'normal') return act?.normalShift || appSettings.coreWorkdayRange || '0730-1500';
   return shiftType === 'night' ? (act?.nightShift || '0000-0730') : (act?.dayShift || '0730-2400');
 }
@@ -2296,24 +2116,18 @@ function activityShiftHours(act, empId, date) {
   if (activityStatus(act) !== 'confirmed') return 0;
   const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
   if (!assignment.assigned || assignment.excluded || !assignment.shift) return 0;
-  const shiftTemplate = shiftTemplateById(assignment.shiftTemplateId);
-  const shiftStr = shiftTemplate ? shiftTemplate.id : (assignment.shift || 'normal');
-  if (shiftTemplate) return shiftTemplateHours(shiftTemplate);
+  const shiftStr = assignment.shift || 'normal';
   if (shiftStr === 'turn') return 0;
-  if (shiftStr === 'continuous') return 24;
   if (['normal', 'day', 'night'].includes(shiftStr)) {
     return timeRangeHours(activityDefaultShift(shiftStr, act)) ?? 0;
   }
   return timeRangeHours(shiftStr) ?? 0;
 }
 function activityShiftMeta(act, shift) {
-  const template = shiftTemplateById(shift);
-  if (template) return { key: template.id, label: template.name, range: shiftTemplateTime(template), category: template.category, color: template.color, icon: template.category === 'night' ? svgIcon('moon', template.name) : (template.category === 'day' ? svgIcon('sun', template.name) : '') };
   if (shift === 'normal') return { key: 'normal', label: 'Normal Working Hours', range: activityDefaultShift('normal', act), icon: '' };
   if (shift === 'day') return { key: 'day', label: 'Day', range: activityDefaultShift('day', act), icon: svgIcon('sun', 'Day') };
   if (shift === 'night') return { key: 'night', label: 'Night', range: activityDefaultShift('night', act), icon: svgIcon('moon', 'Night') };
   if (shift === 'turn') return { key: 'turn', label: 'Turnaround', range: '', icon: shiftChangeIcon('Turnaround') };
-  if (shift === 'continuous') return { key: 'continuous', label: '24h / unspecified working hours', range: '', icon: '' };
   return shift ? { key: shift, label: 'Custom', range: shift, icon: '' } : null;
 }
 function activityAssignmentInfo(act, empId, date) {
@@ -2322,15 +2136,14 @@ function activityAssignmentInfo(act, empId, date) {
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId)
     || (assignment.shift === 'normal' ? { id: null, name: 'Normal Working Hours', abbreviation: 'NA', color: act.color } : null);
   if (!assignment.assigned || assignment.excluded || !assignment.shift || !workCode) return null;
-  const selectedShift = assignment.shiftTemplateId || assignment.shift;
-  const shiftMeta = activityShiftMeta(act, selectedShift);
-  const physicalShift = shiftMeta?.range
+  const shiftMeta = activityShiftMeta(act, assignment.shift);
+  const physicalShift = ['normal', 'day', 'night'].includes(assignment.shift)
     ? `${shiftMeta.label} (${shiftMeta.range})`
-    : (shiftMeta?.label || assignment.shift || 'Not specified');
+    : (assignment.shift === 'turn' ? shiftMeta.label : (assignment.shift || 'Not specified'));
   return { assignment, workCode, physicalShift, hours: activityShiftHours(act, empId, date) };
 }
 function assignmentShiftType(shift, participant = null) {
-  if (shift === 'normal' || shift === 'day' || shift === 'night' || shift === 'turn' || shift === 'continuous') return shift;
+  if (shift === 'normal' || shift === 'day' || shift === 'night' || shift === 'turn') return shift;
   return participant?.shiftType === 'night' ? 'night' : (participant?.shiftType === 'normal' ? 'normal' : 'day');
 }
 function activityCountsTowardLoad(act) {
@@ -2365,16 +2178,16 @@ function activityTypeMeta(act) {
 }
 function activityAssignment(key) {
   const value = activityShiftsMap[key];
-  if (!value) return { shift: '', shiftTemplateId: null, workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: false };
-  if (typeof value === 'string') return { shift: value || 'normal', shiftTemplateId: legacyShiftTemplateId(value || 'normal'), workCodeId: null, staffingImpactOverride: null, assigned: true, excluded: false };
-  const shift = value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : '');
-  return { shift, shiftTemplateId: value.shiftTemplateId || legacyShiftTemplateId(shift), workCodeId: value.workCodeId || null, staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
+  if (!value) return { shift: '', workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: false };
+  return typeof value === 'string'
+    ? { shift: value, workCodeId: null, staffingImpactOverride: null, assigned: true, excluded: false }
+    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: value.workCodeId || null, staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
 }
 function activityAssignmentShift(key) {
   return activityAssignment(key).shift;
 }
 function excludeActivityAssignment(key) {
-  activityShiftsMap[key] = { shift: '', shiftTemplateId: null, workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: true };
+  activityShiftsMap[key] = { shift: '', workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: true };
 }
 function participantActivityShift(act, empId, dateString) {
   const participant = participantFor(act, empId);
@@ -2388,8 +2201,7 @@ function activityHasScheduledShift(act, empId, start, end) {
   return Object.keys(activityShiftsMap).some(key => {
     if (!key.startsWith(prefix) || !key.endsWith(suffix)) return false;
     const [, date] = key.split('_', 3);
-    const assignment = activityAssignment(key);
-    return date >= start && date <= end && Boolean(assignment.workCodeId);
+    return date >= start && date <= end && Boolean(activityAssignment(key).workCodeId);
   });
 }
 function pruneImplicitDefaultActivityShifts() {
@@ -2441,10 +2253,14 @@ function resolveDeptColor(dept) {
     : null;
 }
 function deptColorMap() {
+  const { bg, accent } = deptPalettes();
   const map = {};
   [...new Set(employees.map(e => e.department))].filter(Boolean).sort().forEach((dept, i) => {
-    const color = resolveDeptColor(dept) || PALETTE[i % PALETTE.length];
-    map[dept] = { bg: `${color}22`, accent: color };
+    const custom = resolveDeptColor(dept);
+    const index = i % bg.length;
+    map[dept] = custom
+      ? { bg: `${custom}22`, accent: custom }
+      : { bg: bg[index], accent: accent[index] };
   });
   return map;
 }
@@ -2458,10 +2274,138 @@ function deptGroups() {
   const sorted = sortedEmployees();
   const order = [], byDept = new Map();
   for (const emp of sorted) {
+    if (hiddenEmployees.has(emp.id)) continue;
     if (!byDept.has(emp.department)) { byDept.set(emp.department, []); order.push(emp.department); }
     byDept.get(emp.department).push(emp);
   }
   return order.map(dept => ({ dept, emps: byDept.get(dept) }));
+}
+function normalizeDepartmentName(value) {
+  return String(value || '').trim().toLowerCase();
+}
+function toggleEmployeeVisibility(empId, forceState) {
+  const targetSet = hiddenEmployeesDraft || hiddenEmployees;
+  if (typeof forceState === 'boolean') {
+    if (forceState) targetSet.delete(empId); else targetSet.add(empId);
+  } else if (targetSet.has(empId)) {
+    targetSet.delete(empId);
+  } else {
+    targetSet.add(empId);
+  }
+  if (hiddenEmployeesDraft) { rebuildEmployeePicker(); return; }
+  saveGridPreferences();
+  renderPage();
+}
+function toggleEmployeeDepartment(deptName, forceState) {
+  const targetSet = hiddenEmployeesDraft || hiddenEmployees;
+  const normalizedDept = normalizeDepartmentName(deptName);
+  const deptEmployees = employees
+    .filter(emp => normalizeDepartmentName(emp.department) === normalizedDept)
+    .map(emp => emp.id);
+  if (!deptEmployees.length) return;
+  if (typeof forceState === 'boolean') {
+    deptEmployees.forEach(id => forceState ? targetSet.delete(id) : targetSet.add(id));
+  } else {
+    const deptVisible = deptEmployees.some(id => !targetSet.has(id));
+    deptEmployees.forEach(id => {
+      if (deptVisible) targetSet.add(id);
+      else targetSet.delete(id);
+    });
+  }
+  if (hiddenEmployeesDraft) { setTimeout(rebuildEmployeePicker, 0); return; }
+  saveGridPreferences();
+  renderPage();
+}
+function setEmployeeDepartmentVisibility(deptName, shouldShow) {
+  toggleEmployeeDepartment(deptName, shouldShow === true);
+}
+function rebuildEmployeePicker() {
+  const picker = document.getElementById('employee-picker');
+  if (!picker) return;
+  const hiddenSet = hiddenEmployeesDraft || hiddenEmployees;
+  const departmentMap = new Map();
+  employees.forEach(emp => {
+    const key = normalizeDepartmentName(emp.department);
+    if (!key) return;
+    if (!departmentMap.has(key)) departmentMap.set(key, String(emp.department || '').trim());
+  });
+  const departments = [...departmentMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const deptMarkup = departments.length ? departments.map(([deptKey, deptLabel]) => {
+    const deptEmployees = employees.filter(emp => normalizeDepartmentName(emp.department) === deptKey);
+    const visible = deptEmployees.filter(emp => !hiddenSet.has(emp.id)).length;
+    const allChecked = deptEmployees.length && visible === deptEmployees.length;
+    const someChecked = visible > 0 && visible < deptEmployees.length;
+    const employeeMarkup = deptEmployees.map(emp => `
+      <label class="picker-row" style="display:flex;align-items:center;gap:8px;padding:5px 0">
+        <input type="checkbox" ${hiddenSet.has(emp.id) ? '' : 'checked'} onchange="toggleEmployeeVisibility(${emp.id}, this.checked); return false;">
+        <span>${esc(emp.name)}</span>
+      </label>`).join('');
+    return `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface)">
+        <label class="picker-row" style="display:flex;align-items:center;gap:8px;padding:0 0 6px;font-weight:600;color:var(--text)">
+          <input type="checkbox" ${allChecked ? 'checked' : ''} ${someChecked ? 'data-indeterminate="true"' : ''} onchange="setEmployeeDepartmentVisibility(${esc(JSON.stringify(deptKey))}, this.checked); return false;">
+          <span>${esc(deptLabel)}</span>
+        </label>
+        <div style="display:flex;flex-direction:column;gap:2px;margin-left:18px">${employeeMarkup}</div>
+      </div>`;
+  }).join('') : '<div class="muted text-sm">No departments available.</div>';
+  picker.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+      <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">Select employees</strong>
+      <button class="icon-btn" type="button" onclick="closeEmployeePicker()" aria-label="Close">&times;</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;max-height:330px;overflow:auto">${deptMarkup}</div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn btn-sm" type="button" onclick="resetEmployeePickerSelection()">Show all</button>
+      <button class="btn btn-sm" type="button" onclick="closeEmployeePicker()">Cancel</button>
+      <button class="btn btn-sm btn-primary" type="button" onclick="applyEmployeePickerSelection()">Apply</button>
+    </div>`;
+  picker.querySelectorAll('input[data-indeterminate="true"]').forEach(input => { input.indeterminate = true; });
+}
+function resetEmployeePickerSelection() {
+  if (!hiddenEmployeesDraft) hiddenEmployeesDraft = new Set(hiddenEmployees);
+  hiddenEmployeesDraft.clear();
+  rebuildEmployeePicker();
+}
+function applyEmployeePickerSelection() {
+  if (hiddenEmployeesDraft) {
+    hiddenEmployees = new Set(hiddenEmployeesDraft);
+    hiddenEmployeesDraft = null;
+    saveGridPreferences();
+  }
+  closeEmployeePicker();
+  renderPage();
+}
+function openEmployeePicker(button) {
+  const picker = document.getElementById('employee-picker');
+  const scroll = document.getElementById('grid-scroll');
+  if (!picker) return;
+  if (!scroll) return;
+  hiddenEmployeesDraft = new Set(hiddenEmployees);
+  rebuildEmployeePicker();
+  picker.style.display = 'block';
+  const rect = button.getBoundingClientRect();
+  const scrollRect = scroll.getBoundingClientRect();
+  const gap = 8;
+  picker.style.position = 'absolute';
+  const desiredLeft = scroll.scrollLeft + (rect.left - scrollRect.left) + rect.width + gap;
+  const maxLeft = scroll.scrollLeft + Math.max(0, scroll.clientWidth - 290);
+  const desiredTop = scroll.scrollTop + (rect.top - scrollRect.top) + rect.height + gap;
+  picker.style.left = `${Math.min(maxLeft, Math.max(scroll.scrollLeft + 8, desiredLeft))}px`;
+  picker.style.top = `${Math.max(scroll.scrollTop + 8, desiredTop)}px`;
+  picker.style.zIndex = '120';
+  picker.style.width = '260px';
+  picker.style.maxWidth = 'calc(100vw - 24px)';
+  picker.style.background = 'var(--surface)';
+  picker.style.border = '1px solid var(--border)';
+  picker.style.borderRadius = '10px';
+  picker.style.padding = '10px';
+  picker.style.boxShadow = '0 12px 32px rgba(0,0,0,.15)';
+}
+function closeEmployeePicker() {
+  const picker = document.getElementById('employee-picker');
+  if (picker) picker.style.display = 'none';
+  hiddenEmployeesDraft = null;
 }
 
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
@@ -2529,7 +2473,12 @@ function renderGrid() {
           <button class="btn btn-sm" onclick="openStatusManager()">Manage Planning Options</button>
           <button class="btn btn-sm" onclick="openTeamScheduleReport()">Team Work Schedule</button>
           <button class="btn btn-sm" onclick="goToday()">Today</button>
-          <span class="year-label" aria-label="Calendar year">${gridYear}</span>
+          <div class="year-nav" aria-label="Calendar year">
+            <button class="btn btn-icon" onclick="changeGridYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
+            <span class="year-label">${gridYear}</span>
+            <button class="btn btn-icon" onclick="changeGridYear(1)" aria-label="Next year">${svgIcon('chevronRight')}</button>
+          </div>
+          ${hiddenEmployees.size ? `<button class="btn btn-sm" onclick="showAllEmployees()">Show all employees</button>` : ''}
 
           <!-- Holiday / red-day modal -->
           <div class="modal-bg" id="holiday-modal">
@@ -2571,10 +2520,16 @@ function renderGrid() {
           </div>
         </div>
       </div>
-      <div id="grid-scroll">
+      <div id="grid-scroll" style="position:relative">
+        <div id="employee-picker" style="display:none"></div>
         <table class="gtable">
           <thead>
-            <tr><th class="gh-emp sticky-left" rowspan="3" style="width:240px;min-width:240px;top:0">Employee / Activity</th>${monthCells}</tr>
+            <tr><th class="gh-emp sticky-left" rowspan="3" style="width:240px;min-width:240px;top:0">
+              <div class="flex items-center justify-between gap-2" style="width:100%">
+                <span>Employee / Activity</span>
+                <button class="btn btn-sm" type="button" onclick="openEmployeePicker(this)">Select...</button>
+              </div>
+            </th>${monthCells}</tr>
             <tr>${weekCells}</tr>
             <tr>${dayCells}</tr>
           </thead>
@@ -2582,7 +2537,7 @@ function renderGrid() {
         </table>
       </div>
       <div id="holiday-add-popover" class="holiday-add-popover">
-        <button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add calendar marker</button>
+        <button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday or red-day period</button>
         <button class="holiday-add-option" type="button" onclick="openHolidayAddAction('import')">Import .ics holidays</button>
       </div>
       <div style="padding:6px 24px;border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;color:var(--muted)">
@@ -2684,8 +2639,8 @@ function renderGridBody(days, today) {
   const currentHolidays = yearHolidays.filter(holiday => holiday.endDate >= today);
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
-      <span class="flex items-center justify-between"><span>Calendar Markers (${currentHolidays.length})</span>
-        <span class="flex items-center gap-2"><label class="holiday-section-control"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show</label><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
+      <span class="flex items-center justify-between"><span>Holidays / Red days (${currentHolidays.length})</span>
+        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
         </span>
       </span></td><td colspan="${days.length}"></td></tr>`;
   if (!showHolidays) {
@@ -2699,13 +2654,13 @@ function renderGridBody(days, today) {
       html += `<tr><td class="gempl sticky-left" style="cursor:pointer" onclick="openHolidayModal(${holiday.sourceIndexes[0]},[${holiday.sourceIndexes.join(',')}])" title="Edit ${esc(holiday.name || 'Holiday')}"><div class="act-cell-name"><span class="act-name" style="color:${color}">${esc(holiday.name || 'Holiday')}</span><span class="act-cell-actions"><button class="icon-btn" title="Edit" onclick="event.stopPropagation();openHolidayModal(${holiday.sourceIndexes[0]},[${holiday.sourceIndexes.join(',')}])">${svgIcon('edit')}</button></span></div><div class="act-dates muted">${fmtShort(start)} – ${fmtShort(end)}${holiday.nonWorking ? ' · non-working' : ' · highlight only'}</div></td>`;
       days.forEach(day => {
         const ds = fmt(day), active = ds >= start && ds <= end;
-        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${active ? ' holiday-col' : ''}" style="${active ? `background:${color}28 !important;color:${color}` : ''}${planningHorizonStyle(ds)}" title="${active ? esc(holiday.name || 'Holiday') : ''}"></td>`;
+        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${active ? ' holiday-col' : ''}" style="${active ? `background:${color}28 !important;color:${color};border-color:${color}55;` : ''}${planningHorizonStyle(ds)}" title="${active ? esc(holiday.name || 'Holiday') : ''}"></td>`;
       });
       html += '</tr>';
     };
     currentHolidays.forEach(renderHolidayRow);
     if (pastHolidays.length) {
-      html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)"><button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" onclick="pastHolidaysExpanded=!pastHolidaysExpanded;renderPage()">${svgIcon(pastHolidaysExpanded ? 'chevronLeft' : 'chevronRight')} Past calendar markers (${pastHolidays.length})</button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
+      html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)"><button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" onclick="pastHolidaysExpanded=!pastHolidaysExpanded;renderPage()">${svgIcon(pastHolidaysExpanded ? 'chevronLeft' : 'chevronRight')} Past red days / holidays (${pastHolidays.length})</button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
       if (pastHolidaysExpanded) pastHolidays.forEach(renderHolidayRow);
     }
   }
@@ -2724,8 +2679,8 @@ function renderGridBody(days, today) {
         <span style="font-size:10px;color:var(--muted);opacity:.7"> · ${group.emps.length} ${group.emps.length === 1 ? 'person' : 'people'}</span>
       </td><td colspan="${days.length}" style="background:${colors.bg};opacity:.45;border-bottom:2px solid ${colors.accent}"></td></tr>`;
     for (const emp of group.emps) {
-      html += `<tr><td class="gempl sticky-left" style="background:var(--surface);border-right:2px solid ${colors.accent} !important">
-        <div class="emp-name">${esc(emp.name)}</div>
+      html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-right:2px solid ${colors.accent} !important">
+        <div class="flex items-center justify-between gap-2"><div class="emp-name">${esc(emp.name)}</div></div>
         <div class="emp-sub">${esc(emp.role)}</div>
       </td>`;
       for (const d of days) {
@@ -2763,7 +2718,7 @@ function cellActivities(empId, ds) {
     })
     .map(act => {
       const assignment = activityAssignment(`${empId}_${ds}_${act.id}`);
-      const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId) || null;
+      const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
       return {
         ...act,
         isStart: ds === act.startDate, isEnd: ds === act.endDate,
@@ -2772,8 +2727,15 @@ function cellActivities(empId, ds) {
         workCode,
       };
     })
-    .filter(Boolean)
     .sort((a, b) => a.id - b.id);
+}
+
+function isEmployeeBirthday(emp, dateString) {
+  if (!emp || !emp.birthday || !dateString) return false;
+  const birthday = new Date(`${emp.birthday}T00:00:00`);
+  if (Number.isNaN(birthday.getTime())) return false;
+  const date = new Date(`${dateString}T00:00:00`);
+  return birthday.getMonth() === date.getMonth() && birthday.getDate() === date.getDate();
 }
 
 function buildEmployeeCell(emp, ds, weekend, isToday) {
@@ -2782,10 +2744,14 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const si = entry ? siFor(entry.status) : null;
   const isPartial = entry?.durationType === 'time';
   const acts = cellActivities(emp.id, ds);
+  const birthday = isEmployeeBirthday(emp, ds);
+
   const tipParts = [];
   acts.forEach(act => {
-    const shift = activityShiftMeta(act, act.assignment.shiftTemplateId || act.assignment.shift);
-    let detail = `Activity: ${act.name}\nCode: ${act.workCode ? `${act.workCode.name} (${act.workCode.abbreviation})` : 'No work code'}`;
+    const shift = activityShiftMeta(act, act.assignment.shift);
+    let detail = `Activity: ${act.name}`;
+    if (act.workCode) detail += `\nCode: ${act.workCode.name} (${act.workCode.abbreviation})`;
+    else detail += '\nCode: None';
     if (shift) detail += `\nShift: ${shift.label}${shift.range ? ` (${shift.range})` : ''}`;
     tipParts.push(detail);
   });
@@ -2795,21 +2761,17 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     else if (entry.durationType === '24hours') t += ' (24 hours)';
     tipParts.push(t);
   }
+  if (birthday) tipParts.push(`Birthday: ${emp.name}`);
   if (!tipParts.length) tipParts.push('Click to set status');
 
   const primaryActivity = acts[0];
   const activeWorkCode = primaryActivity?.workCode || null;
   let cellText = '', cellStyleStr = '';
   if (primaryActivity) {
-    const template = shiftTemplateById(primaryActivity?.assignment.shiftTemplateId);
-    const activityShift = template?.category || primaryActivity?.assignment.shift || 'normal';
-    const shade = activityShift === 'night' ? '4d' : (activityShift === 'day' ? '14' : (activityShift === 'continuous' ? '30' : '28'));
-    const shiftColor = template?.color || primaryActivity.color;
-    const outline = activityShift === 'night' ? `;outline:1px solid ${shiftColor}88;outline-offset:-1px` : '';
     cellText = !activeWorkCode && primaryActivity.assignment.shift === 'normal'
       ? (primaryActivity.abbreviation || primaryActivity.name.slice(0, 4).toUpperCase())
       : (activeWorkCode?.abbreviation || primaryActivity.abbreviation || primaryActivity.name.slice(0, 4).toUpperCase());
-    cellStyleStr = `background:${shiftColor}${shade};color:${activeWorkCode?.color || primaryActivity.color}${outline}`;
+    cellStyleStr = `background:${activeWorkCode?.color || primaryActivity.color}20;color:${activeWorkCode?.color || primaryActivity.color}`;
   } else if (!isPartial && si) {
     cellText = si.abbr;
     cellStyleStr = statusStyle(si.color);
@@ -2817,23 +2779,30 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     cellText = si.abbr;
     cellStyleStr = `color:${si.color}`;
   }
-  const primaryShiftTemplate = shiftTemplateById(primaryActivity?.assignment.shiftTemplateId);
-  const customActivityShift = primaryActivity?.assignment.shift && !primaryShiftTemplate && !['normal', 'day', 'night', 'turn', 'continuous'].includes(primaryActivity.assignment.shift);
+
+  const customActivityShift = primaryActivity?.assignment.shift && !['normal', 'day', 'night', 'turn'].includes(primaryActivity.assignment.shift);
   const dot = customActivityShift
     ? `<div class="status-dot" style="background:${activeWorkCode?.color || primaryActivity.color}"></div>`
     : ((isPartial && si && !primaryActivity) ? `<div class="status-dot" style="background:${si.color}"></div>` : '');
   const activityStatusBadge = primaryActivity && si ? `<div class="activity-status-badge" title="${esc(si.label)}" style="color:${si.color}">${esc(si.abbr)}</div>` : '';
-  const shiftMeta = primaryActivity ? activityShiftMeta(primaryActivity, primaryActivity.assignment.shiftTemplateId || primaryActivity.assignment.shift) : null;
+  const shiftMeta = primaryActivity ? activityShiftMeta(primaryActivity, primaryActivity.assignment.shift) : null;
   const shiftSymbol = !customActivityShift && shiftMeta?.icon ? `<span class="shift-symbol">${shiftMeta.icon}</span>` : '';
-  const activityColor = primaryActivity?.color || '';
-  const activityUnderline = acts.length && activityColor ? `box-shadow: inset 0 -3px 0 ${activityColor};` : '';
+  const activityUnderline = acts.length && primaryActivity ? `box-shadow: inset 0 -3px 0 ${primaryActivity.color};` : '';
   const holidayTint = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
+  const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">🎂</span>` : '';
+
+  const dayBackground = holiday ? `background:${holiday.color || '#ef4444'}28 !important;` : '';
+  const dayTextColor = holiday ? `color:${holiday.color || '#ef4444'} !important;` : '';
+
+  const finalCellStyle = holiday
+    ? `${dayBackground}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${dayTextColor}${holidayTint}${planningHorizonStyle(ds)}`
+    : `${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${planningHorizonStyle(ds)}`;
 
   return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}"
-    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${holidayTint}${planningHorizonStyle(ds)}"
+    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"
-    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}<div class="gday-inner">${esc(cellText)}</div></td>`;
+    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
@@ -2853,8 +2822,18 @@ function scrollToToday() {
 }
 function goToday() {
   const y = new Date().getFullYear();
-  if (gridYear !== y) { gridYear = y; renderPage(); }
+  if (gridYear !== y) { gridYear = y; saveGridPreferences(); renderPage(); }
   else scrollToToday();
+}
+function changeGridYear(delta) {
+  gridYear += delta;
+  saveGridPreferences();
+  renderPage();
+}
+function showAllEmployees() {
+  hiddenEmployees.clear();
+  saveGridPreferences();
+  renderPage();
 }
 
 // ═══ GRID RANGE SELECTION ════════════════════════════════════════════════════
@@ -3015,10 +2994,9 @@ function _showPicker(event, empId, dates) {
       const rawShift = assignment.shift || '';
       const selectedShift = !assignment.assigned || assignment.excluded
         ? ''
-        : (!assignment.shift && !assignment.shiftTemplateId
+        : (!assignment.shift
           ? 'normal'
-          : (assignment.shiftTemplateId || legacyShiftTemplateId(rawShift) || (['normal', 'turn'].includes(rawShift) ? rawShift : 'custom')));
-      const shiftTemplates = appSettings.shiftTemplates || [];
+          : (['normal', 'day', 'night', 'turn'].includes(rawShift) ? rawShift : 'custom'));
       return `<div class="pk-shift-box">
         <div class="pk-shift-title"><span class="act-dot" style="background:${act.color};width:9px;height:9px"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(act.name)}${act.abbreviation ? ` (${esc(act.abbreviation)})` : ''}</span></div>
         <div class="pk-field"><span class="pk-field-label">Work Code</span>
@@ -3029,8 +3007,9 @@ function _showPicker(event, empId, dates) {
           </details>
         </div>
         <div class="pk-field"><span class="pk-field-label">Shift Type</span><div class="pk-shift-options" id="pk-shifts-${act.id}" data-shift="${esc(selectedShift === 'custom' ? assignment.shift : selectedShift)}">
-          ${shiftTemplates.map(template => `<button class="pk-chip${selectedShift === template.id ? ' sel' : ''}" title="${esc(`${template.name} (${template.start}-${template.end})`)}" onclick="selectPickerShift(${act.id},'${esc(template.id)}')">${template.category === 'night' ? svgIcon('moon') : (template.category === 'day' ? svgIcon('sun') : '')} ${esc(template.name)}</button>`).join('')}
           <button class="pk-chip${selectedShift === 'normal' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'normal')">Normal Working Hours (NA)</button>
+          <button class="pk-chip${selectedShift === 'day' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'day')">${svgIcon('sun')} Day</button>
+          <button class="pk-chip${selectedShift === 'night' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'night')">${svgIcon('moon')} Night</button>
           <button class="pk-chip${selectedShift === 'turn' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'turn')">${shiftChangeIcon('')} Turnaround</button>
           <button class="pk-chip${selectedShift === 'custom' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'custom')">Custom</button>
         </div><div id="pk-custom-shift-wrap-${act.id}" style="display:${selectedShift === 'custom' ? 'block' : 'none'}"><input class="pk-input" id="pk-custom-shift-${act.id}" type="text" placeholder="1500-2000" value="${esc(selectedShift === 'custom' ? assignment.shift : '')}" oninput="document.getElementById('pk-shifts-${act.id}').dataset.shift=this.value.trim()"><div class="form-hint">Expected format: HHMM-HHMM, for example 1500-2000.</div></div></div>
@@ -3154,10 +3133,8 @@ async function saveActivityAssignment(empId, actId) {
   const workCodeId = document.getElementById(`pk-code-${actId}`)?.value || '';
   const customShift = document.getElementById(`pk-custom-shift-${actId}`)?.value.trim() || '';
   const selectedShift = document.getElementById(`pk-shifts-${actId}`)?.dataset.shift || '';
-  const template = shiftTemplateById(selectedShift);
   const isNormalWorkingHours = !customShift && selectedShift === 'normal';
-  const shift = customShift || template?.category || selectedShift;
-  const shiftTemplateId = customShift ? null : (template?.id || legacyShiftTemplateId(shift));
+  const shift = customShift || selectedShift;
   if (!activity) { alert('Select a Shift Type.'); return; }
   const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
   if (!shift) {
@@ -3174,7 +3151,7 @@ async function saveActivityAssignment(empId, actId) {
   recordUndo();
   dates.forEach(date => {
     removeConflictingActivityAssignments(empId, date, actId);
-    activityShiftsMap[`${empId}_${date}_${actId}`] = { shift, shiftTemplateId, workCodeId: workCodeId || null, staffingImpactOverride: null, assigned: true, excluded: false };
+    activityShiftsMap[`${empId}_${date}_${actId}`] = { shift, workCodeId: workCodeId || null, staffingImpactOverride: null, assigned: true, excluded: false };
   });
   if (pickerSelectedStatus) {
     dates.forEach(date => {
@@ -3208,6 +3185,12 @@ async function pickStatus(key) {
     await removeSelectedStatus();
     return;
   }
+  if (pickerSelectedStatus === key) {
+    pickerSelectedStatus = null;
+    document.querySelectorAll('#pk-status-btns .pk-btn').forEach(button => button.classList.remove('pk-sel'));
+    document.getElementById('pk-duration-section').style.display = 'none';
+    return;
+  }
   pickerSelectedStatus = key;
   document.querySelectorAll('#pk-status-btns .pk-btn').forEach(b => b.classList.remove('pk-sel'));
   const idx = statuses.findIndex(s => s.key === key);
@@ -3216,7 +3199,6 @@ async function pickStatus(key) {
   const st = siFor(key);
   document.getElementById('pk-duration-label').innerHTML = `Duration &mdash; ${esc(st ? st.label : key)} <span class="muted" style="font-weight:400;text-transform:none">(Ignored when assigning an activity below)</span>`;
   document.getElementById('pk-duration-section').style.display = 'flex';
-  await saveWithDuration('fullday');
 }
 async function removeSelectedStatus() {
   if (pickerEmpId == null || !pickerDate) return;
@@ -3327,8 +3309,6 @@ function openStatusManager() {
   renderStatusList();
   renderDailyStatusList();
   renderWorkCodeList();
-  resetShiftTemplateForm();
-  renderShiftTemplateList();
   document.getElementById('status-modal').classList.add('open');
 }
 function resetStatusForm() {
@@ -3395,7 +3375,8 @@ async function saveStatus() {
 async function deleteActivityType(id) {
   const type = (appSettings.activityTypes || []).find(item => item.id === id);
   if (!type || !confirm(`Delete activity type "${type.name}"? Existing activities keep their saved type key.`)) return;
-  recordUndo(); appSettings.activityTypes = appSettings.activityTypes.filter(item => item.id !== id);
+  recordUndo();
+  appSettings.activityTypes = appSettings.activityTypes.filter(item => item.id !== id);
   persistSettings(); markUnsaved(); await saveState(); renderStatusList();
 }
 function resetDailyStatusForm() {
@@ -3472,11 +3453,14 @@ function renderWorkCodeList() {
 function editWorkCode(id) {
   const code = (appSettings.workCodes || []).find(item => item.id === id);
   if (!code) return;
-  document.getElementById('wcf-id').value = id; document.getElementById('wcf-name').value = code.name;
-  document.getElementById('wcf-abbr').value = code.abbreviation; document.getElementById('wcf-staffing-impact').value = code.staffingImpact;
+  document.getElementById('wcf-id').value = id;
+  document.getElementById('wcf-name').value = code.name;
+  document.getElementById('wcf-abbr').value = code.abbreviation;
+  document.getElementById('wcf-staffing-impact').value = code.staffingImpact;
   selectedWorkCodeColor = code.color;
   buildSwatchRow('wcf-swatches', selectedWorkCodeColor, color => { selectedWorkCodeColor = color; markSwatch('wcf-swatches', color); });
-  document.getElementById('wcf-cancel').style.display = ''; document.getElementById('wcf-save').textContent = 'Save changes';
+  document.getElementById('wcf-cancel').style.display = '';
+  document.getElementById('wcf-save').textContent = 'Save changes';
 }
 async function saveWorkCode() {
   const id = document.getElementById('wcf-id').value;
@@ -3493,85 +3477,11 @@ async function saveWorkCode() {
 async function deleteWorkCode(id) {
   const code = (appSettings.workCodes || []).find(item => item.id === id);
   if (!code || !confirm(`Delete work code "${code.name}"?`)) return;
-  recordUndo(); appSettings.workCodes = appSettings.workCodes.filter(item => item.id !== id);
+  recordUndo();
+  appSettings.workCodes = appSettings.workCodes.filter(item => item.id !== id);
   Object.keys(activityShiftsMap).forEach(key => { if (activityAssignment(key).workCodeId === id) activityShiftsMap[key] = { ...activityAssignment(key), workCodeId: null }; });
   persistSettings(); markUnsaved(); await saveState(); renderWorkCodeList();
 }
-function shiftTemplateById(id) {
-  return (appSettings.shiftTemplates || []).find(template => template.id === id) || null;
-}
-function shiftTemplateTime(template) { return template ? `${template.start}-${template.end}` : ''; }
-function shiftTemplateHours(template) { return template ? (template.category === 'continuous' ? 24 : (timeRangeHours(shiftTemplateTime(template)) ?? (Number(template.hours) || 0))) : 0; }
-function legacyShiftTemplateId(shift) {
-  if (['day', 'night', 'continuous'].includes(shift)) return shift;
-  return null;
-}
-function resetShiftTemplateForm() {
-  editingShiftTemplateId = null;
-  document.getElementById('shf-form-title').textContent = 'Add a shift template';
-  document.getElementById('shf-save').textContent = 'Add shift template';
-  document.getElementById('shf-cancel').style.display = 'none';
-  document.getElementById('shf-id').value = '';
-  document.getElementById('shf-name').value = '';
-  document.getElementById('shf-category').value = 'day';
-  document.getElementById('shf-start').value = '07:00';
-  document.getElementById('shf-end').value = '15:00';
-  document.getElementById('shf-color').value = '#3b82f6';
-  updateShiftTemplateHours();
-}
-function updateShiftTemplateHours() {
-  const start = document.getElementById('shf-start')?.value.replace(':', '') || '';
-  const end = document.getElementById('shf-end')?.value.replace(':', '') || '';
-  const category = document.getElementById('shf-category')?.value;
-  const hours = category === 'continuous' ? 24 : timeRangeHours(`${start}-${end}`);
-  const output = document.getElementById('shf-hours');
-  if (output) output.textContent = Number.isFinite(hours) ? `${hours} h` : 'Invalid time range';
-}
-function renderShiftTemplateList() {
-  const list = document.getElementById('shift-template-list');
-  if (!list) return;
-  const templates = sortedPlanningItems(appSettings.shiftTemplates || []);
-  list.innerHTML = templates.length ? templates.map(template => `<div class="flex items-center justify-between" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px"><span class="flex items-center gap-2"><span style="width:9px;height:9px;border-radius:50%;background:${template.color};flex:none"></span><span><b>${esc(template.name)}</b> <span class="muted text-sm">${esc(template.start)}–${esc(template.end)} · ${shiftTemplateHours(template)} h · ${esc(template.category)}</span></span></span><span class="flex gap-2"><button class="icon-btn" title="Edit" onclick="editShiftTemplate('${esc(template.id)}')">${svgIcon('edit')}</button><button class="icon-btn danger" title="Delete" onclick="deleteShiftTemplate('${esc(template.id)}')">${svgIcon('trash')}</button></span></div>`).join('') : '<div class="empty-note" style="padding:22px">No shift templates yet.</div>';
-}
-function editShiftTemplate(id) {
-  const template = shiftTemplateById(id);
-  if (!template) return;
-  editingShiftTemplateId = id;
-  document.getElementById('shf-form-title').textContent = `Edit shift template - ${template.name}`;
-  document.getElementById('shf-save').textContent = 'Save changes';
-  document.getElementById('shf-cancel').style.display = '';
-  document.getElementById('shf-id').value = id;
-  document.getElementById('shf-name').value = template.name;
-  document.getElementById('shf-category').value = template.category;
-  document.getElementById('shf-start').value = `${template.start.slice(0, 2)}:${template.start.slice(2)}`;
-  document.getElementById('shf-end').value = `${template.end.slice(0, 2)}:${template.end.slice(2)}`;
-  document.getElementById('shf-color').value = normalizeHexColor(template.color);
-  updateShiftTemplateHours();
-}
-async function saveShiftTemplate() {
-  const name = document.getElementById('shf-name').value.trim();
-  const category = document.getElementById('shf-category').value;
-  const start = document.getElementById('shf-start').value.replace(':', '');
-  const end = document.getElementById('shf-end').value.replace(':', '');
-  const color = normalizeHexColor(document.getElementById('shf-color').value);
-  if (!name || !/^\d{4}$/.test(start) || !/^\d{4}$/.test(end)) { alert('Shift name and valid start/end times are required.'); return; }
-  const hours = category === 'continuous' ? 24 : timeRangeHours(`${start}-${end}`);
-  if (!Number.isFinite(hours) || hours <= 0) { alert('End time must produce a valid shift duration.'); return; }
-  const templates = appSettings.shiftTemplates || (appSettings.shiftTemplates = []);
-  const id = editingShiftTemplateId || `shift-${Date.now()}`;
-  const value = { id, name, start, end, category, color, hours };
-  const index = templates.findIndex(template => template.id === id);
-  if (index >= 0) templates[index] = value; else templates.push(value);
-  persistSettings(); markUnsaved(); await saveState(); resetShiftTemplateForm(); renderShiftTemplateList();
-}
-async function deleteShiftTemplate(id) {
-  const template = shiftTemplateById(id);
-  if (!template || (appSettings.shiftTemplates || []).length <= 1 || !confirm(`Delete shift template "${template.name}"?`)) return;
-  recordUndo(); appSettings.shiftTemplates = appSettings.shiftTemplates.filter(item => item.id !== id);
-  Object.keys(activityShiftsMap).forEach(key => { const assignment = activityAssignment(key); if (assignment.shiftTemplateId === id) activityShiftsMap[key] = { ...assignment, shiftTemplateId: null, shift: '' }; });
-  persistSettings(); markUnsaved(); await saveState(); renderShiftTemplateList();
-}
-['shf-start', 'shf-end', 'shf-category'].forEach(id => document.getElementById(id)?.addEventListener('input', updateShiftTemplateHours));
 
 // ═══ SWATCH HELPERS ══════════════════════════════════════════════════════════
 const swatchHandlers = {};
@@ -3607,15 +3517,12 @@ function selectActivityType(typeKey) {
   document.getElementById('af-type-menu').removeAttribute('open');
   document.querySelector('#af-type-menu summary')?.focus();
 }
-async function quickCreateActivityType() {
+function quickCreateActivityType() {
   document.getElementById('af-type-menu').removeAttribute('open');
   quickActivityTypeReturn = true;
   document.getElementById('act-modal').classList.remove('open');
   openStatusManager();
-  setTimeout(() => {
-    const input = document.getElementById('sf-label');
-    if (input) input.focus();
-  }, 50);
+  setTimeout(() => document.getElementById('sf-label')?.focus(), 50);
 }
 function buildParticipantPicker() {
   const container = document.getElementById('af-participants');
@@ -3711,6 +3618,7 @@ async function saveActivity() {
   if (!start || !end) { alert('Start date and end date are required.'); return; }
   if (end < start) { alert('End date must be on or after start date.'); return; }
   if (!timeRangeHours(dayShift) || !timeRangeHours(nightShift)) { alert('Enter valid Day and Night shift ranges, e.g. 0730-2400 and 0000-0730.'); return; }
+  const previousAct = editingActId ? activities.find(a => a.id === editingActId) : null;
   recordUndo();
   const rec = { name, abbreviation: abbr, project, order, billing, type, status, countsTowardLoad, dayShift, nightShift, includeWeekends, color: selectedActColor, startDate: start, endDate: end,
     participants: selectedParticipants.map(p => ({ ...p })), notes };
@@ -3790,12 +3698,11 @@ function openActivityReport(id) {
       </tr></thead>
       <tbody>${participantGroups.length ? participantGroups.map(group => `<tr><td colspan="${dates.length + 1}" style="padding:7px 8px;background:${group.color}18;border-bottom:1px solid ${group.color}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${group.color};margin-right:5px"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${esc(emp.name)}</td>${dates.map(date => {
           const info = activityAssignmentInfo(act, emp.id, date);
-          const label = info ? (info.workCode?.abbreviation || 'Activity') : '—';
+          const label = info ? info.workCode.abbreviation : '—';
           const deviation = dailyDeviationLabel(emp.id, date);
           const details = `${info ? `<div style="font-size:11px;margin-top:2px">${esc(info.physicalShift)}</div><div class="muted" style="font-size:10px;margin-top:2px">${info.hours}t</div>` : ''}${deviation ? `<div style="font-size:10px;margin-top:3px;color:var(--destructive)">${esc(deviation)}</div>` : ''}`;
           const weekendBackground = isWknd(new Date(`${date}T00:00:00`)) ? '#fff7ed' : 'transparent';
-          const shiftShade = info ? (info.assignment.shift === 'night' ? '40' : (info.assignment.shift === 'day' ? '0c' : (info.assignment.shift === 'continuous' ? '24' : '1c'))) : '00';
-          const cellBackground = info ? `${info.workCode?.color || act.color}${shiftShade}` : weekendBackground;
+          const cellBackground = info ? `${info.workCode.color}14` : weekendBackground;
           return `<td style="padding:8px;background:${cellBackground};color:${info ? 'var(--text)' : 'var(--muted)'};border-left:${weekendBackground !== 'transparent' ? '1px solid #fed7aa' : '0'}"><strong>${esc(label)}</strong>${details}</td>`;
         }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${dates.length + 1}" class="empty-note" style="padding:24px;text-align:center">No participants assigned.</td></tr>`}</tbody>
     </table>`;
@@ -3813,7 +3720,7 @@ function activityReportParticipantGroups(act) {
   });
   return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([name, participants]) => ({
     name,
-    color: appSettings.departmentColors?.[name] || '#999',
+    color: resolveDeptColor(name) || '#999',
     participants: participants.sort((a, b) => a.emp.name.localeCompare(b.emp.name)),
   }));
 }
@@ -3848,8 +3755,7 @@ function printActivityReport() {
       }).join('')}</tr></thead><tbody>${participantGroups.length ? participantGroups.map(group => `<tr class="section-row"><td colspan="${chunkDates.length + 1}" style="background:${group.color}18;border-bottom-color:${group.color}"><span class="section-dot" style="background-color:${group.color}"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr><td><b>${esc(emp.name)}</b></td>${chunkDates.map(date => {
           const info = activityAssignmentInfo(act, emp.id, date);
           const weekend = isWknd(new Date(`${date}T00:00:00`));
-          const shiftShade = info ? (info.assignment.shift === 'night' ? '40' : (info.assignment.shift === 'day' ? '0c' : (info.assignment.shift === 'continuous' ? '24' : '1c'))) : '00';
-          return `<td class="${weekend ? 'weekend ' : ''}${info ? 'scheduled' : ''}"${info ? ` style="background:${info.workCode?.color || act.color}${shiftShade}"` : ''}>${info ? `<strong>${esc(info.workCode?.abbreviation || 'Activity')}</strong><div>${esc(info.physicalShift)}</div><div class="muted">${info.hours}t</div>` : '—'}</td>`;
+          return `<td class="${weekend ? 'weekend ' : ''}${info ? 'scheduled' : ''}"${info ? ` style="background:${info.workCode.color}14"` : ''}>${info ? `<strong>${esc(info.workCode.abbreviation)}</strong><div>${esc(info.physicalShift)}</div><div class="muted">${info.hours}t</div>` : '—'}</td>`;
         }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${chunkDates.length + 1}" class="empty-note">No participants assigned.</td></tr>`}</tbody></table>
     </section>`);
   }
@@ -3900,15 +3806,13 @@ function teamReportCellInfo(emp, act, date) {
   if (!info) return null;
   const hours = info.hours;
   const days = hours / 24;
-  const tint = info.assignment.shift === 'night'
-    ? 0.4
-    : (info.assignment.shift === 'day' ? 0.14 : (info.assignment.shift === 'continuous' ? 0.26 : 0.18));
+  const tint = info.assignment.shift === 'night' ? 0.22 : 0.12;
   return {
-    html: `<div style="font-weight:700">${esc(info.workCode?.abbreviation || act.abbreviation || 'Activity')}</div><div style="font-size:10px;margin-top:2px">${esc(info.physicalShift)}</div><div class="muted" style="font-size:10px">${hours}t</div>`,
+    html: `<div style="font-weight:700">${esc(info.workCode.abbreviation)}</div><div style="font-size:10px;margin-top:2px">${esc(info.physicalShift)}</div><div class="muted" style="font-size:10px">${hours}t</div>`,
     hours,
     days,
     tint,
-    workCode: info.workCode || { color: act.color },
+    workCode: info.workCode,
   };
 }
 function teamReportCell(emp, act, date) {
@@ -4037,7 +3941,10 @@ let editingRequirementEmployeeId = null;
 function requirementRecordFor(requirementId, employeeId, year = boardYear) {
   return requirementRecords[`${requirementId}_${employeeId}_${year}`] || { completedDate: '', dueDate: '', result: '', required: true };
 }
-function changeBoardYear(step) { boardYear += step; renderStatusBoard(); }
+function changeBoardYear(step) {
+  boardYear += step;
+  renderStatusBoard();
+}
 function openRequirementDefinitionModal(requirementId = null) {
   editingRequirementId = requirementId;
   const requirement = requirementId === null ? null : requirements.find(item => item.id === requirementId);
@@ -4049,11 +3956,22 @@ function openRequirementDefinitionModal(requirementId = null) {
 async function saveRequirementFromModal() {
   const name = document.getElementById('req-def-name').value.trim();
   if (!name) { alert('Requirement name is required.'); return; }
-  if (requirements.some(requirement => requirement.id !== editingRequirementId && requirement.name.toLowerCase() === name.toLowerCase())) { alert('A requirement with this name already exists.'); return; }
+  if (requirements.some(requirement => requirement.id !== editingRequirementId && requirement.name.toLowerCase() === name.toLowerCase())) {
+    alert('A requirement with this name already exists.');
+    return;
+  }
   recordUndo();
-  if (editingRequirementId === null) requirements.push({ id: requirements.reduce((max, requirement) => Math.max(max, Number(requirement.id) || 0), 0) + 1, name });
-  else { const requirement = requirements.find(item => item.id === editingRequirementId); if (requirement) requirement.name = name; }
-  markUnsaved(); await saveState(); closeModal('req-def-modal'); renderStatusBoard();
+  if (editingRequirementId === null) {
+    const nextId = requirements.reduce((max, requirement) => Math.max(max, Number(requirement.id) || 0), 0) + 1;
+    requirements.push({ id: nextId, name });
+  } else {
+    const requirement = requirements.find(item => item.id === editingRequirementId);
+    if (requirement) requirement.name = name;
+  }
+  markUnsaved();
+  await saveState();
+  closeModal('req-def-modal');
+  renderStatusBoard();
 }
 async function deleteRequirementFromModal() {
   if (editingRequirementId === null) return;
@@ -4061,11 +3979,17 @@ async function deleteRequirementFromModal() {
   if (!requirement || !confirm(`Delete requirement "${requirement.name}" and all of its employee records?`)) return;
   recordUndo();
   requirements = requirements.filter(item => item.id !== editingRequirementId);
-  Object.keys(requirementRecords).forEach(key => { if (key.startsWith(`${editingRequirementId}_`)) delete requirementRecords[key]; });
-  markUnsaved(); await saveState(); closeModal('req-def-modal'); renderStatusBoard();
+  Object.keys(requirementRecords).forEach(key => {
+    if (key.startsWith(`${editingRequirementId}_`)) delete requirementRecords[key];
+  });
+  markUnsaved();
+  await saveState();
+  closeModal('req-def-modal');
+  renderStatusBoard();
 }
 function openRequirementRecordModal(requirementId, employeeId) {
-  editingRequirementId = requirementId; editingRequirementEmployeeId = employeeId;
+  editingRequirementId = requirementId;
+  editingRequirementEmployeeId = employeeId;
   const requirement = requirements.find(item => item.id === requirementId);
   const record = requirementRecordFor(requirementId, employeeId);
   document.getElementById('req-record-modal-title').textContent = `${empById(employeeId)?.name || 'Employee'} · ${requirement?.name || 'Requirement'} · ${boardYear}`;
@@ -4073,9 +3997,12 @@ function openRequirementRecordModal(requirementId, employeeId) {
   document.getElementById('req-record-completed').value = record.completedDate || '';
   document.getElementById('req-record-due').value = record.dueDate || '';
   document.getElementById('req-record-result').value = record.result || '';
-  toggleRequirementFields(); document.getElementById('req-record-modal').classList.add('open');
+  toggleRequirementFields();
+  document.getElementById('req-record-modal').classList.add('open');
 }
-function toggleRequirementFields() { document.getElementById('req-record-fields').style.display = document.getElementById('req-record-required').value === 'not_required' ? 'none' : 'block'; }
+function toggleRequirementFields() {
+  document.getElementById('req-record-fields').style.display = document.getElementById('req-record-required').value === 'not_required' ? 'none' : 'block';
+}
 async function saveRequirementRecordFromModal() {
   if (editingRequirementId === null || editingRequirementEmployeeId === null) return;
   const required = document.getElementById('req-record-required').value !== 'not_required';
@@ -4087,7 +4014,10 @@ async function saveRequirementRecordFromModal() {
   if (!required) requirementRecords[key] = { completedDate: '', dueDate: '', result: '', required: false };
   else if (!completedDate && !dueDate && !result) delete requirementRecords[key];
   else requirementRecords[key] = { completedDate, dueDate, result, required: true };
-  markUnsaved(); await saveState(); closeModal('req-record-modal'); renderStatusBoard();
+  markUnsaved();
+  await saveState();
+  closeModal('req-record-modal');
+  renderStatusBoard();
 }
 function renderLegacyStatusBoard() {
   const employeeList = [...employees].sort((a, b) =>
@@ -4108,7 +4038,9 @@ function renderLegacyStatusBoard() {
 
 function annualRequirementCell(requirement, employee) {
   const record = requirementRecordFor(requirement.id, employee.id);
-  if (record.required === false) return `<button class="btn btn-sm" onclick="openRequirementRecordModal(${requirement.id},${employee.id})" style="width:100%;height:auto;min-height:54px;padding:7px 9px;text-align:left;white-space:normal;color:var(--muted)" title="Edit annual requirement">Not required</button>`;
+  if (record.required === false) {
+    return `<button class="btn btn-sm" onclick="openRequirementRecordModal(${requirement.id},${employee.id})" style="width:100%;height:auto;min-height:54px;padding:7px 9px;text-align:left;white-space:normal;color:var(--muted)" title="Edit annual requirement">Not required</button>`;
+  }
   const overdue = Boolean(record.dueDate && record.dueDate < todayStr());
   const isCompleted = Boolean(record.completedDate || record.result);
   const accent = overdue ? 'var(--destructive)' : (isCompleted ? '#16a34a' : '#dc2626');
@@ -4118,15 +4050,38 @@ function annualRequirementCell(requirement, employee) {
   return `<button class="btn btn-sm" onclick="openRequirementRecordModal(${requirement.id},${employee.id})" style="width:100%;height:auto;min-height:54px;padding:7px 9px;text-align:left;white-space:normal;border-color:${overdue ? 'var(--destructive)' : 'var(--border)'};background:${overdue ? 'color-mix(in srgb,var(--destructive) 9%,var(--surface))' : 'var(--surface)'}" title="Edit annual requirement"><strong style="color:${accent}">${status}</strong>${completed}${due}</button>`;
 }
 function renderStatusBoard() {
-  const employeeList = [...employees].sort((a, b) => a.department.localeCompare(b.department, 'nb', { sensitivity: 'base' }) || ((a.sortOrder ?? 99) - (b.sortOrder ?? 99)) || a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
+  const employeeList = [...employees].sort((a, b) =>
+    a.department.localeCompare(b.department, 'nb', { sensitivity: 'base' }) ||
+    ((a.sortOrder ?? 99) - (b.sortOrder ?? 99)) ||
+    a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
   const courseRows = [...courses].sort((a, b) => a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
   const requirementColumns = [...requirements].sort((a, b) => a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
   const courseBoardWidth = 260 + employeeList.length * 190;
   const requirementBoardWidth = 230 + requirementColumns.length * 190;
-  const courseBody = courseRows.length ? courseRows.map(course => `<tr style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px"><button class="btn btn-sm" onclick="openCourseModal(${course.id})" style="text-align:left;max-width:220px;white-space:normal">${esc(course.name)}${course.code ? `<span class="muted" style="display:block;font-size:10px;margin-top:2px">${esc(course.code)}</span>` : ''}</button></td>${employeeList.map(employee => { const record = courseStatusFor(course.id, employee.id); const compliance = courseComplianceMeta(record.status); return `<td style="padding:8px 12px;vertical-align:top"><div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:${compliance.color};font-size:10px;font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:${compliance.color};display:inline-block"></span>${compliance.label}</div><select class="plain-select" style="width:100%;font-size:11px" onchange="saveCourseStatus(${course.id},${employee.id},this.value,this.nextElementSibling.value)"><option value="not_relevant"${record.status === 'not_relevant' ? ' selected' : ''}>Not relevant</option><option value="mandatory"${record.status === 'mandatory' ? ' selected' : ''}>Mandatory, not planned</option><option value="planned"${record.status === 'planned' ? ' selected' : ''}>Planned</option><option value="taken"${record.status === 'taken' ? ' selected' : ''}>Taken</option></select><input type="date" value="${esc(record.plannedDate || '')}" ${record.status === 'planned' ? '' : 'disabled'} style="width:100%;margin-top:5px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--surface);color:var(--text)" onchange="saveCourseStatus(${course.id},${employee.id},this.previousElementSibling.value,this.value)" title="Planned date"></td>`; }).join('')}</tr>`).join('') : `<tr><td colspan="${employeeList.length + 1}" class="empty-note">No courses yet. Add a course to start tracking.</td></tr>`;
-  const requirementBody = employeeList.length && requirementColumns.length ? employeeList.map(employee => `<tr data-employee-id="${employee.id}" style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px"><div style="font-weight:600">${esc(employee.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${esc(employee.department)}</div></td>${requirementColumns.map(requirement => `<td data-requirement-id="${requirement.id}" style="padding:8px;vertical-align:top">${annualRequirementCell(requirement, employee)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${requirementColumns.length + 1}" class="empty-note">${employeeList.length ? 'No annual requirements yet. Add one to start tracking.' : 'Add employees before tracking annual requirements.'}</td></tr>`;
+  const courseBody = courseRows.length ? courseRows.map(course => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px">
+        <button class="btn btn-sm" onclick="openCourseModal(${course.id})" style="text-align:left;max-width:220px;white-space:normal">${esc(course.name)}${course.code ? `<span class="muted" style="display:block;font-size:10px;margin-top:2px">${esc(course.code)}</span>` : ''}</button>
+      </td>
+      ${employeeList.map(employee => {
+        const record = courseStatusFor(course.id, employee.id);
+        const compliance = courseComplianceMeta(record.status);
+        return `<td style="padding:8px 12px;vertical-align:top"><div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:${compliance.color};font-size:10px;font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:${compliance.color};display:inline-block"></span>${compliance.label}</div><select class="plain-select" style="width:100%;font-size:11px" onchange="saveCourseStatus(${course.id},${employee.id},this.value,this.nextElementSibling.value)"><option value="not_relevant"${record.status === 'not_relevant' ? ' selected' : ''}>Not relevant</option><option value="mandatory"${record.status === 'mandatory' ? ' selected' : ''}>Mandatory, not planned</option><option value="planned"${record.status === 'planned' ? ' selected' : ''}>Planned</option><option value="taken"${record.status === 'taken' ? ' selected' : ''}>Taken</option></select><input type="date" value="${esc(record.plannedDate || '')}" ${record.status === 'planned' ? '' : 'disabled'} style="width:100%;margin-top:5px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--surface);color:var(--text)" onchange="saveCourseStatus(${course.id},${employee.id},this.previousElementSibling.value,this.value)" title="Planned date"></td>`;
+      }).join('')}
+    </tr>`).join('') : `<tr><td colspan="${employeeList.length + 1}" class="empty-note">No courses yet. Add a course to start tracking.</td></tr>`;
+  const requirementBody = employeeList.length && requirementColumns.length
+    ? employeeList.map(employee => `<tr data-employee-id="${employee.id}" style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px"><div style="font-weight:600">${esc(employee.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${esc(employee.department)}</div></td>${requirementColumns.map(requirement => `<td data-requirement-id="${requirement.id}" style="padding:8px;vertical-align:top">${annualRequirementCell(requirement, employee)}</td>`).join('')}</tr>`).join('')
+    : `<tr><td colspan="${requirementColumns.length + 1}" class="empty-note">${employeeList.length ? 'No annual requirements yet. Add one to start tracking.' : 'Add employees before tracking annual requirements.'}</td></tr>`;
+
   document.getElementById('content').innerHTML = `
-    <div class="flex items-center justify-between mb-6" style="gap:12px;flex-wrap:wrap"><div><div class="page-title">Personnel Status Board</div><div class="page-sub">Track courses, planned training, annual certifications, and recurring requirements.</div></div><div class="year-nav" style="gap:8px;background:var(--surface);padding:4px 8px;border-radius:8px;border:1px solid var(--border)"><button class="btn btn-icon" onclick="changeBoardYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button><span class="year-label" style="min-width:60px">${boardYear}</span><button class="btn btn-icon" onclick="changeBoardYear(1)" aria-label="Next year">${svgIcon('chevronRight')}</button></div></div>
+    <div class="flex items-center justify-between mb-6" style="gap:12px;flex-wrap:wrap">
+      <div><div class="page-title">Personnel Status Board</div><div class="page-sub">Track courses, planned training, annual certifications, and recurring requirements.</div></div>
+      <div class="year-nav" style="gap:8px;background:var(--surface);padding:4px 8px;border-radius:8px;border:1px solid var(--border)">
+        <button class="btn btn-icon" onclick="changeBoardYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
+        <span class="year-label" style="min-width:60px">${boardYear}</span>
+        <button class="btn btn-icon" onclick="changeBoardYear(1)" aria-label="Next year">${svgIcon('chevronRight')}</button>
+      </div>
+    </div>
     <div class="flex items-center justify-between mb-4" style="gap:12px;flex-wrap:wrap"><div class="card-title" style="font-size:15px">Courses (${courses.length})</div><button class="btn btn-primary" onclick="openCourseModal()">Add course</button></div>
     <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:${courseBoardWidth}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:10px 12px;min-width:240px">Course</th>${employeeList.map(employee => `<th style="padding:10px 12px;min-width:180px;vertical-align:top"><div>${esc(employee.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${esc(employee.department)}</div></th>`).join('')}</tr></thead><tbody>${courseBody}</tbody></table></div>
     <div class="flex items-center justify-between" style="gap:12px;flex-wrap:wrap;margin:24px 0 16px"><div><div class="card-title" style="font-size:15px">Annual Requirements (${requirements.length})</div><div class="muted text-sm" style="margin-top:3px">Records shown for ${boardYear}.</div></div><button class="btn btn-primary" onclick="openRequirementDefinitionModal()">Add requirement</button></div>
@@ -4141,7 +4096,7 @@ function setDepartmentColor(dept, color) {
   appSettings.departmentColors[dept] = safe;
   markUnsaved();
   persistSettings();
-  renderEmployees();
+  renderPage();
 }
 function renderEmployees() {
   const searchLower = empSearch.toLowerCase();
@@ -4149,7 +4104,8 @@ function renderEmployees() {
     const matchesSearch = !searchLower ||
       emp.name.toLowerCase().includes(searchLower) || (emp.email || '').toLowerCase().includes(searchLower) ||
       (emp.department || '').toLowerCase().includes(searchLower) || (emp.role || '').toLowerCase().includes(searchLower) ||
-      (emp.level || '').toLowerCase().includes(searchLower);
+      (emp.level || '').toLowerCase().includes(searchLower) || (emp.birthday || '').toLowerCase().includes(searchLower) ||
+      (emp.homeAddress || '').toLowerCase().includes(searchLower);
     const matchesDept = !empFilterDept || emp.department === empFilterDept;
     const matchesCat = empFilterCatId === null || (emp.categoryIds || []).includes(empFilterCatId);
     return matchesSearch && matchesDept && matchesCat;
@@ -4183,11 +4139,11 @@ function renderEmployees() {
   const catChip = cat => `<span class="chip" style="${chipStyle(cat.color)}"><span class="chip-dot" style="background:${cat.color}"></span>${esc(cat.name)}</span>`;
   let rowsHtml = '';
   if (!filtered.length) {
-    rowsHtml = `<tr><td colspan="8" class="empty-note">${employees.length ? 'No personnel match the current filters.' : 'No personnel yet. Click "Add Employee" to create the first record.'}</td></tr>`;
+    rowsHtml = `<tr><td colspan="10" class="empty-note">${employees.length ? 'No personnel match the current filters.' : 'No personnel yet. Click "Add Employee" to create the first record.'}</td></tr>`;
   } else {
     for (const group of groups) {
       const deptColor = resolveDeptColor(group.department) || PALETTE[allDepts.indexOf(group.department) % PALETTE.length];
-      rowsHtml += `<tr class="dept-row"><td colspan="8" style="background:${deptColor}22;border-bottom:1px solid ${deptColor};color:var(--text)">${esc(group.department)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
+      rowsHtml += `<tr class="dept-row"><td colspan="10" style="background:${deptColor}22;border-bottom:1px solid ${deptColor};color:var(--text)">${esc(group.department)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
       for (const emp of group.list) {
         const cats = (emp.categoryIds || []).map(catById).filter(Boolean);
         rowsHtml += `<tr>
@@ -4195,6 +4151,8 @@ function renderEmployees() {
           <td class="muted">${esc(emp.email || '') || '<span class="sum-dash">—</span>'}</td>
           <td>${esc(emp.role || '')}</td>
           <td class="muted">${esc(emp.department || '')}${emp.level ? `<div style="font-size:11px;margin-top:2px">${esc(emp.level)}</div>` : ''}</td>
+          <td class="muted">${emp.birthday ? esc(fmtMed(emp.birthday)) : '<span class="sum-dash">—</span>'}</td>
+          <td class="muted">${emp.homeAddress ? esc(emp.homeAddress) : '<span class="sum-dash">—</span>'}</td>
           <td>${emp.phoneWork ? `<a class="tel-link" href="tel:${esc(emp.phoneWork)}">${esc(emp.phoneWork)}</a>` : '<span class="sum-dash">—</span>'}</td>
           <td>${emp.phonePrivate ? `<a class="tel-link" href="tel:${esc(emp.phonePrivate)}">${esc(emp.phonePrivate)}</a>` : '<span class="sum-dash">—</span>'}</td>
           <td class="muted" style="font-variant-numeric:tabular-nums">${emp.sortOrder ?? ''}</td>
@@ -4229,7 +4187,11 @@ function renderEmployees() {
         ${allDepts.map(d => `<option value="${esc(d)}"${empFilterDept === d ? ' selected' : ''}>${esc(d)}</option>`).join('')}
       </select>
     </div>
-    <div class="card mb-4" style="padding:10px 12px">
+    ${categories.length ? `<div class="flex items-center gap-2 mb-4" style="flex-wrap:wrap">
+      <button class="filter-chip${empFilterCatId === null ? ' active' : ''}" onclick="empFilterCatId=null;renderEmployees()">All categories</button>
+      ${categories.map(c => `<button class="filter-chip${empFilterCatId === c.id ? ' active' : ''}" onclick="empFilterCatId=${c.id};renderEmployees()"><span class="chip-dot" style="background:${c.color};display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px"></span>${esc(c.name)}</button>`).join('')}
+    </div>` : ''}
+    <div class="card mb-4" style="padding:12px">
       <button class="btn btn-sm" type="button" onclick="deptColorsExpanded=!deptColorsExpanded;renderEmployees()" style="display:flex;align-items:center;gap:6px">
         ${svgIcon(deptColorsExpanded ? 'chevronDown' : 'chevronRight')} Department colors
       </button>
@@ -4237,14 +4199,10 @@ function renderEmployees() {
         ? `<div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:10px">${deptSwatches || '<span class="muted text-sm">No departments yet.</span>'}</div>`
         : ''}
     </div>
-    ${categories.length ? `<div class="flex items-center gap-2 mb-4" style="flex-wrap:wrap">
-      <button class="filter-chip${empFilterCatId === null ? ' active' : ''}" onclick="empFilterCatId=null;renderEmployees()">All categories</button>
-      ${categories.map(c => `<button class="filter-chip${empFilterCatId === c.id ? ' active' : ''}" onclick="empFilterCatId=${c.id};renderEmployees()"><span class="chip-dot" style="background:${c.color};display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px"></span>${esc(c.name)}</button>`).join('')}
-    </div>` : ''}
     <div class="card" style="padding:0;overflow:hidden">
       <div style="overflow:auto">
         <table class="list-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department / Level</th><th>Work phone</th><th>Private phone</th><th>Order</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department / Level</th><th>Birthday</th><th>Home address</th><th>Work phone</th><th>Private phone</th><th>Order</th><th></th></tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>
@@ -4278,6 +4236,8 @@ function openEmpModal(id) {
   document.getElementById('ef-role').value = emp?.role || '';
   document.getElementById('ef-dept').value = emp?.department || '';
   document.getElementById('ef-level').value = emp?.level || '';
+  document.getElementById('ef-birthday').value = emp?.birthday || '';
+  document.getElementById('ef-address').value = emp?.homeAddress || '';
   document.getElementById('ef-phone-work').value = emp?.phoneWork || '';
   document.getElementById('ef-phone-priv').value = emp?.phonePrivate || '';
   document.getElementById('ef-sort').value = emp?.sortOrder ?? '';
@@ -4292,6 +4252,8 @@ async function saveEmployee() {
   const role = document.getElementById('ef-role').value.trim();
   const dept = document.getElementById('ef-dept').value.trim();
   const level = document.getElementById('ef-level').value.trim();
+  const birthday = document.getElementById('ef-birthday').value;
+  const homeAddress = document.getElementById('ef-address').value.trim();
   const phoneWork = document.getElementById('ef-phone-work').value.trim();
   const phonePrivate = document.getElementById('ef-phone-priv').value.trim();
   const sortRaw = document.getElementById('ef-sort').value.trim();
@@ -4302,7 +4264,7 @@ async function saveEmployee() {
     if (isNaN(n) || n < 1 || n > 9999) { alert('Sort order must be a number between 1 and 9999.'); return; }
     sortOrder = n;
   }
-  const rec = { name, email, role, department: dept, level, phoneWork, phonePrivate, sortOrder, categoryIds: [...selectedEmpCatIds] };
+  const rec = { name, email, role, department: dept, level, birthday, homeAddress, phoneWork, phonePrivate, sortOrder, categoryIds: [...selectedEmpCatIds] };
   if (editingEmpId) {
     rec.id = editingEmpId;
     const idx = employees.findIndex(e => e.id === editingEmpId);
@@ -4477,8 +4439,8 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
       const activity = activities.find(act => act.id === activityId);
       if (!activity || activityStatus(activity) !== 'confirmed') return;
       if (activity && !activityCountsTowardLoad(activity)) return;
-      dayActivityHours += activityShiftHours(activity, emp.id, ds);
-    });
+          dayActivityHours += activityShiftHours(activity, emp.id, ds);
+        });
     activityHours += dayActivityHours;
     const dayPlannedHours = dayActivityHours > 0 ? dayActivityHours : dayBaselineHours;
     loadHours += dayPlannedHours;
@@ -4980,6 +4942,12 @@ function computeSummaryRows(startDate, endDate) {
     const act = activities.find(a => a.id === +actIdStr);
     if (!row || !act) continue;
 
+    // Hvis den ansatte allerede har en registrert dagsstatus, prioriteres den
+    const existingEntry = getEntryObj(`${empId}_${date}`);
+    if (existingEntry && existingEntry.status) {
+      continue;
+    }
+
     const hrs = activityShiftHours(act, empId, date);
     if (act.type && statusKeySet.has(act.type)) {
       row.counts[act.type] = (row.counts[act.type] || 0) + hrs;
@@ -5078,13 +5046,12 @@ function renderSummary() {
   const totalCols = 2 + statuses.length + groups.length + (hasAbsence ? 1 : 0) + (hasOoo ? 1 : 0);
   const employeeRowHtml = row => {
     const cats = (row.emp.categoryIds || []).map(catById).filter(Boolean);
-    const barItems = [
-      ...statuses.map(st => ({ label: st.label, color: st.color, hours: row.counts[st.key] || 0, value: fmtDaysHours(row.counts[st.key] || 0) })),
-      ...groups.map(group => ({ label: group.label, color: group.color, hours: groupHours(row, group), value: `${groupDays(row, group)}d · ${fmtFIF(groupHours(row, group))}` })),
-    ].filter(item => item.hours > 0);
-    const barTotal = barItems.reduce((sum, item) => sum + item.hours, 0);
-    const minibar = barTotal > 0
-      ? `<div class="minibar">${barItems.map(item => `<div style="width:${(item.hours / barTotal) * 100}%;background:${item.color}" title="${esc(item.label)}: ${esc(item.value)}"></div>`).join('')}</div>` : '';
+    const statusTotal = statuses.reduce((s, st) => s + (row.counts[st.key] || 0), 0);
+    const minibar = statusTotal > 0
+      ? `<div class="minibar">${statuses.map(st => {
+          const pct = ((row.counts[st.key] || 0) / statusTotal) * 100;
+          return pct > 0 ? `<div style="width:${pct}%;background:${st.color}" title="${esc(st.label)}: ${fmtDaysHours(row.counts[st.key])}"></div>` : '';
+        }).join('')}</div>` : '';
     return `<tr data-employee-id="${row.emp.id}">
       <td>
         <div style="font-weight:500">${esc(row.emp.name)}</div>
@@ -5186,34 +5153,35 @@ document.addEventListener('keydown', e => {
 });
 
 // ═══ BOOT ════════════════════════════════════════════════════════════════════
-async function initializeApp() {
+async function bootApp() {
   loadSettings();
+  loadGridPreferences();
   loadStorageMode();
   applyStorageModeControls();
-
   try {
-    if (window.location.protocol !== 'file:') {
-      const response = await fetch('/api/health', { method: 'GET' }).catch(() => null);
-      if (response && response.ok) {
-        DataManager.mode = STORAGE_MODE_SERVER;
-        storageMode = STORAGE_MODE_SERVER;
-        console.log('Server detected. Using backend API.');
-      } else {
-        throw new Error('Server not responding or no API found');
+    if (storageMode === STORAGE_MODE_LOCAL) {
+      const rawLocalState = lsGet(LOCAL_STATE_KEY);
+      if (rawLocalState) {
+        const parsedLocalState = JSON.parse(rawLocalState);
+        if (parsedLocalState && typeof parsedLocalState === 'object') loadFromData(parsedLocalState);
       }
     } else {
-      throw new Error('File protocol detected');
+      const res = await fetch('/api/state');
+      if (res.status === 401) {
+        document.getElementById('login-modal').classList.add('open');
+        return;
+      }
+      const data = await res.json();
+      if (Object.keys(data).length > 0) loadFromData(data);
     }
   } catch (err) {
-    DataManager.mode = STORAGE_MODE_LOCAL;
-    storageMode = STORAGE_MODE_LOCAL;
-    console.log('No server detected. Falling back to LocalStorage.');
+    console.warn(storageMode === STORAGE_MODE_LOCAL
+      ? 'Could not load local JSON data.'
+      : 'Could not load from server. If running locally without backend, switch to Local JSON mode in Settings.');
   }
 
-  applyStorageModeControls();
-  const loaded = await loadData();
-  if (!loaded) return;
-  
+  hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
+  saveGridPreferences();
   persistStorageMode();
   applyTheme(); applyAppName(); updateSaveButton(); updateAutoSaveButton(); updateUndoButton();
   document.getElementById('af-start').addEventListener('change', updateActivityWeekLabels);
@@ -5222,10 +5190,10 @@ async function initializeApp() {
   document.getElementById('af-end').addEventListener('input', updateActivityWeekLabels);
   
   updateSbStatus();
-  checkFirstRun();
+  nav('grid');
 }
 
-initializeApp();
+bootApp();
 </script>
 </body>
 </html>
