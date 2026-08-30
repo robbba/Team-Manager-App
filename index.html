@@ -327,7 +327,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 </main>
 
 <!-- Login Modal -->
-<div class="modal-bg" id="login-modal" style="background:var(--bg); z-index:9999;">
+<div class="modal-bg" id="login-modal" style="display:none;background:var(--bg); z-index:9999;"><!-- TEMP: bypass login modal until auth flow is fixed -->
   <div class="modal" style="width:360px; box-shadow:0 10px 40px rgba(0,0,0,0.1);">
     <h3 style="margin-bottom:16px; text-align:center;">Team Manager sign in</h3>
     <div class="form-row"><label>Username</label><input id="login-user" type="text" placeholder="admin"></div>
@@ -5301,11 +5301,12 @@ async function bootApp() {
     } else {
       const res = await fetch('/api/state');
       if (res.status === 401) {
-        document.getElementById('login-modal').classList.add('open');
-        return;
+        // TEMP: bypass login gate until auth/login flow is fixed
+        console.warn('Temporary login bypass active: continuing without opening login modal.');
+      } else {
+        const data = await res.json();
+        if (Object.keys(data).length > 0) loadFromData(data);
       }
-      const data = await res.json();
-      if (Object.keys(data).length > 0) loadFromData(data);
     }
   } catch (err) {
     console.warn(storageMode === STORAGE_MODE_LOCAL
