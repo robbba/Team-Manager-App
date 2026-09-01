@@ -1,12 +1,29 @@
-# Team-Manager-App
+# Team Manager
 
-Team Manager supports two deployment modes:
+The active application is the standalone [`index.html`](index.html). Open it directly in a browser; no installation, login, or web server is required.
 
-- **Standalone/offline:** open `public/index.html` directly in a browser, or open the root `index.html` which forwards to it. The app works without a web server, stores the working copy locally, and uses **Export JSON** / **Import JSON** for controlled data transfer.
-- **Web:** run `npm start` and open `http://localhost:3000`. The app uses the existing authenticated server API and SQLite persistence.
+## Planner files
 
-The standalone mode is intended for environments where a web server is unavailable or not permitted. Keep exported JSON files in the approved secure storage location for the environment.
+Use **Open JSON** to open an existing planner and **Save As** to create a new planner file. After a writable file has been opened or created, **Save** writes changes to that file. The sidebar reports **Unsaved** until a file save succeeds.
 
-The storage backend is selectable under **Settings → Data storage mode**. On a hosted deployment, choose **Online SQLite mode** or **Local JSON mode**. Directly opened HTML files are locked to Local JSON mode because a browser cannot reach the server API from a `file:` URL.
+Browser storage provides automatic crash and reload recovery, but it is not a replacement for saving the JSON file. The JSON file is the portable source and contains personnel, activities, assignments, statuses, holidays, settings, courses, requirements, and grid preferences. Store planner files in the approved secure location for your environment.
 
-In Grid View, use the **Import .ics holidays** button in the Holidays / Red days section. Standard all-day `VEVENT` entries are shown in a review list before import, where you can check all, select **Future only**, check none, or select individual holidays. Only events in the active planner year are offered; matching existing events can be selected to replace their current holiday record.
+## Work time codes
+
+Work Time Codes can count assigned dates as **Days** or as **Hours**. Hour codes use either a fixed amount per assigned date or an administrative time interval entered on the assignment. Legacy codes with the `VAKT` or `ATF` abbreviation migrate to a fixed 24 hours; other legacy hour codes use entered time.
+
+Administrative compensation is independent of the physical shift. For example, an ATF assignment can report `ATF (24h)` while its physical shift remains `Night (1930-0730)`. No overtime-rate calculation is performed.
+
+**Additional Work / Overtime (OT)** is recorded independently on an employee date. It can coexist with a status or activity, is added to timed hours in Workload and Summary, and does not change absence or availability. The app records hours and an optional note; it does not calculate overtime rates or pay.
+
+## Schedule behavior
+
+Planned assignments remain visible with diagonal hatching, but only Confirmed activities count in Workload, Summary, availability, and reports. Day and Night use lighter and darker shades of the assigned Work Time Code color.
+
+Dragging across dates creates a visible selection. **Remove from [activity]** removes only that activity from the selected dates; daily statuses and other activities remain. **Clear all selected cells** is the separate action for clearing everything in the selection. Both actions participate in Undo and browser recovery.
+
+In Grid View, use **Import .ics holidays** in the Holidays / Red days section. Standard all-day `VEVENT` entries are shown for review before import. Only events in the active planner year are offered.
+
+## Legacy server implementation
+
+The previous server-based version is preserved separately in [`public/index.html`](public/index.html), [`server.js`](server.js), [`package.json`](package.json), [`Dockerfile`](Dockerfile), and [`docker-compose.yml`](docker-compose.yml). It is not part of the active standalone application and is not kept in sync with changes to the root HTML file.

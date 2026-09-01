@@ -59,14 +59,19 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sa
 .gtable { border-collapse: separate; border-spacing: 0; table-layout: fixed; }
 .gtable th, .gtable td { border-bottom: 1px solid var(--border); border-right: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
 .gh-emp { background: var(--surface); font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; padding: 0 12px; height: 28px; text-align: left; }
-.gh-month { background: var(--surface); font-size: 11px; font-weight: 600; text-align: center; padding: 4px 0; white-space: nowrap; }
-.gh-week { background: var(--surface); font-size: 9px; color: var(--muted); text-align: center; padding: 2px 0; }
+.gh-month { background: color-mix(in srgb, var(--text) 4%, var(--surface)); color: var(--muted); border-bottom: 2px solid color-mix(in srgb, var(--text) 14%, var(--border)) !important; border-right: 2px solid color-mix(in srgb, var(--text) 16%, var(--border)) !important; font-size: 11px; font-weight: 700; text-align: center; padding: 4px 0; white-space: nowrap; }
+.gh-month.period-alt { background: color-mix(in srgb, var(--text) 10%, var(--surface)); color: var(--text); }
+.gh-week { background: color-mix(in srgb, var(--text) 2%, var(--surface)); color: var(--muted); border-bottom: 1px solid color-mix(in srgb, var(--text) 10%, var(--border)) !important; font-size: 9px; font-weight: 700; text-align: center; padding: 2px 0; }
+.gh-week.period-alt { background: color-mix(in srgb, var(--text) 7%, var(--surface)); color: var(--text); }
 .gh-day { background: var(--surface); font-size: 10px; color: var(--muted); text-align: center; height: 34px; padding: 0; }
 .gh-day .dow { font-size: 8.5px; opacity: .75; display: block; }
 .gh-day.weekend { color: #b6bec9; }
-.gh-day.today-col { background: color-mix(in srgb, var(--accent-blue) 10%, var(--surface)); color: var(--accent-blue); font-weight: 700; }
+.gh-day.today-col { background: color-mix(in srgb, var(--accent-blue) 18%, var(--surface)) !important; color: var(--accent-blue) !important; font-weight: 800; box-shadow: inset 2px 0 color-mix(in srgb, var(--text) 45%, var(--border)), inset -2px 0 color-mix(in srgb, var(--text) 45%, var(--border)); }
 .gh-day.holiday-col, .gday.holiday-col { background: #fee2e2 !important; color: #b91c1c; }
 body.dark .gh-day.holiday-col, body.dark .gday.holiday-col { background: #451a1a !important; color: #fca5a5; }
+.gday.status-cell.holiday-col { border-right: 1px solid color-mix(in srgb, var(--holiday-color, #ef4444) 16%, var(--border)) !important; border-bottom: 1px solid color-mix(in srgb, var(--holiday-color, #ef4444) 16%, var(--border)) !important; }
+.gday.span-label-cell { overflow: visible; z-index: 4; }
+.grid-span-label { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); z-index: 5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; font-weight: 700; pointer-events: none; text-align: left; }
 .sticky-left { position: sticky; left: 0; z-index: 20; background: var(--surface); }
 .gtable tbody .sticky-left { z-index: 22; background: var(--surface); isolation: isolate; background-clip: padding-box; }
 .gtable thead th { position: sticky; z-index: 25; }
@@ -76,25 +81,28 @@ body.dark .gh-day.holiday-col, body.dark .gday.holiday-col { background: #451a1a
 .emp-sub { font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gday { width: 36px; min-width: 36px; height: 34px; text-align: center; font-size: 10px; font-weight: 700; padding: 0; position: relative; overflow: hidden; }
 .gday.weekend { background: color-mix(in srgb, var(--muted-bg) 55%, transparent); }
-.gday.today-col { background: color-mix(in srgb, var(--accent-blue) 7%, transparent); }
+.gday.today-col { background: color-mix(in srgb, var(--accent-blue) 10%, transparent); box-shadow: inset 2px 0 color-mix(in srgb, var(--text) 45%, var(--border)), inset -2px 0 color-mix(in srgb, var(--text) 45%, var(--border)); z-index: 2; }
 .gday.status-cell { cursor: pointer; user-select: none; -webkit-user-select: none; }
 .gday.status-cell:hover { opacity: .85; }
 .gday.status-cell.dragging-active { cursor: crosshair; }
-.cell-selected { box-shadow: inset 0 0 0 2px var(--primary); z-index: 10; }
+.cell-selected { outline: 2px solid var(--primary) !important; outline-offset: -2px; z-index: 10; }
 .gday-inner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 1; pointer-events: none; }
 .shift-symbol { position: absolute; left: 3px; top: 2px; z-index: 2; font-size: 10px; line-height: 1; pointer-events: none; }
 .activity-tag { position: absolute; left: 3px; bottom: 2px; z-index: 2; font-size: 8px; line-height: 1; font-weight: 700; padding: 1px 3px; border-radius: 4px; pointer-events: none; background: color-mix(in srgb, var(--muted-bg) 70%, transparent); color: var(--muted); }
 .gday.shift-change-cell { position: relative; overflow: hidden; }
 .gday.shift-change-cell::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--shift-change-color, #22c55e) 10%, transparent) 0 50%, color-mix(in srgb, var(--shift-change-color, #22c55e) 18%, transparent) 50% 100%); pointer-events: none; z-index: 0; }
-.gday.shift-change-cell::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--shift-change-underline, #f97316); pointer-events: none; z-index: 2; }
-.gday.night-shift-cell:not(.shift-change-cell)::before { content: ''; position: absolute; inset: 0; background: color-mix(in srgb, var(--night-shift-color, #22c55e) 18%, var(--surface)); pointer-events: none; z-index: 0; }
-.gday.night-shift-cell:not(.shift-change-cell)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--night-shift-underline, #f97316); pointer-events: none; z-index: 2; }
+.gday.night-shift-cell:not(.shift-change-cell) { background: color-mix(in srgb, var(--shift-color, #2563eb) 30%, var(--surface)) !important; }
 .gday.shift-change-cell > .gday-inner,
 .gday.shift-change-cell > .shift-symbol,
 .gday.shift-change-cell > .activity-tag,
 .gday.shift-change-cell > .status-dot { z-index: 3; }
+.gday.day-shift-cell { background: color-mix(in srgb, var(--shift-color, #2563eb) 14%, var(--surface)) !important; }
+.gday.has-activity { border-bottom: 3px solid var(--activity-color, transparent) !important; }
+.gday.day-shift-cell.planned-activity-cell { background: repeating-linear-gradient(135deg,color-mix(in srgb,var(--shift-color) 22%,var(--surface)) 0 5px,color-mix(in srgb,var(--shift-color) 7%,var(--surface)) 5px 10px) !important; }
+.gday.night-shift-cell.planned-activity-cell { background: repeating-linear-gradient(135deg,color-mix(in srgb,var(--shift-color) 38%,var(--surface)) 0 5px,color-mix(in srgb,var(--shift-color) 16%,var(--surface)) 5px 10px) !important; }
 .status-dot { position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; z-index: 3; pointer-events: none; border: 1px solid rgba(255,255,255,.6); }
 .activity-status-badge { position:absolute; right:2px; top:1px; z-index:3; font-size:6px; line-height:1; font-weight:800; pointer-events:none; color:var(--text); background:color-mix(in srgb,var(--surface) 78%,transparent); border-radius:3px; padding:1px 2px; }
+.overtime-badge { position:absolute; left:2px; bottom:1px; z-index:4; max-width:32px; overflow:hidden; white-space:nowrap; font-size:6px; line-height:1.2; font-weight:800; pointer-events:none; color:#c2410c; background:color-mix(in srgb,var(--surface) 84%,transparent); border-radius:3px; padding:1px 2px; }
 .birthday-cake { position: absolute; right: 5px; bottom: 4px; font-size: 9px; line-height: 1; z-index: 3; pointer-events: none; filter: drop-shadow(0 0 2px rgba(0,0,0,.2)); }
 .dur-tag { position: absolute; top: 1px; right: 2px; font-size: 5px; font-weight: 900; z-index: 3; pointer-events: none; opacity: .9; }
 .sect-row td { background: color-mix(in srgb, var(--muted-bg) 70%, transparent); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 5px 12px; }
@@ -306,12 +314,11 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     </button>
   </nav>
   <div class="sb-section">
-    <div class="sb-section-label">Server Sync</div>
-    <button class="sb-link" id="save-btn" onclick="saveData()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5M4 20h16"/></svg> Save to Server</button>
-    <button class="sb-link" id="autosave-btn" onclick="toggleAutoSave()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/><circle cx="12" cy="12" r="8"/></svg> Auto-save: On</button>
+    <div class="sb-section-label">Local Data</div>
+    <button class="sb-link" id="save-btn" onclick="saveData()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l3 3v13H4V4z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg> Save</button>
+    <button class="sb-link" id="autosave-btn" onclick="toggleAutoSave()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/><circle cx="12" cy="12" r="8"/></svg> Auto-recovery: On</button>
     <button class="sb-link" id="undo-btn" onclick="undoLastChange()" disabled><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/></svg> Undo Change</button>
-    <button class="sb-link" onclick="doLogout()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Log Out</button>
-    <div class="sb-info"><span class="db-indicator connected" id="db-dot"></span><span id="db-status-text">Connected to server</span></div>
+    <div class="sb-info" id="file-status" title="No active JSON file"><span class="db-indicator" id="db-dot"></span><span id="db-status-text">Saved</span></div>
   </div>
   <div class="sb-section">
     <div class="sb-today" id="sb-today"></div>
@@ -325,19 +332,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 <main id="main">
   <div id="content" style="padding:0;overflow:hidden;display:flex;flex-direction:column;height:100%"></div>
 </main>
-
-<!-- Login Modal -->
-<div class="modal-bg" id="login-modal" style="display:none;background:var(--bg); z-index:9999;"><!-- TEMP: bypass login modal until auth flow is fixed -->
-  <div class="modal" style="width:360px; box-shadow:0 10px 40px rgba(0,0,0,0.1);">
-    <h3 style="margin-bottom:16px; text-align:center;">Team Manager sign in</h3>
-    <div class="form-row"><label>Username</label><input id="login-user" type="text" placeholder="admin"></div>
-    <div class="form-row"><label>Password</label><input id="login-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()"></div>
-    <p id="login-err" style="color:var(--destructive); font-size:12px; display:none;">Invalid username or password</p>
-    <div class="modal-actions" style="margin-top:20px; justify-content:stretch;">
-      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Sign in</button>
-    </div>
-  </div>
-</div>
 
 <!-- Cell status picker popover -->
 <div id="picker">
@@ -355,6 +349,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       </div>
     </div>
   </div>
+  <div id="pk-overtime-section"></div>
   <div id="pk-shift-section"></div>
   <button class="pk-btn" id="pk-add-activity-btn" style="display:none;background:var(--muted-bg);color:var(--text)" onclick="openActivityFromSelection()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add activity for selected dates</button>
   <div class="pk-sep"></div>
@@ -517,8 +512,8 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <input type="checkbox" id="af-include-weekends"> Include weekends in Work Schedule
     </label>
     <div class="form-row-2">
-      <div class="form-row" style="margin:0"><label>Start date * <span id="af-start-week" class="muted text-sm"></span></label><input id="af-start" type="date"></div>
-      <div class="form-row" style="margin:0"><label>End date * <span id="af-end-week" class="muted text-sm"></span></label><input id="af-end" type="date"></div>
+      <div class="form-row" style="margin:0"><label>Start date * <span id="af-start-week" class="muted text-sm"></span></label><input id="af-start" type="text" inputmode="numeric" placeholder="dd.mm.yyyy" maxlength="10" autocomplete="off" onblur="normalizeActivityDateInput(this);updateActivityWeekLabels()"></div>
+      <div class="form-row" style="margin:0"><label>End date * <span id="af-end-week" class="muted text-sm"></span></label><input id="af-end" type="text" inputmode="numeric" placeholder="dd.mm.yyyy" maxlength="10" autocomplete="off" onblur="normalizeActivityDateInput(this);updateActivityWeekLabels()"></div>
     </div>
     <div class="form-row">
       <label>Color</label>
@@ -587,15 +582,20 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     <div style="height:1px;background:var(--border);margin:18px 0"></div>
     <h3 style="font-size:16px">Work Time Codes (FIF Codes for Activity)</h3>
     <p class="modal-desc">Describes the planned work performed during an activity. The code defines whether the employee is out of office; Shift Type alone determines scheduled hours.</p>
-    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+    <div id="work-code-form" style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
       <input id="wcf-id" type="hidden">
+      <div id="wcf-form-title" style="font-size:13px;font-weight:600;margin-bottom:8px">Add work code</div>
       <div class="form-row-2" style="margin-bottom:10px">
         <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Name *</label><input id="wcf-name" placeholder="Exercise Day"></div>
         <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Abbreviation *</label><input id="wcf-abbr" maxlength="12" placeholder="EX D" style="text-transform:uppercase"></div>
       </div>
       <div class="form-row-2" style="margin-bottom:10px">
-        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Out of office while assigned</label><select id="wcf-staffing-impact"><option value="available">No</option><option value="unavailable">Yes</option></select></div>
-        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Count as</label><select id="wcf-aggregation-mode"><option value="hours">Hours</option><option value="units">Units</option></select></div>
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Office status</label><select id="wcf-staffing-impact"><option value="available">In office</option><option value="unavailable">Out of office</option></select></div>
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Count as</label><select id="wcf-aggregation-mode" onchange="updateWorkCodeDurationFields()"><option value="hours">Hours</option><option value="days">Days</option></select></div>
+      </div>
+      <div class="form-row-2" id="wcf-duration-fields" style="margin-bottom:10px">
+        <div><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Hour entry</label><select id="wcf-duration-mode" onchange="updateWorkCodeDurationFields()"><option value="entered">Entered time</option><option value="fixed">Fixed hours</option></select></div>
+        <div id="wcf-fixed-hours-wrap"><label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Hours per assigned date</label><input id="wcf-fixed-hours" type="number" min="0.1" max="168" step="0.5" placeholder="24"></div>
       </div>
       <div class="swatches" id="wcf-swatches" style="margin-bottom:10px"></div>
       <div class="flex gap-2" style="justify-content:flex-end">
@@ -666,40 +666,21 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <button class="btn" type="button" onclick="closeModal('settings-modal');openStatusManager()">Manage Planning Options</button>
     </div>
     <div class="form-row">
-      <label>Planning Horizon</label>
+      <label>Activity discussion deadline</label>
       <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
         <div><label class="muted text-sm">Days from today</label><input id="set-planning-horizon-days" type="number" min="0" max="365" step="1"></div>
         <div><label class="muted text-sm">Line color</label><input id="set-planning-horizon-color" type="color" style="width:48px;height:34px;padding:2px"></div>
       </div>
-      <div class="form-hint">Set to 0 to hide the planning-horizon line.</div>
+      <div class="form-hint">Shows a vertical deadline line in Schedule. Default is 14 days from today; set to 0 to hide it.</div>
     </div>
     <div class="form-row">
-      <label>Data storage mode</label>
-      <select id="set-storage-mode" class="plain-select" style="width:100%">
-        <option value="server">Online SQLite mode (server)</option>
-        <option value="local">Local JSON mode (standalone)</option>
-      </select>
-      <div class="form-hint" id="set-storage-hint">Choose where data is persisted.</div>
+      <label>Local data</label>
+      <div class="form-hint">Auto-recovery protects work in this browser. Open or save a JSON file to move and archive all app data.</div>
       <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" type="button" onclick="exportData()">Export JSON</button>
-        <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save locally as...</button>
-        <button class="btn btn-sm" type="button" onclick="importData()">Import JSON</button>
-        <button class="btn btn-sm" id="upload-server-btn" type="button" onclick="uploadCurrentDataToServer()">Upload current data to server</button>
+        <button class="btn btn-sm" type="button" onclick="importData()">Open JSON</button>
+        <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As...</button>
       </div>
-      <div class="form-hint" id="upload-server-hint" style="margin-top:6px">Uploads the currently loaded offline/local data snapshot to the server and replaces the server copy.</div>
       <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
-    </div>
-    <div style="height:1px;background:var(--border);margin:16px 0;"></div>
-    <div class="form-row">
-      <label>Change Password</label>
-      <div style="display:flex;gap:8px;margin-bottom:6px">
-        <input id="set-pass-current" type="password" placeholder="Current password" style="flex:1">
-        <input id="set-pass-new" type="password" placeholder="New password" style="flex:1">
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <button class="btn btn-sm" type="button" onclick="changePassword()">Update password</button>
-        <span id="set-pass-msg" style="font-size:12px;font-weight:500"></span>
-      </div>
     </div>
     <div class="form-row" style="margin-top:2px">
       <label>About</label>
@@ -742,14 +723,13 @@ const DEPT_ACC_DARK  = ['#166534','#1d4ed8','#6d28d9','#c2410c','#0369a1','#a162
 const SETTINGS_KEY = 'team-manager-app-settings';
 const LEGACY_SETTINGS_KEY = 'team-status-app-settings';
 const LEGACY_THEME_KEY = 'team-status-theme';
-const STORAGE_MODE_KEY = 'team-manager-storage-mode';
 const LOCAL_STATE_KEY = 'team-manager-local-state';
-const STORAGE_MODE_SERVER = 'server';
-const STORAGE_MODE_LOCAL = 'local';
+const LOCAL_FILE_META_KEY = 'team-manager-file-meta';
 const LOCAL_BACKUP_HANDLE_DB = 'team-manager-file-handles';
 const LOCAL_BACKUP_HANDLE_STORE = 'handles';
 const LOCAL_BACKUP_HANDLE_KEY = 'local-backup-json';
 let localBackupFileHandle = null;
+let activeFileName = '';
 function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 function svgIcon(name, title = '') {
   const paths = {
@@ -776,7 +756,15 @@ function shiftChangeIcon(title = 'Night shift change') {
 
 // ═══ SAFE STORAGE ════════════════════════════════════════════════════════════
 function lsGet(key) { try { return window.localStorage.getItem(key); } catch (err) { return null; } }
-function lsSet(key, value) { try { window.localStorage.setItem(key, value); } catch (err) { } }
+function lsSet(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch (err) {
+    console.warn(`Browser storage write failed for ${key}:`, err);
+    return false;
+  }
+}
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
 const APP_VERSION = '1.1.1';
@@ -809,7 +797,6 @@ let appSettings = {
   shiftTemplates: DEFAULT_SHIFT_TEMPLATES.map(shift => ({ ...shift })),
   summaryColumns: null,
 };
-let storageMode = STORAGE_MODE_SERVER;
 
 function normalizeHexColor(color, fallback = '#3b82f6') {
   if (typeof color !== 'string') return fallback;
@@ -852,7 +839,6 @@ function loadSettings() {
       appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
-      appSettings.isFirstRunComplete = parsed.isFirstRunComplete === true;
       appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(parsed.coreWorkdayRange, '0730-1500');
       appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || (typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5);
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
@@ -873,7 +859,7 @@ function loadSettings() {
     appSettings.darkMode = lsGet(LEGACY_THEME_KEY) === 'dark';
   } catch (err) { }
 }
-function persistSettings() { lsSet(SETTINGS_KEY, JSON.stringify(appSettings)); }
+function persistSettings() { return lsSet(SETTINGS_KEY, JSON.stringify(appSettings)); }
 function normalizeCoreWorkdayRange(value, fallback = '0730-1500') {
   const normalized = String(value || '').trim().replace(/\s+/g, '').replace('–', '-');
   const m = normalized.match(/^(\d{1,2}):?(\d{2})-(\d{1,2}):?(\d{2})$/);
@@ -897,14 +883,22 @@ function normalizeActivityTypes(value) {
 }
 function normalizeWorkCodes(value) {
   const source = Array.isArray(value) && value.length ? value : DEFAULT_WORK_CODES;
-  return source.map((code, index) => ({
-    id: String(code.id || `wc${index + 1}`),
-    name: String(code.name || 'Work Code').trim(),
-    abbreviation: String(code.abbreviation || code.abbr || '').trim().toUpperCase().slice(0, 12),
-    staffingImpact: code.staffingImpact === 'unavailable' ? 'unavailable' : 'available',
-    aggregationMode: code.aggregationMode === 'units' ? 'units' : 'hours',
-    color: normalizeHexColor(code.color, '#3b82f6'),
-  }));
+  return source.map((code, index) => {
+    const name = String(code.name || 'Work Code').trim();
+    const abbreviation = String(code.abbreviation || code.abbr || '').trim().toUpperCase().slice(0, 12);
+    const legacyFixedDayCode = !code.durationMode && ['ATF', 'VAKT'].includes(abbreviation);
+    const durationMode = code.durationMode === 'fixed' || legacyFixedDayCode ? 'fixed' : 'entered';
+    return {
+      id: String(code.id || `wc${index + 1}`),
+      name,
+      abbreviation,
+      staffingImpact: code.staffingImpact === 'unavailable' ? 'unavailable' : 'available',
+      aggregationMode: code.aggregationMode === 'units' || code.aggregationMode === 'days' ? 'days' : 'hours',
+      durationMode,
+      fixedHours: durationMode === 'fixed' ? (Number(code.fixedHours) > 0 ? Number(code.fixedHours) : 24) : null,
+      color: normalizeHexColor(code.color, '#3b82f6'),
+    };
+  });
 }
 function normalizeAnnualRequirements(raw) {
   const existingRequirements = Array.isArray(raw.requirements)
@@ -983,6 +977,7 @@ function normalizeStateVersion(data) {
   const detectedVersion = Number(raw.dataVersion ?? raw.version ?? 1);
   normalized.dataVersion = Math.max(DATA_VERSION, detectedVersion);
   normalized.appVersion = raw.appVersion || APP_VERSION;
+  normalized.appSettings = raw.appSettings && typeof raw.appSettings === 'object' ? { ...raw.appSettings } : null;
   normalized.activityTypes = normalizeActivityTypes(raw.activityTypes || raw.appSettings?.activityTypes || []);
   normalized.workCodes = normalizeWorkCodes(raw.workCodes || raw.appSettings?.workCodes);
   normalized.shiftTemplates = normalizeShiftTemplates(raw.shiftTemplates || raw.appSettings?.shiftTemplates);
@@ -1028,42 +1023,9 @@ function loadSettings() {
   } catch (err) { }
 }
 function persistSettings() {
-  lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
-  lsRemove(LEGACY_SETTINGS_KEY);
-}
-function loadStorageMode() {
-  const saved = lsGet(STORAGE_MODE_KEY);
-  storageMode = saved === STORAGE_MODE_LOCAL ? STORAGE_MODE_LOCAL : STORAGE_MODE_SERVER;
-  if (window.location.protocol === 'file:') storageMode = STORAGE_MODE_LOCAL;
-}
-function persistStorageMode() {
-  lsSet(STORAGE_MODE_KEY, storageMode);
-}
-function applyStorageModeControls() {
-  const select = document.getElementById('set-storage-mode');
-  const hint = document.getElementById('set-storage-hint');
-  const uploadButton = document.getElementById('upload-server-btn');
-  const uploadHint = document.getElementById('upload-server-hint');
-  const saveLocalAsButton = document.getElementById('save-local-as-btn');
-  if (!select || !hint) return;
-  if (window.location.protocol === 'file:') {
-    storageMode = STORAGE_MODE_LOCAL;
-    select.value = STORAGE_MODE_LOCAL;
-    select.disabled = true;
-    hint.textContent = 'Direct file mode is locked to Local JSON mode. Save locally writes a JSON backup file, and Save locally as... lets you choose a new file.';
-    if (uploadButton) uploadButton.style.display = 'none';
-    if (uploadHint) uploadHint.style.display = 'none';
-    if (saveLocalAsButton) saveLocalAsButton.style.display = '';
-    return;
-  }
-  select.disabled = false;
-  select.value = storageMode;
-  hint.textContent = storageMode === STORAGE_MODE_SERVER
-    ? 'Online SQLite mode uses the authenticated server/database.'
-    : 'Local JSON mode stores planner data in your browser. Save locally writes to a backup JSON file after you choose it once.';
-  if (uploadButton) uploadButton.style.display = '';
-  if (uploadHint) uploadHint.style.display = '';
-  if (saveLocalAsButton) saveLocalAsButton.style.display = storageMode === STORAGE_MODE_LOCAL ? '' : 'none';
+  const saved = lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
+  if (saved) lsRemove(LEGACY_SETTINGS_KEY);
+  return saved;
 }
 const GRID_YEAR_KEY = 'teamManagerGridYear';
 const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
@@ -1089,7 +1051,7 @@ function updateAutoSaveButton() {
   const button = document.getElementById('autosave-btn');
   if (!button) return;
   const enabled = appSettings.autoSaveEnabled !== false;
-  button.innerHTML = `${svgIcon('save')} Auto-save: ${enabled ? 'On' : 'Off'}`;
+  button.innerHTML = `${svgIcon('save')} Auto-recovery: ${enabled ? 'On' : 'Off'}`;
 }
 async function toggleAutoSave() {
   appSettings.autoSaveEnabled = appSettings.autoSaveEnabled === false;
@@ -1110,53 +1072,13 @@ async function toggleAutoSave() {
       updateAutoSaveButton();
       updateSaveButton();
       updateSbStatus();
-      alert(storageMode === STORAGE_MODE_LOCAL
-        ? 'Could not enable auto-save because local save failed.'
-        : 'Could not enable auto-save because server save failed.');
+      alert('Could not enable auto-save because local save failed.');
     }
   }
 }
 function applyAppName() {
   document.getElementById('sb-app-name').textContent = appSettings.appName;
   document.title = appSettings.appName;
-}
-
-async function changePassword() {
-  const currentPassword = document.getElementById('set-pass-current').value;
-  const newPassword = document.getElementById('set-pass-new').value;
-  const msgEl = document.getElementById('set-pass-msg');
-
-  if (!currentPassword || !newPassword) {
-    msgEl.textContent = 'Fill in both fields.';
-    msgEl.style.color = 'var(--destructive)';
-    return;
-  }
-
-  msgEl.textContent = 'Saving...';
-  msgEl.style.color = 'var(--muted)';
-
-  try {
-    const res = await fetch('/api/change-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentPassword, newPassword })
-    });
-    const data = await res.json();
-    
-    if (res.ok) {
-      msgEl.textContent = 'Password updated!';
-      msgEl.style.color = '#22c55e'; // Grønn
-      document.getElementById('set-pass-current').value = '';
-      document.getElementById('set-pass-new').value = '';
-      setTimeout(() => { msgEl.textContent = ''; }, 4000);
-    } else {
-      msgEl.textContent = data.error || 'Could not update password.';
-      msgEl.style.color = 'var(--destructive)'; // Rød
-    }
-  } catch (e) {
-    msgEl.textContent = 'Network error.';
-    msgEl.style.color = 'var(--destructive)';
-  }
 }
 
 function openSettings() {
@@ -1170,9 +1092,6 @@ function openSettings() {
   document.getElementById('set-high-max').value = String(appSettings.highMax);
   document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
   document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
-  const storageSelect = document.getElementById('set-storage-mode');
-  if (storageSelect) storageSelect.value = storageMode;
-  applyStorageModeControls();
   renderHolidaySettings();
   const about = document.getElementById('set-about-version');
   if (about) about.textContent = `Team Manager v${APP_VERSION} · Data format v${DATA_VERSION}`;
@@ -1488,20 +1407,16 @@ function saveSettings() {
   appSettings.highMax = highMax;
   const planningHorizonDays = Number(document.getElementById('set-planning-horizon-days').value);
   if (!Number.isInteger(planningHorizonDays) || planningHorizonDays < 0 || planningHorizonDays > 365) {
-    alert('Planning Horizon must be a whole number from 0 to 365 days.');
+    alert('Activity discussion deadline must be a whole number from 0 to 365 days.');
     return;
   }
   appSettings.planningHorizonDays = planningHorizonDays;
   appSettings.planningHorizonColor = normalizeHexColor(document.getElementById('set-planning-horizon-color').value, '#ef4444');
-  if (window.location.protocol !== 'file:') {
-    const selectedMode = document.getElementById('set-storage-mode')?.value;
-    if (selectedMode === STORAGE_MODE_LOCAL || selectedMode === STORAGE_MODE_SERVER) storageMode = selectedMode;
-  } else {
-    storageMode = STORAGE_MODE_LOCAL;
+  if (!persistSettings() || !lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()))) {
+    alert('Browser recovery could not be updated. Your changes remain unsaved; save the planner JSON to protect them.');
+    markUnsaved();
+    return;
   }
-  persistSettings();
-  persistStorageMode();
-  if (storageMode === STORAGE_MODE_LOCAL) lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()));
   applyAppName();
   updateSaveButton();
   updateSbStatus();
@@ -1509,17 +1424,21 @@ function saveSettings() {
   renderPage();
 }
 
-function exportData() {
+function downloadDataFile() {
   const payload = JSON.stringify(snapshotData(), null, 2);
+  validatePlannerData(JSON.parse(payload));
   const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `team-manager-backup-${todayStr()}.json`;
+  const fileName = activeFileName || `team-manager-${todayStr()}.json`;
+  link.download = fileName;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+  activeFileName = fileName;
+  return fileName;
 }
 
 function canUseFileSystemSave() {
@@ -1545,6 +1464,7 @@ function openLocalBackupHandleDb() {
 
 async function storeLocalBackupHandle(handle) {
   localBackupFileHandle = handle || null;
+  activeFileName = handle?.name || activeFileName;
   const db = await openLocalBackupHandleDb();
   if (!db) return;
   try {
@@ -1611,7 +1531,7 @@ async function ensureLocalBackupPermission(handle) {
 
 async function requestLocalBackupHandle() {
   const handle = await window.showSaveFilePicker({
-    suggestedName: `team-manager-backup-${todayStr()}.json`,
+    suggestedName: activeFileName || `team-manager-${todayStr()}.json`,
     types: [{
       description: 'JSON backup',
       accept: { 'application/json': ['.json'] },
@@ -1622,9 +1542,11 @@ async function requestLocalBackupHandle() {
 }
 
 async function writeLocalBackupFile(handle) {
+  const payload = JSON.stringify(snapshotData(), null, 2);
+  validatePlannerData(JSON.parse(payload));
   const writable = await handle.createWritable();
   try {
-    await writable.write(JSON.stringify(snapshotData(), null, 2));
+    await writable.write(payload);
     await writable.close();
   } catch (err) {
     try { await writable.abort(); } catch (abortErr) { }
@@ -1634,8 +1556,7 @@ async function writeLocalBackupFile(handle) {
 
 async function saveLocalBackupFile(forcePrompt = false) {
   if (!canUseFileSystemSave()) {
-    exportData();
-    return;
+    return downloadDataFile();
   }
   let handle = null;
   if (!forcePrompt) {
@@ -1655,6 +1576,8 @@ async function saveLocalBackupFile(forcePrompt = false) {
   }
   try {
     await writeLocalBackupFile(handle);
+    activeFileName = handle.name || activeFileName;
+    return activeFileName;
   } catch (err) {
     const shouldRePrompt = !forcePrompt && (err?.name === 'NotAllowedError' || err?.name === 'NotFoundError' || err?.name === 'SecurityError');
     if (shouldRePrompt) {
@@ -1667,18 +1590,18 @@ async function saveLocalBackupFile(forcePrompt = false) {
 }
 
 async function saveDataAs() {
-  if (storageMode !== STORAGE_MODE_LOCAL) {
-    await saveData();
-    return;
-  }
   const btn = document.getElementById('save-btn');
   const originalText = btn ? btn.innerHTML : '';
   try {
     if (btn) btn.innerHTML = 'Saving...';
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
-    await saveState(true);
+    try {
+      await saveState(true);
+    } catch (recoveryError) {
+      alert('Browser recovery is unavailable. The JSON file will still be saved.');
+    }
     await saveLocalBackupFile(true);
-    hasUnsavedChanges = false;
+    markFileSaved();
     updateSaveButton();
     updateSbStatus();
   } catch (err) {
@@ -1690,71 +1613,101 @@ async function saveDataAs() {
   }
 }
 
-function importData() {
+async function importData() {
+  if (typeof window.showOpenFilePicker === 'function') {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: [{ description: 'Team Manager JSON', accept: { 'application/json': ['.json'] } }],
+      });
+      const file = await handle.getFile();
+      await loadDataFile(file, handle);
+    } catch (err) {
+      if (err?.name !== 'AbortError') alert('Could not open JSON file. Verify the file format and try again.');
+    }
+    return;
+  }
   const input = document.getElementById('import-json-file');
   if (!input) return;
   input.click();
-}
-
-async function saveSnapshotToServer(payload) {
-  const res = await fetch('/api/state', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error('Failed to save to server');
 }
 
 async function handleImportDataFile(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
   try {
-    const text = await file.text();
-    const parsed = JSON.parse(text);
-    loadFromData(parsed);
-    hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
-    saveGridPreferences();
-    await saveState(true);
-    closeModal('settings-modal');
-    renderPage();
+    await loadDataFile(file, null);
   } catch (err) {
-    alert('Could not import JSON backup. Verify the file format and try again.');
+    alert('Could not open JSON planner. Verify the file format and try again.');
   } finally {
     event.target.value = '';
   }
 }
 
-async function uploadCurrentDataToServer() {
-  if (window.location.protocol === 'file:') {
-    alert('Server upload is not available in direct file mode.');
-    return;
+async function loadDataFile(file, handle) {
+  const parsed = JSON.parse(await file.text());
+  validatePlannerData(parsed);
+  loadFromData(parsed);
+  if (handle) await storeLocalBackupHandle(handle);
+  else {
+    localBackupFileHandle = null;
+    activeFileName = file.name || '';
   }
-  const confirmed = window.confirm('Upload the currently loaded local/offline data to the server? This replaces the server copy with your current planner data.');
-  if (!confirmed) return;
-  const button = document.getElementById('upload-server-btn');
-  const originalLabel = button ? button.textContent : '';
+  hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
+  saveGridPreferences();
+  persistSettings();
+  markFileSaved();
   try {
-    if (button) {
-      button.disabled = true;
-      button.textContent = 'Uploading...';
-    }
-    await saveSnapshotToServer(snapshotData());
-    storageMode = STORAGE_MODE_SERVER;
-    persistStorageMode();
-    hasUnsavedChanges = false;
-    updateSaveButton();
-    updateSbStatus();
-    applyStorageModeControls();
-    alert('Current data uploaded to server.');
-  } catch (err) {
-    alert('Could not upload current data to server.');
-    console.warn('Manual server upload failed:', err.message);
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = originalLabel;
-    }
+    await saveState(true);
+  } catch (recoveryError) {
+    alert('The planner is open, but browser recovery could not be updated. Save the JSON file after changes.');
   }
+  closeModal('settings-modal');
+  renderPage();
+}
+
+function validatePlannerData(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid JSON payload');
+  const employeeList = data.employees;
+  const activityList = data.activities || data.projects;
+  const statusList = data.statuses || data.statusTypes;
+  if (!Array.isArray(employeeList) || !Array.isArray(activityList) || !Array.isArray(statusList)) {
+    throw new Error('Planner JSON is missing employees, activities, or statuses');
+  }
+  const uniqueIds = (items, label) => {
+    const ids = items.map(item => Number(item?.id));
+    if (ids.some(id => !Number.isFinite(id)) || new Set(ids).size !== ids.length) throw new Error(`Invalid or duplicate ${label} IDs`);
+    return new Set(ids);
+  };
+  const employeeIds = uniqueIds(employeeList, 'employee');
+  const activityIds = uniqueIds(activityList, 'activity');
+  activityList.forEach(activity => {
+    const participants = Array.isArray(activity.participants) ? activity.participants : (activity.employeeIds || []).map(id => ({ id }));
+    if (!Array.isArray(participants) || participants.some(participant => !employeeIds.has(Number(participant?.id)))) {
+      throw new Error('Activity contains an unknown employee');
+    }
+  });
+  if (data.entriesMap != null && (typeof data.entriesMap !== 'object' || Array.isArray(data.entriesMap))) throw new Error('Invalid daily entries');
+  Object.keys(data.entriesMap || {}).forEach(key => {
+    const separator = key.indexOf('_');
+    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator)))) throw new Error('Daily entry contains an unknown employee');
+  });
+  if (data.overtimeMap != null && (typeof data.overtimeMap !== 'object' || Array.isArray(data.overtimeMap))) throw new Error('Invalid overtime entries');
+  Object.entries(data.overtimeMap || {}).forEach(([key, value]) => {
+    const separator = key.indexOf('_');
+    const date = key.slice(separator + 1);
+    const hours = Number(value?.hours);
+    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(hours) || hours <= 0 || hours > 24) {
+      throw new Error('Overtime entry contains invalid data');
+    }
+  });
+  if (data.activityShiftsMap != null && (typeof data.activityShiftsMap !== 'object' || Array.isArray(data.activityShiftsMap))) throw new Error('Invalid activity assignments');
+  Object.keys(data.activityShiftsMap || {}).forEach(key => {
+    const parts = key.split('_');
+    if (parts.length !== 3 || !employeeIds.has(Number(parts[0])) || !activityIds.has(Number(parts[2])) || !/^\d{4}-\d{2}-\d{2}$/.test(parts[1])) {
+      throw new Error('Activity assignment contains an invalid relation');
+    }
+  });
 }
 
 // ═══ DATA STATE ══════════════════════════════════════════════════════════════
@@ -1778,7 +1731,7 @@ let activityPageOffset = 0;
 let activityPageSize = activityPageCapacity();
 
 let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, requirements = [], requirementRecords = {};
-let entriesMap = {}, activityShiftsMap = {};
+let entriesMap = {}, activityShiftsMap = {}, overtimeMap = {};
 let nextEmpId = 1, nextActId = 1, nextStatusId = 1, nextCatId = 1;
 
 let pickerEmpId = null, pickerDate = null, pickerSelectedStatus = null;
@@ -1805,7 +1758,7 @@ function updateUndoButton() {
 function recordUndo() {
   undoStack.push(JSON.parse(JSON.stringify({
     appSettings: { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } },
-    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap,
+    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   })));
   if (undoStack.length > 20) undoStack.shift();
@@ -1814,7 +1767,8 @@ function recordUndo() {
 async function undoLastChange() {
   const previous = undoStack.pop();
   if (!previous) return;
-  ({ appSettings, employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
+  ({ appSettings, employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
+  overtimeMap ||= {};
   if (appSettings && typeof appSettings === 'object') {
     const merged = { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } };
     Object.assign(appSettings, merged);
@@ -1829,17 +1783,16 @@ async function undoLastChange() {
 function updateSaveButton() {
   const button = document.getElementById('save-btn');
   if (!button) return;
-  const manualSaveVisible = appSettings.autoSaveEnabled === false;
-  button.style.display = manualSaveVisible ? '' : 'none';
-  if (!manualSaveVisible) return;
-  const baseLabel = storageMode === STORAGE_MODE_LOCAL ? 'Save locally' : 'Save to Server';
-  button.innerHTML = `${svgIcon('save')} ${baseLabel}`;
+  button.style.display = '';
+  button.disabled = !hasUnsavedChanges;
+  button.innerHTML = `${svgIcon('save')} Save`;
   button.style.background = '';
   button.style.color = '';
   button.style.fontWeight = '';
 }
 function markUnsaved() {
   hasUnsavedChanges = true;
+  persistFileMeta();
   updateSaveButton();
   updateSbStatus();
 }
@@ -1862,6 +1815,12 @@ function loadFromData(data) {
   const normalized = normalizeStateVersion(data || {});
   undoStack = [];
   updateUndoButton();
+  if (normalized.appSettings) {
+    appSettings = { ...appSettings, ...normalized.appSettings };
+    appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(appSettings.coreWorkdayRange, '0730-1500');
+    appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || 7.5;
+    appSettings.holidays = Array.isArray(appSettings.holidays) ? appSettings.holidays : [];
+  }
   appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
     ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
     : {};
@@ -1921,15 +1880,21 @@ function loadFromData(data) {
       };
     });
   } else entriesMap = {};
+  overtimeMap = normalized.overtimeMap && typeof normalized.overtimeMap === 'object' && !Array.isArray(normalized.overtimeMap)
+    ? Object.fromEntries(Object.entries(normalized.overtimeMap).map(([key, value]) => [key, {
+        hours: formatHoursNumber(Number(value?.hours) || 0),
+        note: String(value?.note || '').trim(),
+      }]).filter(([, value]) => value.hours > 0 && value.hours <= 24))
+    : {};
   if (normalized.activityShiftsMap && typeof normalized.activityShiftsMap === 'object' && !Array.isArray(normalized.activityShiftsMap)) {
     activityShiftsMap = Object.fromEntries(Object.entries(normalized.activityShiftsMap).map(([key, value]) => [key,
-      typeof value === 'string' ? { shift: value || 'normal', workCodeId: null, staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), workCodeId: value?.workCodeId || null, staffingImpactOverride: null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
+      typeof value === 'string' ? { shift: value || 'normal', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), workCodeId: value?.workCodeId || null, administrativeTime: String(value?.administrativeTime || ''), staffingImpactOverride: null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
     ]));
   } else if (Array.isArray(normalized.activityShifts)) {
     activityShiftsMap = {};
     normalized.activityShifts.forEach(s => {
-      const eid = +s.employeeId, pid = +s.projectId;
-      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: s.workCodeId || null, staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
+      const eid = +s.employeeId, pid = +(s.activityId ?? s.projectId);
+      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: s.workCodeId || null, administrativeTime: String(s.administrativeTime || ''), staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
     });
   } else activityShiftsMap = {};
   const rawStatuses = Array.isArray(normalized.statuses) && normalized.statuses.length
@@ -1958,21 +1923,10 @@ function loadFromData(data) {
 function updateSbStatus() {
   const dot = document.getElementById('db-dot');
   const text = document.getElementById('db-status-text');
-  const autoSaveOn = appSettings.autoSaveEnabled !== false;
-  if (storageMode === STORAGE_MODE_LOCAL) {
-    dot.className = 'db-indicator';
-    if (autoSaveOn) text.textContent = 'Local synced';
-    else text.textContent = 'Manual save';
-  } else {
-    dot.className = 'db-indicator connected';
-    if (autoSaveOn) {
-      text.textContent = hasUnsavedChanges
-        ? 'Syncing changes...'
-        : 'All data synced';
-    } else {
-      text.textContent = 'Manual sync';
-    }
-  }
+  const status = document.getElementById('file-status');
+  dot.className = hasUnsavedChanges ? 'db-indicator' : 'db-indicator connected';
+  text.textContent = hasUnsavedChanges ? 'Unsaved' : 'Saved';
+  if (status) status.title = activeFileName || 'No active JSON file';
   renderSbToday();
 }
 function renderSbToday() {
@@ -1986,33 +1940,7 @@ function renderSbToday() {
     </div>`;
 }
 
-// ═══ SERVER PERSISTENCE & LOGIN ══════════════════════════════════════════════
-async function doLogin() {
-  const u = document.getElementById('login-user').value;
-  const p = document.getElementById('login-pass').value;
-  try {
-    const res = await fetch('/api/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: u, password: p })
-    });
-    if (res.ok) {
-      document.getElementById('login-modal').classList.remove('open');
-      document.getElementById('login-err').style.display = 'none';
-      bootApp();
-    } else {
-      document.getElementById('login-err').style.display = 'block';
-    }
-  } catch (e) {
-    document.getElementById('login-err').textContent = "Connection error";
-    document.getElementById('login-err').style.display = 'block';
-  }
-}
-
-async function doLogout() {
-  await fetch('/api/logout', { method: 'POST' });
-  window.location.reload();
-}
-
+// ═══ LOCAL PERSISTENCE ═══════════════════════════════════════════════════════
 function snapshotData() {
   return {
     appVersion: APP_VERSION,
@@ -2020,12 +1948,14 @@ function snapshotData() {
     version: DATA_VERSION,
     savedAt: new Date().toISOString(),
     dailyStatusesSeparated: true,
+    appSettings: JSON.parse(JSON.stringify(appSettings)),
+    gridPreferences: { year: gridYear, hiddenEmployeeIds: [...hiddenEmployees] },
     departmentColors: appSettings.departmentColors || {},
     activityTypes: appSettings.activityTypes || [],
     workCodes: appSettings.workCodes || [],
     shiftTemplates: appSettings.shiftTemplates || [],
     summaryColumns: appSettings.summaryColumns,
-    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap,
+    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   };
 }
@@ -2035,51 +1965,52 @@ async function saveState(force = false) {
     markUnsaved();
     return;
   }
-  if (storageMode === STORAGE_MODE_LOCAL) {
-    try {
-      lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()));
-      hasUnsavedChanges = false;
-      updateSaveButton();
-      updateSbStatus();
-      if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
-    } catch (err) {
-      console.warn('Local JSON save failed:', err.message);
-      throw err;
-    }
-    return;
-  }
-  if (!force) {
-    scheduleAutoSave();
-    return;
-  }
   try {
-    await saveSnapshotToServer(snapshotData());
-    hasUnsavedChanges = false;
+    if (!lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()))) {
+      throw new Error('Browser recovery storage is unavailable.');
+    }
     updateSaveButton();
     updateSbStatus();
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
-  } catch (err) { console.warn('Auto-save feilet:', err.message); throw err; }
+  } catch (err) {
+    console.warn('Local JSON save failed:', err.message);
+    throw err;
+  }
 }
 
 async function saveData() {
   const btn = document.getElementById('save-btn');
   const originalText = btn ? btn.innerHTML : '';
-  const saveMode = storageMode;
   try {
     if (btn) btn.innerHTML = 'Saving...';
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
-    await saveState(true);
-    if (saveMode === STORAGE_MODE_LOCAL) await saveLocalBackupFile(false);
-    hasUnsavedChanges = false;
+    try {
+      await saveState(true);
+    } catch (recoveryError) {
+      alert('Browser recovery is unavailable. The JSON file will still be saved.');
+    }
+    await saveLocalBackupFile(false);
+    markFileSaved();
     updateSaveButton();
     updateSbStatus();
   } catch (err) {
     if (err && err.name === 'AbortError') return;
-    alert(saveMode === STORAGE_MODE_LOCAL ? 'Could not save local backup file.' : 'Could not save to server.');
+    alert('Could not save local backup file.');
     updateSaveButton();
   } finally {
     if (btn) btn.innerHTML = originalText;
   }
+}
+
+function persistFileMeta() {
+  lsSet(LOCAL_FILE_META_KEY, JSON.stringify({ dirty: hasUnsavedChanges, fileName: activeFileName }));
+}
+
+function markFileSaved() {
+  hasUnsavedChanges = false;
+  persistFileMeta();
+  updateSaveButton();
+  updateSbStatus();
 }
 
 // ═══ HELPERS ═════════════════════════════════════════════════════════════════
@@ -2216,7 +2147,9 @@ function activityAssignmentInfo(act, empId, date) {
   const physicalShift = ['normal', 'day', 'night'].includes(assignment.shift)
     ? `${shiftMeta.label} (${shiftMeta.range})`
     : (assignment.shift === 'turn' ? shiftMeta.label : (assignment.shift || 'Not specified'));
-  return { assignment, workCode, physicalShift, hours: activityShiftHours(act, empId, date) };
+  const administrativeMeasure = activityAdministrativeMeasure(act, empId, date);
+  const administrativeValue = formatCompactMeasure(administrativeMeasure.units, administrativeMeasure.hours);
+  return { assignment, workCode, physicalShift, physicalHours: activityShiftHours(act, empId, date), administrativeMeasure, administrativeValue };
 }
 function assignmentShiftType(shift, participant = null) {
   if (shift === 'normal' || shift === 'day' || shift === 'night' || shift === 'turn') return shift;
@@ -2256,14 +2189,14 @@ function activityAssignment(key) {
   const value = activityShiftsMap[key];
   if (!value) return { shift: '', workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: false };
   return typeof value === 'string'
-    ? { shift: value, workCodeId: null, staffingImpactOverride: null, assigned: true, excluded: false }
-    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: value.workCodeId || null, staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
+    ? { shift: value, workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false }
+    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: value.workCodeId || null, administrativeTime: String(value.administrativeTime || ''), staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
 }
 function activityAssignmentShift(key) {
   return activityAssignment(key).shift;
 }
 function excludeActivityAssignment(key) {
-  activityShiftsMap[key] = { shift: '', workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: true };
+  activityShiftsMap[key] = { shift: '', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: false, excluded: true };
 }
 function participantActivityShift(act, empId, dateString) {
   const participant = participantFor(act, empId);
@@ -2324,9 +2257,13 @@ function deptPalettes() {
 }
 function resolveDeptColor(dept) {
   if (!dept) return null;
-  return appSettings.departmentColors && appSettings.departmentColors[dept]
-    ? normalizeHexColor(appSettings.departmentColors[dept])
-    : null;
+  if (appSettings.departmentColors && appSettings.departmentColors[dept]) {
+    return normalizeHexColor(appSettings.departmentColors[dept]);
+  }
+  const departments = [...new Set(employees.map(employee => employee.department).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right));
+  const index = Math.max(0, departments.indexOf(dept));
+  return PALETTE[index % PALETTE.length];
 }
 function deptColorMap() {
   const { bg, accent } = deptPalettes();
@@ -2515,18 +2452,22 @@ function planningHorizonStyle(date) {
     ? `border-right:2px dashed ${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;`
     : '';
 }
+function gridSpanLabelWidth(startIndex, endIndex) {
+  const spanColumns = startIndex >= 0 && endIndex >= startIndex ? endIndex - startIndex + 1 : 1;
+  return Math.min(420, Math.max(68, spanColumns * 36 - 8));
+}
 function renderGrid() {
   const days = daysOfYear(gridYear);
   const today = todayStr();
 
   let monthCells = '', weekCells = '', dayCells = '';
-  let mLabel = '', mCount = 0;
-  const flushMonth = () => { if (mCount) monthCells += `<th class="gh-month" colspan="${mCount}" style="top:0">${mLabel}</th>`; };
+  let mLabel = '', mCount = 0, mIndex = 0;
+  const flushMonth = () => { if (mCount) monthCells += `<th class="gh-month${mIndex % 2 ? ' period-alt' : ''}" colspan="${mCount}" style="top:0">${mLabel}</th>`; };
   let wLabel = -1, wCount = 0;
-  const flushWeek = () => { if (wCount) weekCells += `<th class="gh-week" colspan="${wCount}" style="top:27px">W${wLabel}</th>`; };
+  const flushWeek = () => { if (wCount) weekCells += `<th class="gh-week${wLabel % 2 === 0 ? ' period-alt' : ''}" colspan="${wCount}" style="top:27px">W${wLabel}</th>`; };
   for (const d of days) {
     const lbl = d.toLocaleDateString('en-US', { month: 'short' });
-    if (lbl !== mLabel) { flushMonth(); mLabel = lbl; mCount = 0; }
+    if (lbl !== mLabel) { flushMonth(); mLabel = lbl; mIndex = d.getMonth(); mCount = 0; }
     mCount++;
     const wk = isoWeek(d);
     if (wk !== wLabel) { flushWeek(); wLabel = wk; wCount = 0; }
@@ -2684,18 +2625,19 @@ function renderGridBody(days, today) {
       </div>
       <div class="act-dates muted">${fmtShort(act.startDate)} – ${fmtShort(act.endDate)} · ${attendCount} attending</div>
     </td>`;
-    const startIdx = days.findIndex(day => fmt(day) === act.startDate);
-    const endIdx = days.findIndex(day => fmt(day) === act.endDate);
-    const spanCols = startIdx >= 0 && endIdx >= startIdx ? (endIdx - startIdx + 1) : 1;
-    const labelWidth = Math.min(420, Math.max(68, spanCols * 36 - 8));
+    const visibleStart = act.startDate < `${gridYear}-01-01` ? `${gridYear}-01-01` : act.startDate;
+    const visibleEnd = act.endDate > `${gridYear}-12-31` ? `${gridYear}-12-31` : act.endDate;
+    const startIdx = days.findIndex(day => fmt(day) === visibleStart);
+    const endIdx = days.findIndex(day => fmt(day) === visibleEnd);
+    const labelWidth = gridSpanLabelWidth(startIdx, endIdx);
     for (const d of days) {
       const ds = fmt(d), inR = ds >= act.startDate && ds <= act.endDate;
-      const isS = ds === act.startDate, isE = ds === act.endDate;
+      const isS = ds === visibleStart, isE = ds === visibleEnd;
       if (inR) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
-        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
+        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
           <div class="act-bar" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${lifecycle.status === 'confirmed' ? (dim ? '.16' : '.28') : '.9'};border-radius:${brl} ${brr}"></div>
-          ${isS ? `<span style="position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;white-space:nowrap;z-index:2;pointer-events:none;color:${lifecycle.status === 'cancelled' ? '#b91c1c' : act.color};width:${labelWidth}px;overflow:hidden;text-overflow:ellipsis;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : ` · ${lifecycle.label}`}</span>` : ''}
+          ${isS ? `<span class="grid-span-label" style="color:${lifecycle.status === 'cancelled' ? '#b91c1c' : act.color};width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : ` · ${lifecycle.label}`}</span>` : ''}
         </td>`;
       } else {
         row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
@@ -2727,10 +2669,16 @@ function renderGridBody(days, today) {
     const renderHolidayRow = holiday => {
       const start = holiday.startDate, end = holiday.endDate;
       const color = holiday.color || '#ef4444';
+      const visibleStart = start < `${gridYear}-01-01` ? `${gridYear}-01-01` : start;
+      const visibleEnd = end > `${gridYear}-12-31` ? `${gridYear}-12-31` : end;
+      const startIndex = days.findIndex(day => fmt(day) === visibleStart);
+      const endIndex = days.findIndex(day => fmt(day) === visibleEnd);
+      const labelWidth = gridSpanLabelWidth(startIndex, endIndex);
       html += `<tr><td class="gempl sticky-left" style="cursor:pointer" onclick="openHolidayModal(${holiday.sourceIndexes[0]},[${holiday.sourceIndexes.join(',')}])" title="Edit ${esc(holiday.name || 'Holiday')}"><div class="act-cell-name"><span class="act-name" style="color:${color}">${esc(holiday.name || 'Holiday')}</span><span class="act-cell-actions"><button class="icon-btn" title="Edit" onclick="event.stopPropagation();openHolidayModal(${holiday.sourceIndexes[0]},[${holiday.sourceIndexes.join(',')}])">${svgIcon('edit')}</button></span></div><div class="act-dates muted">${fmtShort(start)} – ${fmtShort(end)}${holiday.nonWorking ? ' · non-working' : ' · highlight only'}</div></td>`;
       days.forEach(day => {
         const ds = fmt(day), active = ds >= start && ds <= end;
-        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${active ? ' holiday-col' : ''}" style="${active ? `background:${color}28 !important;color:${color};border-color:${color}55;` : ''}${planningHorizonStyle(ds)}" title="${active ? esc(holiday.name || 'Holiday') : ''}"></td>`;
+        const isStart = ds === visibleStart;
+        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${active ? ' holiday-col' : ''}${isStart ? ' span-label-cell' : ''}" style="${active ? `--holiday-color:${color};background:${color}28 !important;color:${color};border-color:${color}55;` : ''}${planningHorizonStyle(ds)}" title="${active ? esc(holiday.name || 'Holiday') : ''}">${isStart ? `<span class="grid-span-label" style="width:${labelWidth}px;color:${color}">${esc(holiday.name || 'Holiday')}</span>` : ''}</td>`;
       });
       html += '</tr>';
     };
@@ -2750,7 +2698,7 @@ function renderGridBody(days, today) {
   const colorMap = deptColorMap();
   for (const group of deptGroups()) {
     const colors = colorMap[group.dept] || { bg: 'transparent', accent: 'var(--border)' };
-    html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-bottom:2px solid ${colors.accent};border-right:2px solid ${colors.accent} !important;z-index:21;padding:3px 12px">
+    html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-bottom:2px solid ${colors.accent};border-right:2px solid ${colors.accent} !important;z-index:21;padding:2px 7px">
         <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">${esc(group.dept)}</span>
         <span style="font-size:10px;color:var(--muted);opacity:.7"> · ${group.emps.length} ${group.emps.length === 1 ? 'person' : 'people'}</span>
       </td><td colspan="${days.length}" style="background:${colors.bg};opacity:.45;border-bottom:2px solid ${colors.accent}"></td></tr>`;
@@ -2787,7 +2735,7 @@ function togglePastActivities() {
 function cellActivities(empId, ds) {
   return activities
     .filter(act => {
-      if (activityStatus(act) !== 'confirmed') return false;
+      if (activityStatus(act) === 'cancelled') return false;
       if (!(ds >= act.startDate && ds <= act.endDate && participantFor(act, empId))) return false;
       const assignment = activityAssignment(`${empId}_${ds}_${act.id}`);
       return assignment.assigned === true && !assignment.excluded;
@@ -2817,6 +2765,7 @@ function isEmployeeBirthday(emp, dateString) {
 function buildEmployeeCell(emp, ds, weekend, isToday) {
   const holiday = displayedHolidayFor(ds);
   const entry = getEntryObj(`${emp.id}_${ds}`);
+  const overtime = overtimeMap[`${emp.id}_${ds}`] || null;
   const si = entry ? siFor(entry.status) : null;
   const isPartial = entry?.durationType === 'time';
   const acts = cellActivities(emp.id, ds);
@@ -2826,7 +2775,16 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   acts.forEach(act => {
     const shift = activityShiftMeta(act, act.assignment.shift);
     let detail = `Activity: ${act.name}`;
-    if (act.workCode) detail += `\nCode: ${act.workCode.name} (${act.workCode.abbreviation})`;
+    if (act.workCode) {
+      const administrativeValue = act.workCode.aggregationMode === 'days'
+        ? '1d'
+        : (act.workCode.durationMode === 'fixed'
+          ? `${formatHoursNumber(act.workCode.fixedHours)}h`
+          : (act.assignment.administrativeTime
+            ? `${act.assignment.administrativeTime} (${formatHoursNumber(timeRangeHours(act.assignment.administrativeTime))}h)`
+            : 'Not entered'));
+      detail += `\nCode: ${act.workCode.name} (${act.workCode.abbreviation})\nAdministrative: ${administrativeValue}`;
+    }
     else detail += '\nCode: None';
     if (shift) detail += `\nShift: ${shift.label}${shift.range ? ` (${shift.range})` : ''}`;
     tipParts.push(detail);
@@ -2837,6 +2795,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     else if (entry.durationType === '24hours') t += ' (24 hours)';
     tipParts.push(t);
   }
+  if (overtime) tipParts.push(`Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` (${overtime.note})` : ''}`);
   if (birthday) tipParts.push(`Birthday: ${emp.name}`);
   if (!tipParts.length) tipParts.push('Click to set status');
 
@@ -2847,7 +2806,10 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     cellText = !activeWorkCode && primaryActivity.assignment.shift === 'normal'
       ? (primaryActivity.abbreviation || primaryActivity.name.slice(0, 4).toUpperCase())
       : (activeWorkCode?.abbreviation || primaryActivity.abbreviation || primaryActivity.name.slice(0, 4).toUpperCase());
-    cellStyleStr = `background:${activeWorkCode?.color || primaryActivity.color}20;color:${activeWorkCode?.color || primaryActivity.color}`;
+    const activityColor = activeWorkCode?.color || primaryActivity.color;
+    cellStyleStr = activityStatus(primaryActivity) === 'tentative'
+      ? `background:repeating-linear-gradient(135deg,color-mix(in srgb,${activityColor} 28%,transparent) 0 5px,color-mix(in srgb,${activityColor} 7%,transparent) 5px 10px);color:${activityColor}`
+      : `background:${activityColor}20;color:${activityColor}`;
   } else if (!isPartial && si) {
     cellText = si.abbr;
     cellStyleStr = statusStyle(si.color);
@@ -2863,22 +2825,32 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const activityStatusBadge = primaryActivity && si ? `<div class="activity-status-badge" title="${esc(si.label)}" style="color:${si.color}">${esc(si.abbr)}</div>` : '';
   const shiftMeta = primaryActivity ? activityShiftMeta(primaryActivity, primaryActivity.assignment.shift) : null;
   const shiftSymbol = !customActivityShift && shiftMeta?.icon ? `<span class="shift-symbol">${shiftMeta.icon}</span>` : '';
-  const activityUnderline = acts.length && primaryActivity ? `box-shadow: inset 0 -3px 0 ${primaryActivity.color};` : '';
-  const holidayTint = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
+  if (primaryActivity && activityStatus(primaryActivity) === 'tentative') tipParts.push('Planned assignment');
+  const holidayTint = holiday ? 'background:color-mix(in srgb,var(--holiday-color) 8%,var(--surface)) !important;color:color-mix(in srgb,var(--holiday-color) 42%,var(--text)) !important;' : '';
   const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">🎂</span>` : '';
+  const overtimeBadge = overtime
+    ? `<span class="overtime-badge" title="Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` · ${esc(overtime.note)}` : ''}">OT ${formatHoursNumber(overtime.hours)}h</span>`
+    : '';
 
-  const dayBackground = holiday ? `background:${holiday.color || '#ef4444'}28 !important;` : '';
-  const dayTextColor = holiday ? `color:${holiday.color || '#ef4444'} !important;` : '';
-
+  const fullDayStatusStyle = !primaryActivity && !isPartial && si
+    ? `background:${si.color}20 !important;color:${si.color} !important;`
+    : '';
   const finalCellStyle = holiday
-    ? `${dayBackground}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${dayTextColor}${holidayTint}${planningHorizonStyle(ds)}`
-    : `${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${planningHorizonStyle(ds)}`;
+    ? `${cellStyleStr};${holidayTint}${fullDayStatusStyle}${planningHorizonStyle(ds)}`
+    : `${cellStyleStr}${planningHorizonStyle(ds)}`;
 
-  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}"
-    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${finalCellStyle}"
+  const shiftClass = primaryActivity?.assignment.shift === 'day'
+    ? ' day-shift-cell'
+    : (primaryActivity?.assignment.shift === 'night' ? ' night-shift-cell' : '');
+  const activityClass = primaryActivity ? ' has-activity' : '';
+  const plannedClass = primaryActivity && activityStatus(primaryActivity) === 'tentative' ? ' planned-activity-cell' : '';
+  const activityColor = activeWorkCode?.color || primaryActivity?.color || 'transparent';
+
+  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}"
+    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"
-    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
+    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
@@ -3055,8 +3027,24 @@ function _showPicker(event, empId, dates) {
     : '<div style="padding:4px 6px;font-size:11.5px;color:var(--muted)">No daily statuses configured.</div>';
   document.getElementById('pk-duration-section').style.display = 'none';
   document.getElementById('pk-time').value = (entry?.durationType === 'time' && entry.time) ? entry.time : '';
+  const overtimeEntries = pickerDates.map(date => overtimeMap[`${empId}_${date}`]).filter(Boolean);
+  const sharedOvertimeHours = overtimeEntries.length === pickerDates.length && overtimeEntries.every(item => item.hours === overtimeEntries[0].hours)
+    ? overtimeEntries[0].hours
+    : '';
+  const sharedOvertimeNote = overtimeEntries.length === pickerDates.length && overtimeEntries.every(item => item.note === overtimeEntries[0].note)
+    ? overtimeEntries[0].note
+    : '';
+  document.getElementById('pk-overtime-section').innerHTML = `
+    <div class="pk-sep"></div>
+    <div class="pk-label">Additional work</div>
+    <div class="pk-shift-box">
+      <div class="pk-shift-title"><span class="pk-color-dot" style="background:#c2410c"></span><span>Overtime (OT)</span></div>
+      <div class="pk-field"><span class="pk-field-label">Hours${pickerDates.length > 1 ? ' per selected day' : ''}</span><input class="pk-input" id="pk-overtime-hours" type="text" inputmode="decimal" placeholder="e.g. 2.5" value="${esc(sharedOvertimeHours)}"></div>
+      <div class="pk-field"><span class="pk-field-label">Note (optional)</span><input class="pk-input" id="pk-overtime-note" type="text" maxlength="120" placeholder="Reason or context" value="${esc(sharedOvertimeNote)}"></div>
+      <div class="pk-save-row"><button class="pk-clear" ${overtimeEntries.length ? '' : 'disabled'} onclick="removeOvertime()">Remove OT</button><button class="btn btn-sm btn-primary" onclick="saveOvertime()">Save OT</button></div>
+    </div>`;
   const hasCellActivity = activities.some(act => actParticipantIds(act).includes(empId) && pickerDate >= act.startDate && pickerDate <= act.endDate && (() => { const assignment = activityAssignment(`${empId}_${pickerDate}_${act.id}`); return assignment.assigned === true && !assignment.excluded; })());
-  document.getElementById('pk-clear-btn').style.display = (entry || hasCellActivity) ? 'block' : 'none';
+  document.getElementById('pk-clear-btn').style.display = (entry || hasCellActivity || overtimeEntries.length) ? 'block' : 'none';
   document.getElementById('pk-clear-label').textContent = pickerDates.length > 1 ? 'Clear all selected cells' : 'Clear cell';
   document.getElementById('pk-add-activity-btn').style.display = pickerDates.length > 1 ? 'flex' : 'none';
 
@@ -3082,6 +3070,7 @@ function _showPicker(event, empId, dates) {
             <div class="pk-code-options">${sortedPlanningItems(appSettings.workCodes).map(code => `<button type="button" class="pk-code-option${assignment.workCodeId === code.id ? ' sel' : ''}" data-work-code-id="${esc(code.id)}" onclick="selectPickerWorkCode(${act.id},this.dataset.workCodeId)"><span class="pk-color-dot" style="background:${code.color}"></span><span>${esc(code.abbreviation)} · ${esc(code.name)}</span></button>`).join('')}</div>
           </details>
         </div>
+        <div id="pk-admin-${act.id}">${pickerAdministrativeField(act.id, selectedCode, assignment.administrativeTime)}</div>
         <div class="pk-field"><span class="pk-field-label">Shift Type</span><div class="pk-shift-options" id="pk-shifts-${act.id}" data-shift="${esc(selectedShift === 'custom' ? assignment.shift : selectedShift)}">
           <button class="pk-chip${selectedShift === 'normal' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'normal')">Normal Working Hours (NA)</button>
           <button class="pk-chip${selectedShift === 'day' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'day')">${svgIcon('sun')} Day</button>
@@ -3153,6 +3142,13 @@ function selectPickerWorkCode(actId, workCodeId) {
   if (label) label.textContent = code ? `${code.abbreviation} · ${code.name}` : 'Select code';
   document.querySelectorAll(`#pk-code-menu-${actId} .pk-code-option`).forEach(button => button.classList.toggle('sel', button.dataset.workCodeId === workCodeId));
   document.getElementById(`pk-code-menu-${actId}`)?.removeAttribute('open');
+  const admin = document.getElementById(`pk-admin-${actId}`);
+  if (admin) admin.innerHTML = pickerAdministrativeField(actId, code, '');
+}
+function pickerAdministrativeField(actId, code, value = '') {
+  if (!code || code.aggregationMode === 'days') return code ? '<div class="form-hint" style="margin-bottom:7px">Administrative value: 1d per assigned date</div>' : '';
+  if (code.durationMode === 'fixed') return `<div class="form-hint" style="margin-bottom:7px">Administrative value: ${formatHoursNumber(code.fixedHours)}h per assigned date</div>`;
+  return `<div class="pk-field"><span class="pk-field-label">Administrative time</span><input class="pk-input" id="pk-admin-time-${actId}" type="text" placeholder="1800-2200" value="${esc(value)}"><div class="form-hint">Compensation interval, separate from the physical shift.</div></div>`;
 }
 function selectPickerShift(actId, shift) {
   const container = document.getElementById(`pk-shifts-${actId}`);
@@ -3207,6 +3203,8 @@ function removeConflictingActivityAssignments(empId, date, actId) {
 async function saveActivityAssignment(empId, actId) {
   const activity = activities.find(item => item.id === actId);
   const workCodeId = document.getElementById(`pk-code-${actId}`)?.value || '';
+  const workCode = (appSettings.workCodes || []).find(code => code.id === workCodeId);
+  const administrativeTime = document.getElementById(`pk-admin-time-${actId}`)?.value.trim() || '';
   const customShift = document.getElementById(`pk-custom-shift-${actId}`)?.value.trim() || '';
   const selectedShift = document.getElementById(`pk-shifts-${actId}`)?.dataset.shift || '';
   const isNormalWorkingHours = !customShift && selectedShift === 'normal';
@@ -3223,11 +3221,12 @@ async function saveActivityAssignment(empId, actId) {
     return;
   }
   if (!isNormalWorkingHours && !workCodeId) { alert('Select a Work Code, or use Normal Working Hours.'); return; }
+  if (workCode?.aggregationMode === 'hours' && workCode.durationMode !== 'fixed' && !timeRangeHours(administrativeTime)) { alert('Enter a valid administrative time range, e.g. 1800-2200.'); return; }
   if (!confirmActivityReplacement(empId, dates, actId)) return;
   recordUndo();
   dates.forEach(date => {
     removeConflictingActivityAssignments(empId, date, actId);
-    activityShiftsMap[`${empId}_${date}_${actId}`] = { shift, workCodeId: workCodeId || null, staffingImpactOverride: null, assigned: true, excluded: false };
+    activityShiftsMap[`${empId}_${date}_${actId}`] = { shift, workCodeId: workCodeId || null, administrativeTime, staffingImpactOverride: null, assigned: true, excluded: false };
   });
   if (pickerSelectedStatus) {
     dates.forEach(date => {
@@ -3309,12 +3308,40 @@ async function saveWithDuration(durationType) {
   dates.forEach(date => updateCell(pickerEmpId, date));
   closePicker();
 }
+function parseOvertimeHours(value) {
+  const hours = Number(String(value || '').trim().replace(',', '.'));
+  return Number.isFinite(hours) && hours > 0 && hours <= 24 ? formatHoursNumber(hours) : null;
+}
+async function saveOvertime() {
+  if (pickerEmpId == null || !pickerDate) return;
+  const hours = parseOvertimeHours(document.getElementById('pk-overtime-hours')?.value);
+  if (hours === null) { alert('Enter overtime between 0 and 24 hours, e.g. 2.5.'); return; }
+  const note = document.getElementById('pk-overtime-note')?.value.trim() || '';
+  const dates = pickerDates.length ? pickerDates : [pickerDate];
+  recordUndo();
+  dates.forEach(date => { overtimeMap[`${pickerEmpId}_${date}`] = { hours, note }; });
+  markUnsaved();
+  await saveState();
+  dates.forEach(date => updateCell(pickerEmpId, date));
+  closePicker();
+}
+async function removeOvertime() {
+  if (pickerEmpId == null || !pickerDate) return;
+  const dates = pickerDates.length ? pickerDates : [pickerDate];
+  recordUndo();
+  dates.forEach(date => delete overtimeMap[`${pickerEmpId}_${date}`]);
+  markUnsaved();
+  await saveState();
+  dates.forEach(date => updateCell(pickerEmpId, date));
+  closePicker();
+}
 async function clearStatus() {
   if (pickerEmpId == null || !pickerDate) return;
   const dates = pickerDates.length ? pickerDates : [pickerDate];
   recordUndo();
   dates.forEach(date => {
     delete entriesMap[`${pickerEmpId}_${date}`];
+    delete overtimeMap[`${pickerEmpId}_${date}`];
     activities.filter(act => actParticipantIds(act).includes(pickerEmpId) && date >= act.startDate && date <= act.endDate).forEach(act => {
       excludeActivityAssignment(`${pickerEmpId}_${date}_${act.id}`);
     });
@@ -3442,11 +3469,16 @@ async function saveStatus() {
     activityTypes.push({ id: `at${Date.now()}`, key: candidate, name, abbreviation, color: selectedStatusColor });
     newTypeKey = candidate;
   }
-  persistSettings();
+  let recoveryFailed = !persistSettings();
   markUnsaved();
-  await saveState();
+  try {
+    await saveState();
+  } catch (err) {
+    recoveryFailed = true;
+  }
   resetStatusForm(); renderStatusList();
   if (quickActivityTypeReturn && newTypeKey) returnToActivityDraft(newTypeKey);
+  if (recoveryFailed) alert('The activity category was added, but browser recovery could not be updated. Save the planner JSON to protect the change.');
 }
 async function deleteActivityType(id) {
   const type = (appSettings.activityTypes || []).find(item => item.id === id);
@@ -3517,15 +3549,30 @@ function resetWorkCodeForm() {
   document.getElementById('wcf-abbr').value = '';
   document.getElementById('wcf-staffing-impact').value = 'available';
   document.getElementById('wcf-aggregation-mode').value = 'hours';
+  document.getElementById('wcf-duration-mode').value = 'entered';
+  document.getElementById('wcf-fixed-hours').value = '';
+  document.getElementById('wcf-form-title').textContent = 'Add work code';
   selectedWorkCodeColor = '#3b82f6';
   buildSwatchRow('wcf-swatches', selectedWorkCodeColor, color => { selectedWorkCodeColor = color; markSwatch('wcf-swatches', color); });
   document.getElementById('wcf-cancel').style.display = 'none';
   document.getElementById('wcf-save').textContent = 'Add work code';
+  updateWorkCodeDurationFields();
+  renderWorkCodeList();
+}
+function updateWorkCodeDurationFields() {
+  const isHours = document.getElementById('wcf-aggregation-mode').value === 'hours';
+  const isFixed = document.getElementById('wcf-duration-mode').value === 'fixed';
+  document.getElementById('wcf-duration-fields').style.display = isHours ? 'grid' : 'none';
+  document.getElementById('wcf-fixed-hours-wrap').style.visibility = isFixed ? 'visible' : 'hidden';
 }
 function renderWorkCodeList() {
   const list = document.getElementById('work-code-list');
   const workCodes = sortedPlanningItems(appSettings.workCodes);
-  list.innerHTML = workCodes.length ? workCodes.map(code => `<div class="flex items-center justify-between" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px"><span class="flex items-center gap-2"><span style="width:8px;height:8px;border-radius:50%;background:${code.color};flex:none"></span><span><b>${esc(code.abbreviation)}</b> · ${esc(code.name)} <span class="muted text-sm">· ${code.aggregationMode === 'units' ? 'Units' : 'Hours'} · ${code.staffingImpact === 'unavailable' ? 'Out of office' : 'Available for regular duties'}</span></span></span><span class="flex gap-2"><button class="icon-btn" title="Edit" onclick="editWorkCode('${esc(code.id)}')">${svgIcon('edit')}</button><button class="icon-btn danger" title="Delete" onclick="deleteWorkCode('${esc(code.id)}')">${svgIcon('trash')}</button></span></div>`).join('') : '<div class="empty-note" style="padding:22px">No work codes yet.</div>';
+  list.innerHTML = workCodes.length ? workCodes.map(code => {
+    const duration = code.aggregationMode === 'days' ? 'Days' : (code.durationMode === 'fixed' ? `Fixed ${formatHoursNumber(code.fixedHours)}h` : 'Entered time');
+    const selected = document.getElementById('wcf-id')?.value === code.id;
+    return `<div class="flex items-center justify-between" role="button" tabindex="0" onclick="editWorkCode('${esc(code.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editWorkCode('${esc(code.id)}')}" style="border:1px solid ${selected ? 'var(--primary)' : 'var(--border)'};border-radius:8px;padding:8px 10px;cursor:pointer;background:${selected ? 'color-mix(in srgb,var(--primary) 7%,transparent)' : 'transparent'}"><span class="flex items-center gap-2"><span style="width:8px;height:8px;border-radius:50%;background:${code.color};flex:none"></span><span><b>${esc(code.abbreviation)}</b> · ${esc(code.name)} <span class="muted text-sm">· ${duration} · ${code.staffingImpact === 'unavailable' ? 'Out of office' : 'In office'}</span></span></span><span class="flex gap-2"><button class="icon-btn" title="Edit" onclick="event.stopPropagation();editWorkCode('${esc(code.id)}')">${svgIcon('edit')}</button><button class="icon-btn danger" title="Delete" onclick="event.stopPropagation();deleteWorkCode('${esc(code.id)}')">${svgIcon('trash')}</button></span></div>`;
+  }).join('') : '<div class="empty-note" style="padding:22px">No work codes yet.</div>';
 }
 function editWorkCode(id) {
   const code = (appSettings.workCodes || []).find(item => item.id === id);
@@ -3534,23 +3581,34 @@ function editWorkCode(id) {
   document.getElementById('wcf-name').value = code.name;
   document.getElementById('wcf-abbr').value = code.abbreviation;
   document.getElementById('wcf-staffing-impact').value = code.staffingImpact;
-  document.getElementById('wcf-aggregation-mode').value = code.aggregationMode === 'units' ? 'units' : 'hours';
+  document.getElementById('wcf-aggregation-mode').value = code.aggregationMode === 'days' ? 'days' : 'hours';
+  document.getElementById('wcf-duration-mode').value = code.durationMode === 'fixed' ? 'fixed' : 'entered';
+  document.getElementById('wcf-fixed-hours').value = code.fixedHours || '';
+  document.getElementById('wcf-form-title').textContent = `Edit work code - ${code.name}`;
   selectedWorkCodeColor = code.color;
   buildSwatchRow('wcf-swatches', selectedWorkCodeColor, color => { selectedWorkCodeColor = color; markSwatch('wcf-swatches', color); });
   document.getElementById('wcf-cancel').style.display = '';
   document.getElementById('wcf-save').textContent = 'Save changes';
+  updateWorkCodeDurationFields();
+  renderWorkCodeList();
+  document.getElementById('work-code-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('wcf-name').focus({ preventScroll: true });
 }
 async function saveWorkCode() {
   const id = document.getElementById('wcf-id').value;
   const name = document.getElementById('wcf-name').value.trim();
   const abbreviation = document.getElementById('wcf-abbr').value.trim().toUpperCase();
   const staffingImpact = document.getElementById('wcf-staffing-impact').value;
-  const aggregationMode = document.getElementById('wcf-aggregation-mode').value === 'units' ? 'units' : 'hours';
+  const aggregationMode = document.getElementById('wcf-aggregation-mode').value === 'days' ? 'days' : 'hours';
+  const durationMode = document.getElementById('wcf-duration-mode').value === 'fixed' ? 'fixed' : 'entered';
+  const fixedHours = durationMode === 'fixed' ? Number(document.getElementById('wcf-fixed-hours').value) : null;
   if (!name || !abbreviation) { alert('Work code name and abbreviation are required.'); return; }
+  if (aggregationMode === 'hours' && durationMode === 'fixed' && (!Number.isFinite(fixedHours) || fixedHours <= 0)) { alert('Enter a positive fixed number of hours.'); return; }
   const workCodes = appSettings.workCodes || (appSettings.workCodes = []);
   const index = workCodes.findIndex(code => code.id === id);
-  if (id && index !== -1) workCodes[index] = { id, name, abbreviation, staffingImpact, aggregationMode, color: selectedWorkCodeColor };
-  else workCodes.push({ id: `wc${Date.now()}`, name, abbreviation, staffingImpact, aggregationMode, color: selectedWorkCodeColor });
+  const nextCode = { id: id || `wc${Date.now()}`, name, abbreviation, staffingImpact, aggregationMode, durationMode, fixedHours, color: selectedWorkCodeColor };
+  if (id && index !== -1) workCodes[index] = nextCode;
+  else workCodes.push(nextCode);
   persistSettings(); markUnsaved(); await saveState(); resetWorkCodeForm(); renderWorkCodeList();
 }
 async function deleteWorkCode(id) {
@@ -3646,8 +3704,8 @@ function openActModal(id) {
   document.getElementById('af-day-shift').value = act?.dayShift || '0730-2400';
   document.getElementById('af-night-shift').value = act?.nightShift || '0000-0730';
   document.getElementById('af-include-weekends').checked = act?.includeWeekends === true;
-  document.getElementById('af-start').value = act?.startDate || defaultStart;
-  document.getElementById('af-end').value = act?.endDate || defaultEnd;
+  document.getElementById('af-start').value = formatActivityDateInput(act?.startDate || defaultStart);
+  document.getElementById('af-end').value = formatActivityDateInput(act?.endDate || defaultEnd);
   updateActivityWeekLabels();
   document.getElementById('af-notes').value = act?.notes || '';
   selectedActColor = act?.color || PALETTE[0];
@@ -3661,12 +3719,29 @@ function openActModal(id) {
   document.getElementById('act-modal').classList.add('open');
   setTimeout(() => document.getElementById('af-name').focus(), 50);
 }
+function formatActivityDateInput(isoDate) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate || '').trim());
+  return match ? `${match[3]}.${match[2]}.${match[1]}` : '';
+}
+function parseActivityDateInput(value) {
+  const text = String(value || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(text);
+  if (!match) return '';
+  const isoDate = `${match[3]}-${match[2]}-${match[1]}`;
+  const date = new Date(`${isoDate}T00:00:00`);
+  return !Number.isNaN(date.getTime()) && fmt(date) === isoDate ? isoDate : '';
+}
+function normalizeActivityDateInput(input) {
+  const isoDate = parseActivityDateInput(input?.value);
+  if (isoDate) input.value = formatActivityDateInput(isoDate);
+}
 function updateActivityWeekLabels() {
   const update = (inputId, outputId) => {
     const el = document.getElementById(inputId);
     const out = document.getElementById(outputId);
     if (!el || !out) return;
-    const value = el.value;
+    const value = parseActivityDateInput(el.value);
     if (!value) { out.textContent = ''; return; }
     const date = new Date(value + 'T00:00:00');
     const dow = date.toLocaleDateString('en-US', { weekday: 'short' });
@@ -3681,8 +3756,8 @@ async function saveActivity() {
   const project = document.getElementById('af-project').value.trim();
   const order = document.getElementById('af-order').value.trim().toUpperCase();
   const billing = document.getElementById('af-billing').value.trim();
-  const start = document.getElementById('af-start').value;
-  const end = document.getElementById('af-end').value;
+  const start = parseActivityDateInput(document.getElementById('af-start').value);
+  const end = parseActivityDateInput(document.getElementById('af-end').value);
   const notes = document.getElementById('af-notes').value.trim();
   const type = document.getElementById('af-type').value;
   const status = document.getElementById('af-status').value;
@@ -3694,7 +3769,7 @@ async function saveActivity() {
   if (abbr.length > 4) { alert('Activity abbreviation can be at most 4 characters.'); return; }
   if (project && !/^[A-Za-z0-9]+$/.test(project)) { alert('Cost Center must contain only letters and numbers.'); return; }
   if (order && !/^[A-Za-z0-9]{1,9}$/.test(order)) { alert('Order must contain up to 9 alphanumeric characters.'); return; }
-  if (!start || !end) { alert('Start date and end date are required.'); return; }
+  if (!start || !end) { alert('Enter valid start and end dates using dd.mm.yyyy.'); return; }
   if (end < start) { alert('End date must be on or after start date.'); return; }
   if (!timeRangeHours(dayShift) || !timeRangeHours(nightShift)) { alert('Enter valid Day and Night shift ranges, e.g. 0730-2400 and 0000-0730.'); return; }
   const previousAct = editingActId ? activities.find(a => a.id === editingActId) : null;
@@ -3752,9 +3827,9 @@ function activityReportRows(act) {
         employee: emp.name,
         department: emp.department,
         date,
-        shiftType: info?.workCode.abbreviation || '',
+        shiftType: info ? `${info.workCode.abbreviation} (${info.administrativeValue})` : '',
         shift: info?.physicalShift || 'Not scheduled',
-        hours: info?.hours || 0,
+        administrativeValue: info?.administrativeValue || '',
         deviation: dailyDeviationLabel(emp.id, date),
       });
     });
@@ -3777,9 +3852,9 @@ function openActivityReport(id) {
       </tr></thead>
       <tbody>${participantGroups.length ? participantGroups.map(group => `<tr><td colspan="${dates.length + 1}" style="padding:7px 8px;background:${group.color}18;border-bottom:1px solid ${group.color}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${group.color};margin-right:5px"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${esc(emp.name)}</td>${dates.map(date => {
           const info = activityAssignmentInfo(act, emp.id, date);
-          const label = info ? info.workCode.abbreviation : '—';
+          const label = info ? `${info.workCode.abbreviation} (${info.administrativeValue})` : '—';
           const deviation = dailyDeviationLabel(emp.id, date);
-          const details = `${info ? `<div style="font-size:11px;margin-top:2px">${esc(info.physicalShift)}</div><div class="muted" style="font-size:10px;margin-top:2px">${info.hours}t</div>` : ''}${deviation ? `<div style="font-size:10px;margin-top:3px;color:var(--destructive)">${esc(deviation)}</div>` : ''}`;
+          const details = `${info ? `<div style="font-size:11px;margin-top:2px">${esc(info.physicalShift)}</div>` : ''}${deviation ? `<div style="font-size:10px;margin-top:3px;color:var(--destructive)">${esc(deviation)}</div>` : ''}`;
           const weekendBackground = isWknd(new Date(`${date}T00:00:00`)) ? '#fff7ed' : 'transparent';
           const cellBackground = info ? `${info.workCode.color}14` : weekendBackground;
           return `<td style="padding:8px;background:${cellBackground};color:${info ? 'var(--text)' : 'var(--muted)'};border-left:${weekendBackground !== 'transparent' ? '1px solid #fed7aa' : '0'}"><strong>${esc(label)}</strong>${details}</td>`;
@@ -3807,8 +3882,8 @@ function exportActivityReportCsv() {
   const act = activities.find(item => item.id === activityReportId);
   if (!act) return;
   const rows = activityReportRows(act);
-  const lines = [['Report', 'Activity', 'Cost Center', 'Order', 'Billing explanation', 'Employee', 'Department', 'Date', 'Work Code', 'Physical Shift', 'Hours', 'Daily Deviation / Absence'],
-    ...rows.map(row => ['Work Schedule', act.name, act.project || '', act.order || '', act.billing || '', row.employee, row.department, row.date, row.shiftType, row.shift, row.hours, row.deviation])]
+  const lines = [['Report', 'Activity', 'Cost Center', 'Order', 'Billing explanation', 'Employee', 'Department', 'Date', 'Work Code / Administrative value', 'Physical Shift', 'Daily Deviation / Absence'],
+    ...rows.map(row => ['Work Schedule', act.name, act.project || '', act.order || '', act.billing || '', row.employee, row.department, row.date, row.shiftType, row.shift, row.deviation])]
     .map(row => row.map(activityReportCsvValue).join(','));
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob), link = document.createElement('a');
@@ -3834,7 +3909,7 @@ function printActivityReport() {
       }).join('')}</tr></thead><tbody>${participantGroups.length ? participantGroups.map(group => `<tr class="section-row"><td colspan="${chunkDates.length + 1}" style="background:${group.color}18;border-bottom-color:${group.color}"><span class="section-dot" style="background-color:${group.color}"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr><td><b>${esc(emp.name)}</b></td>${chunkDates.map(date => {
           const info = activityAssignmentInfo(act, emp.id, date);
           const weekend = isWknd(new Date(`${date}T00:00:00`));
-          return `<td class="${weekend ? 'weekend ' : ''}${info ? 'scheduled' : ''}"${info ? ` style="background:${info.workCode.color}14"` : ''}>${info ? `<strong>${esc(info.workCode.abbreviation)}</strong><div>${esc(info.physicalShift)}</div><div class="muted">${info.hours}t</div>` : '—'}</td>`;
+          return `<td class="${weekend ? 'weekend ' : ''}${info ? 'scheduled' : ''}"${info ? ` style="background:${info.workCode.color}14"` : ''}>${info ? `<strong>${esc(info.workCode.abbreviation)} (${esc(info.administrativeValue)})</strong><div>${esc(info.physicalShift)}</div>` : '—'}</td>`;
         }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${chunkDates.length + 1}" class="empty-note">No participants assigned.</td></tr>`}</tbody></table>
     </section>`);
   }
@@ -3883,11 +3958,11 @@ function teamReportCellInfo(emp, act, date) {
   if (isWknd(day) && !act.includeWeekends) return '';
   const info = activityAssignmentInfo(act, emp.id, date);
   if (!info) return null;
-  const hours = info.hours;
-  const days = hours / 24;
+  const hours = info.administrativeMeasure.hours;
+  const days = info.administrativeMeasure.units;
   const tint = info.assignment.shift === 'night' ? 0.22 : 0.12;
   return {
-    html: `<div style="font-weight:700">${esc(info.workCode.abbreviation)}</div><div style="font-size:10px;margin-top:2px">${esc(info.physicalShift)}</div><div class="muted" style="font-size:10px">${hours}t</div>`,
+    html: `<div style="font-weight:700">${esc(info.workCode.name)} (${esc(info.administrativeValue)})</div><div style="font-size:10px;margin-top:2px">${esc(info.physicalShift)}</div>`,
     hours,
     days,
     tint,
@@ -3933,7 +4008,7 @@ function renderTeamScheduleReport() {
       <thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="padding:7px 8px;min-width:210px;position:sticky;left:0;background:var(--surface);z-index:1">Employee / Activity</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 6px;min-width:92px;background:${weekend ? '#fff7ed' : 'var(--surface)'};color:${weekend ? '#c2410c' : 'inherit'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}<th style="padding:7px 8px;min-width:70px">Days</th><th style="padding:7px 8px;min-width:70px">Hours</th></tr></thead>
       <tbody>${entries.map(entry => {
         const totalHours = dates.reduce((sum, date) => sum + (teamReportEntryCellInfo(entry, date)?.hours || 0), 0);
-        const totalDays = totalHours / 24;
+        const totalDays = dates.reduce((sum, date) => sum + (teamReportEntryCellInfo(entry, date)?.days || 0), 0);
         return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 8px;position:sticky;left:0;background:var(--surface);z-index:1"><div style="font-weight:600">${esc(entry.emp.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${teamReportActivityLabels(entry.activities)}</div></td>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); const cellInfo = teamReportEntryCellInfo(entry, date); return `<td style="padding:7px 6px;vertical-align:top;background:${cellInfo ? `color-mix(in srgb, ${cellInfo.workCode.color} ${cellInfo.tint * 100}%, transparent)` : (weekend ? '#fff7ed' : 'transparent')};border-left:${weekend ? '1px solid #fed7aa' : '0'}">${cellInfo ? cellInfo.html : ''}</td>`; }).join('')}<td style="padding:7px 8px;white-space:nowrap;font-weight:600">${entry.activities.length ? totalDays.toFixed(2) : ''}</td><td style="padding:7px 8px;white-space:nowrap;font-weight:600">${entry.activities.length ? totalHours.toFixed(1) : ''}</td></tr>`;
       }).join('')}</tbody>
     </table></div>`;
@@ -3958,11 +4033,12 @@ function printTeamScheduleReport() {
       }).join('')}<th class="total-column">Days</th><th class="total-column">Hours</th></tr></thead>
       <tbody>${entries.map(entry => {
         const chunkHours = chunkDates.reduce((sum, date) => sum + (teamReportEntryCellInfo(entry, date)?.hours || 0), 0);
+        const chunkDays = chunkDates.reduce((sum, date) => sum + (teamReportEntryCellInfo(entry, date)?.days || 0), 0);
         return `<tr><td><b>${esc(entry.emp.name)}</b><div class="muted activity-name">${teamReportActivityLabels(entry.activities)}</div></td>${chunkDates.map(date => {
           const weekend = isWknd(new Date(`${date}T00:00:00`));
           const cellInfo = teamReportEntryCellInfo(entry, date);
           return `<td class="${weekend ? 'weekend' : ''}"${cellInfo ? ` style="background:color-mix(in srgb, ${cellInfo.workCode.color} ${cellInfo.tint * 100}%, transparent)"` : ''}>${cellInfo ? cellInfo.html : ''}</td>`;
-        }).join('')}<td class="total-column">${entry.activities.length ? (chunkHours / 24).toFixed(2) : ''}</td><td class="total-column">${entry.activities.length ? chunkHours.toFixed(1) : ''}</td></tr>`;
+        }).join('')}<td class="total-column">${entry.activities.length ? formatHoursNumber(chunkDays) : ''}</td><td class="total-column">${entry.activities.length ? formatHoursNumber(chunkHours) : ''}</td></tr>`;
       }).join('')}</tbody></table>
     </section>`);
   }
@@ -4440,6 +4516,7 @@ function confirmDelete(kind, id) {
     if (kind === 'employee') {
       employees = employees.filter(e => e.id !== id);
       for (const key of Object.keys(entriesMap)) if (key.startsWith(`${id}_`)) delete entriesMap[key];
+      for (const key of Object.keys(overtimeMap)) if (key.startsWith(`${id}_`)) delete overtimeMap[key];
       for (const key of Object.keys(activityShiftsMap)) if (key.startsWith(`${id}_`)) delete activityShiftsMap[key];
       for (const act of activities) act.participants = act.participants.filter(p => p.id !== id);
     } else if (kind === 'activity') {
@@ -4489,19 +4566,34 @@ function statusLoadMeasure(entry) {
   if (entry.durationType === 'time') return { units: 0, hours: timeRangeHours(entry.time) ?? 0 };
   return { units: 1, hours: 0 };
 }
-function activityLoadMeasure(activity, empId, date) {
+function activityAdministrativeMeasure(activity, empId, date) {
   if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return { units: 0, hours: 0 };
   const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
   if (!assignment.assigned || assignment.excluded) return { units: 0, hours: 0 };
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
-  return workCode?.aggregationMode === 'units'
-    ? { units: 1, hours: 0 }
-    : { units: 0, hours: activityShiftHours(activity, empId, date) };
+  if (!workCode) return { units: 0, hours: 0 };
+  if (workCode.aggregationMode === 'days') return { units: 1, hours: 0 };
+  if (workCode.durationMode === 'fixed') return { units: 0, hours: Number(workCode.fixedHours) || 0 };
+  const shiftMeta = activityShiftMeta(activity, assignment.shift);
+  const legacyInterval = shiftMeta?.range || (timeRangeHours(assignment.shift) ? assignment.shift : '');
+  return { units: 0, hours: timeRangeHours(assignment.administrativeTime || legacyInterval) || 0 };
+}
+function activityLoadMeasure(activity, empId, date) {
+  if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return { units: 0, hours: 0 };
+  const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
+  if (!assignment.assigned || assignment.excluded) return { units: 0, hours: 0 };
+  return { units: 0, hours: activityShiftHours(activity, empId, date) };
 }
 function formatHoursNumber(value) { return Number(Number(value || 0).toFixed(1)); }
+function formatCompactMeasure(units, hours) {
+  const parts = [];
+  if (units > 0) parts.push(`${formatHoursNumber(units)}d`);
+  if (hours > 0) parts.push(`${formatHoursNumber(hours)}h`);
+  return parts.join(' · ') || '0';
+}
 function formatLoadMeasure(units, hours) {
   const parts = [];
-  if (units > 0) parts.push(`${units} ${units === 1 ? 'unit' : 'units'}`);
+  if (units > 0) parts.push(`${units} ${units === 1 ? 'day' : 'days'}`);
   if (hours > 0) parts.push(`${formatHoursNumber(hours)} h`);
   return parts.join(' · ') || '0';
 }
@@ -4517,8 +4609,10 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
   let timedAbsenceHours = 0;
   let oooUnits = 0;
   let oooHours = 0;
+  let overtimeHours = 0;
 
   dateStrings.forEach(ds => {
+    overtimeHours += Number(overtimeMap[`${emp.id}_${ds}`]?.hours) || 0;
     const entry = getEntryObj(`${emp.id}_${ds}`);
     if (entry) {
       const st = siFor(entry.status);
@@ -4550,8 +4644,9 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
     absenceHoursActual: timedAbsenceHours,
     oooUnits,
     oooHours,
+    overtimeHours,
     totalUnits: statusUnits + activityUnits,
-    totalHoursActual: timedStatusHours + timedActivityHours,
+    totalHoursActual: timedStatusHours + timedActivityHours + overtimeHours,
   };
 }
 function datesInRange(startDate, endDate) {
@@ -4625,10 +4720,11 @@ function teamWorkloadForDates(dateStrings) {
     acc.absenceHours += row.absenceHoursActual;
     acc.oooUnits += row.oooUnits;
     acc.oooHours += row.oooHours;
+    acc.overtimeHours += row.overtimeHours;
     acc.totalUnits += row.totalUnits;
     acc.totalHours += row.totalHoursActual;
     return acc;
-  }, { statusUnits: 0, statusHours: 0, activityUnits: 0, activityHours: 0, absenceUnits: 0, absenceHours: 0, oooUnits: 0, oooHours: 0, totalUnits: 0, totalHours: 0 });
+  }, { statusUnits: 0, statusHours: 0, activityUnits: 0, activityHours: 0, absenceUnits: 0, absenceHours: 0, oooUnits: 0, oooHours: 0, overtimeHours: 0, totalUnits: 0, totalHours: 0 });
 }
 
 // ═══ DASHBOARD ═══════════════════════════════════════════════════════════════
@@ -4734,6 +4830,7 @@ function renderDashboard() {
       statusHours: totals.statusHours,
       activityUnits: totals.activityUnits,
       activityHours: totals.activityHours,
+      overtimeHours: totals.overtimeHours,
       absenceUnits: totals.absenceUnits,
       absenceHours: totals.absenceHours,
     });
@@ -4754,6 +4851,7 @@ function renderDashboard() {
               <div class="muted text-sm" style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap">
                 <span>Status: ${formatLoadMeasure(row.statusUnits, row.statusHoursActual)}</span>
                 <span>Activities: ${formatLoadMeasure(row.activityUnits, row.activityHoursActual)}</span>
+                <span>Overtime: ${formatHoursNumber(row.overtimeHours)} h</span>
                 <span>Absence: ${formatLoadMeasure(row.absenceUnits, row.absenceHoursActual)}</span>
               </div>
             </div>
@@ -4865,6 +4963,7 @@ function renderDashboard() {
         <div class="muted text-sm" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap">
           <span><b style="color:var(--text)">${workloadTeamTotals.totalUnits}</b> full units/days</span>
           <span><b style="color:var(--text)">${formatHoursNumber(workloadTeamTotals.totalHours)} h</b> timed work</span>
+          <span>Overtime: <b style="color:#c2410c">${formatHoursNumber(workloadTeamTotals.overtimeHours)} h</b></span>
           <span>Absence: ${formatLoadMeasure(workloadTeamTotals.absenceUnits, workloadTeamTotals.absenceHours)}</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:0;margin-top:12px;max-height:300px;overflow:auto;padding-right:6px">${workloadOverview}</div>
@@ -4890,7 +4989,7 @@ function renderDashboard() {
               <div style="flex:1;display:flex;flex-direction:column;align-items:stretch;min-width:0;height:160px">
                 <div class="trend-col">
                   <div class="trend-seg" style="height:${m.totalHours > 0 ? Math.max(2, (m.totalHours / yearMaxHours) * 100) : 0}%;background:#f59e0b;opacity:.92;border-radius:3px 3px 0 0"></div>
-                  <div class="trend-tip"><b>${m.label} ${wlRange.anchorYear}</b><div>Total: <b>${formatHoursNumber(m.totalHours)} h</b></div><div>Status: <b>${formatHoursNumber(m.statusHours)} h</b></div><div>Activities: <b>${formatHoursNumber(m.activityHours)} h</b></div><div>Absence: <b>${formatHoursNumber(m.absenceHours)} h</b></div></div>
+                  <div class="trend-tip"><b>${m.label} ${wlRange.anchorYear}</b><div>Total: <b>${formatHoursNumber(m.totalHours)} h</b></div><div>Status: <b>${formatHoursNumber(m.statusHours)} h</b></div><div>Activities: <b>${formatHoursNumber(m.activityHours)} h</b></div><div>Overtime: <b>${formatHoursNumber(m.overtimeHours)} h</b></div><div>Absence: <b>${formatHoursNumber(m.absenceHours)} h</b></div></div>
                 </div>
                 <div class="trend-x">${m.label}</div>
               </div>
@@ -5003,7 +5102,7 @@ function setSummaryWeek(value) {
   renderSummary();
 }
 function computeSummaryRows(startDate, endDate) {
-  const rows = employees.map(emp => ({ emp, counts: {}, statusMeasures: {}, workCodeMeasures: {} }));
+  const rows = employees.map(emp => ({ emp, counts: {}, statusMeasures: {}, workCodeMeasures: {}, overtimeHours: 0 }));
   const rowByEmp = new Map(rows.map(r => [r.emp.id, r]));
 
   for (const [key, raw] of Object.entries(entriesMap)) {
@@ -5028,10 +5127,17 @@ function computeSummaryRows(startDate, endDate) {
     const act = activities.find(a => a.id === +actIdStr);
     if (!row || !act) continue;
 
-    const measure = activityLoadMeasure(act, empId, date);
+    const measure = activityAdministrativeMeasure(act, empId, date);
     if (!measure.units && !measure.hours) continue;
     const assignment = activityAssignment(key);
     if (assignment.workCodeId) row.workCodeMeasures[assignment.workCodeId] = addLoadMeasure(row.workCodeMeasures[assignment.workCodeId], measure);
+  }
+  for (const [key, overtime] of Object.entries(overtimeMap)) {
+    const separator = key.indexOf('_');
+    const empId = +key.slice(0, separator), date = key.slice(separator + 1);
+    if (date < startDate || date > endDate) continue;
+    const row = rowByEmp.get(empId);
+    if (row) row.overtimeHours += Number(overtime.hours) || 0;
   }
   return rows;
 }
@@ -5074,7 +5180,7 @@ function renderSummaryColumnsModal() {
     <div class="form-row-2" style="margin-bottom:16px">
       ${sortedPlanningItems(appSettings.workCodes).map(code => `<label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" data-id="${esc(code.id)}" onchange="setSummaryColumnDraft('workCode',this.dataset.id,this.checked)" ${workCodeSet.has(code.id) ? 'checked' : ''}><span class="dot" style="background:${code.color}"></span><span><b>${esc(code.abbreviation)}</b> · ${esc(code.name)} <span class="muted">(Cells)</span></span></label>`).join('') || '<span class="muted text-sm">No Work Codes configured.</span>'}
     </div>
-    <div class="muted text-sm">Employee and Total are always shown.</div>
+    <div class="muted text-sm">Employee, Overtime, and Total are always shown.</div>
     <div class="modal-actions">
       <button class="btn" onclick="resetSummaryColumns()">Reset to default</button>
       <button class="btn" onclick="closeModal('summary-columns-modal')">Cancel</button>
@@ -5134,10 +5240,12 @@ function renderSummary() {
   const rowTotalMeasure = row => ({
     ...visibleWorkCodes.reduce((total, code) => addLoadMeasure(total, workCodeMeasure(row, code)),
       [...totalStatusKeys].reduce((total, key) => addLoadMeasure(total, statusMeasure(row, key)), { units: 0, hours: 0 })),
+    hours: visibleWorkCodes.reduce((total, code) => addLoadMeasure(total, workCodeMeasure(row, code)),
+      [...totalStatusKeys].reduce((total, key) => addLoadMeasure(total, statusMeasure(row, key)), { units: 0, hours: 0 })).hours + row.overtimeHours,
   });
   const compareMeasures = (left, right) => (left.units || 0) - (right.units || 0)
     || (left.hours || 0) - (right.hours || 0);
-  const validSortKeys = new Set(['people', 'name', 'total', ...(hasAbsence ? ['__absence'] : []), ...(hasOoo ? ['__ooo'] : []), ...visibleStatuses.map(status => status.key), ...visibleWorkCodes.map(code => `wc:${code.id}`)]);
+  const validSortKeys = new Set(['people', 'name', 'total', '__overtime', ...(hasAbsence ? ['__absence'] : []), ...(hasOoo ? ['__ooo'] : []), ...visibleStatuses.map(status => status.key), ...visibleWorkCodes.map(code => `wc:${code.id}`)]);
   if (!validSortKeys.has(summarySortKey)) { summarySortKey = 'people'; summarySortDir = 'asc'; }
   const peopleOrder = (a, b) =>
     ((a.emp.sortOrder ?? 99) - (b.emp.sortOrder ?? 99)) ||
@@ -5149,6 +5257,7 @@ function renderSummary() {
     else if (summarySortKey === 'total') return (summarySortDir === 'asc' ? 1 : -1) * compareMeasures(rowTotalMeasure(a), rowTotalMeasure(b)) || peopleOrder(a, b);
     else if (summarySortKey === '__absence') return (summarySortDir === 'asc' ? 1 : -1) * compareMeasures(flagMeasure(a, 'isAbsence'), flagMeasure(b, 'isAbsence')) || peopleOrder(a, b);
     else if (summarySortKey === '__ooo') return (summarySortDir === 'asc' ? 1 : -1) * compareMeasures(flagMeasure(a, 'isOutOfOffice'), flagMeasure(b, 'isOutOfOffice')) || peopleOrder(a, b);
+    else if (summarySortKey === '__overtime') return (summarySortDir === 'asc' ? 1 : -1) * (a.overtimeHours - b.overtimeHours) || peopleOrder(a, b);
     else if (summarySortKey.startsWith('wc:')) {
       const code = visibleWorkCodes.find(item => item.id === summarySortKey.slice(3));
       return (summarySortDir === 'asc' ? 1 : -1) * compareMeasures(code ? workCodeMeasure(a, code) : {}, code ? workCodeMeasure(b, code) : {}) || peopleOrder(a, b);
@@ -5190,11 +5299,12 @@ function renderSummary() {
     ${visibleStatuses.map(s => `<th class="num" data-sort="${esc(s.key)}" onclick="setSummarySort(this.dataset.sort)">${esc(s.label)} <span style="opacity:.55">${sortIcon(s.key)}</span></th>`).join('')}
     ${hasAbsence ? `<th class="num" data-sort="__absence" onclick="setSummarySort(this.dataset.sort)" title="Full days and timed absence hours">Absence <span style="opacity:.55">${sortIcon('__absence')}</span></th>` : ''}
     ${hasOoo ? `<th class="num" data-sort="__ooo" onclick="setSummarySort(this.dataset.sort)" title="Full days and timed out-of-office hours">OOO <span style="opacity:.55">${sortIcon('__ooo')}</span></th>` : ''}
+    <th class="num" data-sort="__overtime" onclick="setSummarySort(this.dataset.sort)" title="Additional overtime hours">Overtime <span style="opacity:.55">${sortIcon('__overtime')}</span></th>
     ${visibleWorkCodes.map(code => `<th class="num" style="color:${code.color}" title="${esc(code.name)} · Full days and timed hours" data-sort="wc:${esc(code.id)}" onclick="setSummarySort(this.dataset.sort)">${esc(code.abbreviation || code.name)} <span style="opacity:.55">${sortIcon('wc:' + code.id)}</span></th>`).join('')}
     <th class="num" data-sort="total" onclick="setSummarySort(this.dataset.sort)" title="Full days and timed hours matching the selected columns">Total <span style="opacity:.55">${sortIcon('total')}</span></th>
   </tr>`;
 
-  const totalCols = 2 + visibleStatuses.length + visibleWorkCodes.length + (hasAbsence ? 1 : 0) + (hasOoo ? 1 : 0);
+  const totalCols = 3 + visibleStatuses.length + visibleWorkCodes.length + (hasAbsence ? 1 : 0) + (hasOoo ? 1 : 0);
   const minibarFor = (items, field, label) => {
     const total = items.reduce((sum, item) => sum + (item.measure[field] || 0), 0);
     return total > 0 ? `<div class="minibar" aria-label="${label}">${items.map(item => {
@@ -5206,6 +5316,7 @@ function renderSummary() {
     const cats = (row.emp.categoryIds || []).map(catById).filter(Boolean);
     const barItems = [
       ...visibleStatuses.map(st => ({ label: st.label, color: st.color, measure: statusMeasure(row, st.key) })),
+      { label: 'Overtime', color: '#c2410c', measure: { units: 0, hours: row.overtimeHours } },
       ...visibleWorkCodes.map(code => ({ label: code.name, color: code.color, measure: workCodeMeasure(row, code) })),
     ];
     const minibar = minibarFor(barItems, 'units', 'Cell distribution');
@@ -5219,6 +5330,7 @@ function renderSummary() {
       ${visibleStatuses.map(st => `<td class="num">${measurePill(statusMeasure(row, st.key), st.color)}</td>`).join('')}
       ${hasAbsence ? `<td class="num">${measurePill(flagMeasure(row, 'isAbsence'), '#dc2626')}</td>` : ''}
       ${hasOoo ? `<td class="num">${measurePill(flagMeasure(row, 'isOutOfOffice'), '#7c3aed')}</td>` : ''}
+      <td class="num">${measurePill({ units: 0, hours: row.overtimeHours }, '#c2410c')}</td>
       ${visibleWorkCodes.map(code => `<td class="num" title="${esc(code.name)} · Full days and timed hours">${measurePill(workCodeMeasure(row, code), code.color)}</td>`).join('')}
       <td class="num">${measurePill(rowTotalMeasure(row), 'var(--text)')}</td>
     </tr>`;
@@ -5230,15 +5342,17 @@ function renderSummary() {
   const totals = sorted.reduce((acc, row) => {
     statuses.forEach(st => { acc.status[st.key] = addLoadMeasure(acc.status[st.key], statusMeasure(row, st.key)); });
     visibleWorkCodes.forEach(code => { acc.workCodes[code.id] = addLoadMeasure(acc.workCodes[code.id], workCodeMeasure(row, code)); });
+    acc.overtimeHours += row.overtimeHours;
     acc.total = addLoadMeasure(acc.total, rowTotalMeasure(row));
     return acc;
-  }, { status: {}, workCodes: {}, total: { units: 0, hours: 0 } });
+  }, { status: {}, workCodes: {}, overtimeHours: 0, total: { units: 0, hours: 0 } });
   const footerHtml = sorted.length ? `<tfoot>
     <tr>
       <td style="font-weight:700">Total (${sorted.length} employees)</td>
       ${visibleStatuses.map(st => `<td class="num">${measurePill(totals.status[st.key], st.color)}</td>`).join('')}
       ${hasAbsence ? `<td class="num">${measurePill(statuses.reduce((sum, st) => st.isAbsence ? addLoadMeasure(sum, totals.status[st.key]) : sum, { units: 0, hours: 0 }), '#dc2626')}</td>` : ''}
       ${hasOoo ? `<td class="num">${measurePill(statuses.reduce((sum, st) => st.isOutOfOffice ? addLoadMeasure(sum, totals.status[st.key]) : sum, { units: 0, hours: 0 }), '#7c3aed')}</td>` : ''}
+      <td class="num">${measurePill({ units: 0, hours: totals.overtimeHours }, '#c2410c')}</td>
       ${visibleWorkCodes.map(code => `<td class="num">${measurePill(totals.workCodes[code.id], code.color)}</td>`).join('')}
       <td class="num">${measurePill(totals.total, 'var(--text)')}</td>
     </tr>
@@ -5247,7 +5361,7 @@ function renderSummary() {
   const legend = visibleStatuses.map(st => {
     const total = sorted.reduce((sum, row) => addLoadMeasure(sum, statusMeasure(row, st.key)), { units: 0, hours: 0 });
     return `<span><span class="dot" style="background:${st.color}"></span>${esc(st.label)}: <b style="color:var(--text)">${formatSummaryMeasure(total) || '0'}</b></span>`;
-  }).join('') + (visibleWorkCodes.length ? '<span style="opacity:.4">|</span>' + visibleWorkCodes.map(code => {
+  }).join('') + '<span style="opacity:.4">|</span><span><span class="dot" style="background:#c2410c"></span>Overtime: <b style="color:var(--text)">' + formatHoursNumber(totals.overtimeHours) + 'h</b></span>' + (visibleWorkCodes.length ? '<span style="opacity:.4">|</span>' + visibleWorkCodes.map(code => {
     const total = sorted.reduce((sum, row) => addLoadMeasure(sum, workCodeMeasure(row, code)), { units: 0, hours: 0 });
     return `<span><span class="dot" style="background:${code.color}"></span>${esc(code.name)}: <b style="color:var(--text)">${formatSummaryMeasure(total) || '0'}</b></span>`;
   }).join('') : '');
@@ -5256,7 +5370,7 @@ function renderSummary() {
     <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:12px">
       <div>
         <div class="page-title">Summary</div>
-        <div class="page-sub">Selected statuses, absence totals, and Work Codes for ${range.label}. Period: ${range.subtitle}.</div>
+        <div class="page-sub">Selected statuses, absence totals, overtime, and Work Codes for ${range.label}. Period: ${range.subtitle}.</div>
       </div>
       <div class="year-nav" style="gap:8px">
         <button class="btn" onclick="openSummaryColumns()">${svgIcon('sliders')} Columns</button>
@@ -5277,7 +5391,7 @@ function renderSummary() {
         ${footerHtml}
       </table>
     </div>
-    ${(visibleStatuses.length || visibleWorkCodes.length) ? `<div class="legend-row">${legend}</div>` : ''}`;
+    <div class="legend-row">${legend}</div>`;
 }
 
 // ═══ MODAL PLUMBING ══════════════════════════════════════════════════════════
@@ -5294,16 +5408,14 @@ function closeModal(id) {
 }
 document.querySelectorAll('.modal-bg').forEach(bg => {
   bg.addEventListener('mousedown', e => {
-    // Lukk modalen ved klikk utenfor, MEN IKKE hvis det er innloggingsskjermen
-    if (e.target === bg && bg.id !== 'login-modal') closeModal(bg.id);
+    if (e.target === bg) closeModal(bg.id);
   });
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closePicker();
     document.querySelectorAll('.modal-bg.open').forEach(m => {
-      // Ignorer Escape-knappen for innloggingsskjermen
-      if (m.id !== 'login-modal') closeModal(m.id);
+      closeModal(m.id);
     });
   }
 });
@@ -5312,34 +5424,23 @@ document.addEventListener('keydown', e => {
 async function bootApp() {
   loadSettings();
   loadGridPreferences();
-  loadStorageMode();
-  applyStorageModeControls();
   try {
-    if (storageMode === STORAGE_MODE_LOCAL) {
-      const rawLocalState = lsGet(LOCAL_STATE_KEY);
-      if (rawLocalState) {
-        const parsedLocalState = JSON.parse(rawLocalState);
-        if (parsedLocalState && typeof parsedLocalState === 'object') loadFromData(parsedLocalState);
-      }
-    } else {
-      const res = await fetch('/api/state');
-      if (res.status === 401) {
-        // TEMP: bypass login gate until auth/login flow is fixed
-        console.warn('Temporary login bypass active: continuing without opening login modal.');
-      } else {
-        const data = await res.json();
-        if (Object.keys(data).length > 0) loadFromData(data);
-      }
+    const fileMeta = JSON.parse(lsGet(LOCAL_FILE_META_KEY) || '{}');
+    hasUnsavedChanges = fileMeta.dirty === true;
+    activeFileName = typeof fileMeta.fileName === 'string' ? fileMeta.fileName : '';
+  } catch (err) { }
+  try {
+    const rawLocalState = lsGet(LOCAL_STATE_KEY);
+    if (rawLocalState) {
+      const parsedLocalState = JSON.parse(rawLocalState);
+      if (parsedLocalState && typeof parsedLocalState === 'object') loadFromData(parsedLocalState);
     }
   } catch (err) {
-    console.warn(storageMode === STORAGE_MODE_LOCAL
-      ? 'Could not load local JSON data.'
-      : 'Could not load from server. If running locally without backend, switch to Local JSON mode in Settings.');
+    console.warn('Could not load local JSON data.');
   }
 
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
-  persistStorageMode();
   applyTheme(); applyAppName(); updateSaveButton(); updateAutoSaveButton(); updateUndoButton();
   document.getElementById('af-start').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-end').addEventListener('change', updateActivityWeekLabels);
