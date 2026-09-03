@@ -125,6 +125,8 @@ tr:hover .act-cell-actions { opacity: 1; }
 .act-lifecycle { flex-shrink: 0; padding: 1px 4px; border-radius: 4px; font-size: 8px; font-weight: 700; line-height: 1.4; text-transform: uppercase; }
 .act-lifecycle.planned { color: #92400e; background: #fef3c7; border: 1px solid #f59e0b; }
 .act-lifecycle.cancelled { color: #b91c1c; background: #fee2e2; border: 1px solid #ef4444; }
+.act-bar.cancelled-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 3px; background: var(--destructive); box-shadow: 0 0 0 1px var(--surface); transform: translateY(-50%); pointer-events: none; }
+.grid-span-status.cancelled { color: #b91c1c; background: #fee2e2; border: 1px solid #ef4444; font-size: 9.5px; font-weight: 800; padding: 0 3px; border-radius: 3px; margin-left: 4px; white-space: nowrap; }
 
 /* ── Popover picker ──────────────────────────────────────────── */
 #picker { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.16); z-index: 200; display: none; flex-direction: column; gap: 4px; width: 300px; max-height: min(70vh, 460px); overflow: auto; }
@@ -207,6 +209,12 @@ tr:hover .act-cell-actions { opacity: 1; }
 .form-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 13px; }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 13px; }
+.date-input-wrap { position: relative; }
+.date-input-wrap input[type="text"] { padding-right: 32px; }
+.date-pick-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer; padding: 4px; border-radius: 4px; color: var(--muted); display: flex; }
+.date-pick-btn:hover { color: var(--text); background: var(--muted-bg); }
+.date-pick-btn .ui-icon { width: 16px; height: 16px; }
+.date-native-input { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; pointer-events: none; }
 .activity-meta-row .form-row > label { min-height: 30px; display: flex; align-items: flex-end; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .participant-list { max-height: 210px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
@@ -271,6 +279,8 @@ tr:hover .act-cell-actions { opacity: 1; }
 .year-nav .year-label { min-width: 68px; text-align: center; font-weight: 600; font-size: 17px; font-variant-numeric: tabular-nums; }
 .legend-row { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--muted); margin-top: 12px; }
 .legend-row .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+#app-toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); background: var(--text); color: var(--surface); padding: 10px 16px; border-radius: 8px; font-size: 12.5px; max-width: 440px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 500; }
+#app-toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ── Misc utils ──────────────────────────────────────────────── */
 .flex { display: flex; } .items-center { align-items: center; } .justify-between { justify-content: space-between; }
@@ -513,8 +523,20 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <input type="checkbox" id="af-include-weekends"> Include weekends in Work Schedule
     </label>
     <div class="form-row-2">
-      <div class="form-row" style="margin:0"><label>Start date * <span id="af-start-week" class="muted text-sm"></span></label><input id="af-start" type="text" inputmode="numeric" placeholder="dd.mm.yyyy" maxlength="10" autocomplete="off" onblur="normalizeActivityDateInput(this);updateActivityWeekLabels()"></div>
-      <div class="form-row" style="margin:0"><label>End date * <span id="af-end-week" class="muted text-sm"></span></label><input id="af-end" type="text" inputmode="numeric" placeholder="dd.mm.yyyy" maxlength="10" autocomplete="off" onblur="normalizeActivityDateInput(this);updateActivityWeekLabels()"></div>
+      <div class="form-row" style="margin:0"><label>Start date * <span id="af-start-week" class="muted text-sm"></span></label>
+        <div class="date-input-wrap">
+          <input id="af-start" type="text" inputmode="numeric" placeholder="dd.mm.yyyy" maxlength="10" autocomplete="off" onblur="normalizeActivityDateInput(this);updateActivityWeekLabels()">
+          <button type="button" class="date-pick-btn" tabindex="-1" aria-label="Pick start date" onclick="openActivityDatePicker('af-start')"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
+          <input id="af-start-native" type="date" class="date-native-input" tabindex="-1" aria-hidden="true" onchange="onActivityNativeDateChange('af-start')">
+        </div>
+      </div>
+      <div class="form-row" style="margin:0"><label>End date * <span id="af-end-week" class="muted text-sm"></span></label>
+        <div class="date-input-wrap">
+          <input id="af-end" type="text" inputmode="numeric" placeholder="dd.mm.yyyy" maxlength="10" autocomplete="off" onblur="normalizeActivityDateInput(this);updateActivityWeekLabels()">
+          <button type="button" class="date-pick-btn" tabindex="-1" aria-label="Pick end date" onclick="openActivityDatePicker('af-end')"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
+          <input id="af-end-native" type="date" class="date-native-input" tabindex="-1" aria-hidden="true" onchange="onActivityNativeDateChange('af-end')">
+        </div>
+      </div>
     </div>
     <div class="form-row">
       <label>Color</label>
@@ -682,7 +704,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
         <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As...</button>
       </div>
       <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
-      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:12px"><input id="set-confirmed-activities-only" type="checkbox"> Show only confirmed activities in Grid View</label>
     </div>
     <div class="form-row" style="margin-top:2px">
       <label>About</label>
@@ -769,7 +790,7 @@ function lsSet(key, value) {
 }
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '0.1.0';
 const DATA_VERSION = 6;
 const DEFAULT_WORK_CODES = [
   { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', staffingImpact: 'available', aggregationMode: 'hours', color: '#3b82f6' },
@@ -1089,7 +1110,6 @@ function applyAppName() {
 function openSettings() {
   document.getElementById('set-app-name').value = appSettings.appName;
   document.getElementById('set-core-time').value = appSettings.coreWorkdayRange || '0730-1500';
-  document.getElementById('set-confirmed-activities-only').checked = appSettings.showOnlyConfirmedActivities === true;
   document.getElementById('set-core-time').oninput = updateCoreHoursDisplayFromRangeInput;
   document.getElementById('set-core-time').onchange = updateCoreHoursDisplayFromRangeInput;
   updateCoreHoursDisplayFromRangeInput();
@@ -1158,7 +1178,7 @@ function openHolidayModal(index = null, indexes = null) {
   editingHolidayIndex = index;
   editingHolidayIndexes = indexes || (index === null ? [] : [index]);
   const holiday = index === null ? null : appSettings.holidays[index];
-  document.getElementById('holiday-modal-title').textContent = holiday ? 'Edit Holiday / Red days' : 'Add Holiday / Red days';
+  document.getElementById('holiday-modal-title').textContent = holiday ? 'Edit Holiday' : 'Add Holiday';
   document.getElementById('hf-delete-btn').style.display = holiday ? 'inline-block' : 'none';
   document.getElementById('hf-name').value = holiday?.name || '';
   document.getElementById('hf-start').value = holiday?.startDate || holiday?.date || `${gridYear}-01-01`;
@@ -1392,8 +1412,6 @@ function confirmHolidayImport() {
   renderPage();
 }
 function saveSettings() {
-  const confirmedOnlyToggle = document.getElementById('set-confirmed-activities-only');
-  const previousShowOnlyConfirmed = appSettings.showOnlyConfirmedActivities === true;
   const name = document.getElementById('set-app-name').value.trim();
   if (name) appSettings.appName = name;
   const coreTime = normalizeCoreWorkdayRange(document.getElementById('set-core-time').value, '');
@@ -1413,7 +1431,6 @@ function saveSettings() {
   appSettings.lightMax = lightMax;
   appSettings.normalMax = normalMax;
   appSettings.highMax = highMax;
-  appSettings.showOnlyConfirmedActivities = confirmedOnlyToggle?.checked === true;
   const planningHorizonDays = Number(document.getElementById('set-planning-horizon-days').value);
   if (!Number.isInteger(planningHorizonDays) || planningHorizonDays < 0 || planningHorizonDays > 365) {
     alert('Activity discussion deadline must be a whole number from 0 to 365 days.');
@@ -1429,8 +1446,13 @@ function saveSettings() {
   applyAppName();
   updateSaveButton();
   updateSbStatus();
-  if (previousShowOnlyConfirmed !== appSettings.showOnlyConfirmedActivities) activityPageOffset = 0;
   closeModal('settings-modal');
+  renderPage();
+}
+function toggleShowOnlyConfirmedActivities(checked) {
+  appSettings.showOnlyConfirmedActivities = checked === true;
+  activityPageOffset = 0;
+  persistSettings();
   renderPage();
 }
 
@@ -1475,6 +1497,7 @@ function openLocalBackupHandleDb() {
 async function storeLocalBackupHandle(handle) {
   localBackupFileHandle = handle || null;
   activeFileName = handle?.name || activeFileName;
+  if (localBackupFileHandle) startRemoteUpdatePolling(); else stopRemoteUpdatePolling();
   const db = await openLocalBackupHandleDb();
   if (!db) return;
   try {
@@ -1494,6 +1517,7 @@ async function storeLocalBackupHandle(handle) {
 
 async function clearStoredLocalBackupHandle() {
   localBackupFileHandle = null;
+  stopRemoteUpdatePolling();
   const db = await openLocalBackupHandleDb();
   if (!db) return;
   try {
@@ -1539,6 +1563,88 @@ async function ensureLocalBackupPermission(handle) {
   return permission === 'granted';
 }
 
+function showToast(message, duration = 5000) {
+  let el = document.getElementById('app-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'app-toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function startRemoteUpdatePolling() {
+  stopRemoteUpdatePolling();
+  remoteUpdatePollTimer = setInterval(checkForRemoteFileUpdate, REMOTE_UPDATE_POLL_MS);
+}
+function stopRemoteUpdatePolling() {
+  if (remoteUpdatePollTimer) clearInterval(remoteUpdatePollTimer);
+  remoteUpdatePollTimer = null;
+}
+// Detects a colleague's save while this tab is open; refreshes when safe, merges into unsaved edits otherwise
+async function checkForRemoteFileUpdate() {
+  if (!localBackupFileHandle || document.hidden || remoteUpdateCheckInFlight) return;
+  if (document.querySelector('.modal-bg.open')) return;
+  remoteUpdateCheckInFlight = true;
+  try {
+    if (typeof localBackupFileHandle.queryPermission === 'function') {
+      const permission = await localBackupFileHandle.queryPermission({ mode: 'read' });
+      if (permission !== 'granted') return;
+    }
+    const diskFile = await localBackupFileHandle.getFile();
+    const diskText = await diskFile.text();
+    if (!diskText || !diskText.trim()) return;
+    const parsedDiskData = JSON.parse(diskText);
+    if (!parsedDiskData.savedAt || !lastSyncTime || !(parsedDiskData.savedAt > lastSyncTime)) return;
+    validatePlannerData(parsedDiskData);
+    if (!hasUnsavedChanges) {
+      loadFromData(parsedDiskData);
+      renderPage();
+      showToast('Updated with the latest changes from your colleagues.');
+      return;
+    }
+    const diskEntriesMap = isObjectMap(parsedDiskData.entriesMap);
+    const diskOvertimeMap = isObjectMap(parsedDiskData.overtimeMap);
+    const diskActivityShiftsMap = isObjectMap(parsedDiskData.activityShiftsMap);
+    const mergedEntriesMap = { ...diskEntriesMap, ...isObjectMap(entriesMap) };
+    const mergedOvertimeMap = { ...diskOvertimeMap, ...isObjectMap(overtimeMap) };
+    const mergedActivityShiftsMap = { ...diskActivityShiftsMap, ...isObjectMap(activityShiftsMap) };
+    for (const key of Object.keys(mergedEntriesMap)) if (mergedEntriesMap[key] === null) delete mergedEntriesMap[key];
+    for (const key of Object.keys(mergedOvertimeMap)) if (mergedOvertimeMap[key] === null) delete mergedOvertimeMap[key];
+    for (const key of Object.keys(mergedActivityShiftsMap)) if (mergedActivityShiftsMap[key] === null) delete mergedActivityShiftsMap[key];
+
+    const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
+    const employeeMerge = mergeEntityArray(baseSnapshot?.employees, employees, parsedDiskData.employees, 'id', allocateId);
+    const activityMerge = mergeEntityArray(baseSnapshot?.activities, activities, parsedDiskData.activities, 'id', allocateId);
+
+    const before = stableJson({ entriesMap: isObjectMap(entriesMap), overtimeMap: isObjectMap(overtimeMap), activityShiftsMap: isObjectMap(activityShiftsMap), employees, activities });
+    const after = stableJson({ entriesMap: mergedEntriesMap, overtimeMap: mergedOvertimeMap, activityShiftsMap: mergedActivityShiftsMap, employees: employeeMerge.merged, activities: activityMerge.merged });
+    if (before === after) { lastSyncTime = parsedDiskData.savedAt; return; }
+
+    entriesMap = mergedEntriesMap;
+    overtimeMap = mergedOvertimeMap;
+    activityShiftsMap = mergedActivityShiftsMap;
+    employees = employeeMerge.merged.sort((a, b) => a.name.localeCompare(b.name));
+    activities = activityMerge.merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
+    nextEmpId = Math.max(nextEmpId, ...employees.map(e => e.id || 0)) + 1;
+    nextActId = Math.max(nextActId, ...activities.map(a => a.id || 0)) + 1;
+    lastSyncTime = parsedDiskData.savedAt;
+    baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
+    renderPage();
+    const conflicts = [...employeeMerge.conflicts, ...activityMerge.conflicts];
+    const conflictNote = conflicts.length ? ` ${conflicts.length} record(s) had conflicting edits — yours were kept.` : '';
+    showToast(`Colleague updates were merged into your unsaved work.${conflictNote} Save when ready.`, 8000);
+  } catch (err) {
+    if (!['NotFoundError', 'AbortError'].includes(err?.name)) console.warn('Remote update check failed:', err?.message);
+  } finally {
+    remoteUpdateCheckInFlight = false;
+  }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForRemoteFileUpdate(); });
+
 async function requestLocalBackupHandle() {
   const handle = await window.showSaveFilePicker({
     suggestedName: activeFileName || `team-manager-${todayStr()}.json`,
@@ -1561,9 +1667,56 @@ function stableJson(value) {
   return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
 }
 
+function entityMapById(list, idKey) {
+  const map = {};
+  for (const item of list || []) map[item[idKey]] = item;
+  return map;
+}
+function makeIdAllocator(...lists) {
+  let max = 0;
+  for (const list of lists) for (const item of list || []) if (Number.isFinite(item?.id) && item.id > max) max = item.id;
+  return () => ++max;
+}
+// 3-way merge (base = last synced, mine = in-memory, theirs = on disk) so unrelated concurrent edits/deletes/adds all survive
+function mergeEntityArray(base, mine, theirs, idKey, allocateId) {
+  const baseById = entityMapById(base, idKey), mineById = entityMapById(mine, idKey), theirsById = entityMapById(theirs, idKey);
+  const ids = [...new Set([...Object.keys(mineById), ...Object.keys(theirsById)])];
+  const merged = [];
+  const conflicts = [];
+  for (const id of ids) {
+    const b = baseById[id], m = mineById[id], t = theirsById[id];
+    const label = (m || t)?.name || (m || t)?.label || String(id);
+    if (!b) {
+      if (m && t && stableJson(m) !== stableJson(t)) {
+        const newId = allocateId();
+        merged.push(m, { ...t, [idKey]: newId });
+        conflicts.push({ label, type: 'duplicate-id', detail: `A colleague also added a new record with the same id; it was kept and reassigned id ${newId}.` });
+      } else {
+        merged.push(m || t);
+      }
+      continue;
+    }
+    const bJson = stableJson(b);
+    const mChanged = m ? stableJson(m) !== bJson : null;
+    const tChanged = t ? stableJson(t) !== bJson : null;
+    if (m && t) {
+      if (stableJson(m) === stableJson(t)) { merged.push(m); continue; }
+      if (!mChanged) { merged.push(t); continue; }
+      if (!tChanged) { merged.push(m); continue; }
+      merged.push(m);
+      conflicts.push({ label, type: 'edit-conflict', detail: 'Both you and a colleague edited this; your version was kept.' });
+      continue;
+    }
+    if (!m) { if (tChanged) { merged.push(t); conflicts.push({ label, type: 'delete-edit', detail: 'You deleted this, but a colleague edited it; their edit was kept.' }); } continue; }
+    if (!t) { if (mChanged) { merged.push(m); conflicts.push({ label, type: 'edit-delete', detail: 'A colleague deleted this, but you edited it; your edit was kept.' }); } continue; }
+  }
+  return { merged, conflicts };
+}
+
 async function writeLocalBackupFile(handle) {
   const localSnapshot = snapshotData();
   let mergedWithDisk = false;
+  let entityConflicts = [];
   try {
     const diskFile = await handle.getFile();
     const diskText = await diskFile.text();
@@ -1582,21 +1735,32 @@ async function writeLocalBackupFile(handle) {
         for (const key of Object.keys(mergedOvertimeMap)) if (mergedOvertimeMap[key] === null) delete mergedOvertimeMap[key];
         for (const key of Object.keys(mergedActivityShiftsMap)) if (mergedActivityShiftsMap[key] === null) delete mergedActivityShiftsMap[key];
 
+        const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
+        const employeeMerge = mergeEntityArray(baseSnapshot?.employees, employees, parsedDiskData.employees, 'id', allocateId);
+        const activityMerge = mergeEntityArray(baseSnapshot?.activities, activities, parsedDiskData.activities, 'id', allocateId);
+        entityConflicts = [...employeeMerge.conflicts, ...activityMerge.conflicts];
+
         const localBeforeMerge = {
           entriesMap: isObjectMap(entriesMap),
           overtimeMap: isObjectMap(overtimeMap),
           activityShiftsMap: isObjectMap(activityShiftsMap),
+          employees, activities,
         };
         const localAfterMerge = {
           entriesMap: mergedEntriesMap,
           overtimeMap: mergedOvertimeMap,
           activityShiftsMap: mergedActivityShiftsMap,
+          employees: employeeMerge.merged, activities: activityMerge.merged,
         };
         mergedWithDisk = stableJson(localBeforeMerge) !== stableJson(localAfterMerge);
         if (mergedWithDisk) {
           entriesMap = mergedEntriesMap;
           overtimeMap = mergedOvertimeMap;
           activityShiftsMap = mergedActivityShiftsMap;
+          employees = employeeMerge.merged.sort((a, b) => a.name.localeCompare(b.name));
+          activities = activityMerge.merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
+          nextEmpId = Math.max(nextEmpId, ...employees.map(e => e.id || 0)) + 1;
+          nextActId = Math.max(nextActId, ...activities.map(a => a.id || 0)) + 1;
         }
       }
     }
@@ -1611,6 +1775,7 @@ async function writeLocalBackupFile(handle) {
   localSnapshot.savedAt = lastSyncTime;
   const payloadData = {
     ...localSnapshot,
+    employees, activities,
     entriesMap: isObjectMap(entriesMap),
     overtimeMap: isObjectMap(overtimeMap),
     activityShiftsMap: isObjectMap(activityShiftsMap),
@@ -1621,9 +1786,13 @@ async function writeLocalBackupFile(handle) {
   try {
     await writable.write(payload);
     await writable.close();
+    baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
     if (mergedWithDisk) {
       renderPage();
-      setTimeout(() => alert('Endringene dine ble lagret sammen med nye oppdateringer fra dine kollegaer!'), 0);
+      const conflictNote = entityConflicts.length
+        ? `\n\n${entityConflicts.length} record(s) had conflicting changes and were kept as follows:\n${entityConflicts.map(c => `- ${c.label}: ${c.detail}`).join('\n')}`
+        : '';
+      setTimeout(() => alert(`Your changes were saved along with new updates from your colleagues.${conflictNote}`), 0);
     }
   } catch (err) {
     try { await writable.abort(); } catch (abortErr) { }
@@ -1826,6 +1995,10 @@ let hasUnsavedChanges = false;
 let undoStack = [];
 let autoSaveTimer = null;
 let lastSyncTime = null;
+let baseSnapshot = null;
+let remoteUpdatePollTimer = null;
+let remoteUpdateCheckInFlight = false;
+const REMOTE_UPDATE_POLL_MS = 25000;
 
 function updateUndoButton() {
   const button = document.getElementById('undo-btn');
@@ -1998,6 +2171,7 @@ function loadFromData(data) {
   pruneImplicitDefaultActivityShifts();
   employees.sort((a, b) => a.name.localeCompare(b.name));
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
+  baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
 }
 function updateSbStatus() {
   const dot = document.getElementById('db-dot');
@@ -2461,8 +2635,9 @@ function rebuildEmployeePicker() {
       <button class="icon-btn" type="button" onclick="closeEmployeePicker()" aria-label="Close">&times;</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;max-height:330px;overflow:auto">${deptMarkup}</div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
-      <button class="btn btn-sm" type="button" onclick="resetEmployeePickerSelection()">Show all</button>
+    <div style="display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px;margin-top:12px">
+      <button class="btn btn-sm" type="button" onclick="resetEmployeePickerSelection()">All</button>
+      <button class="btn btn-sm" type="button" onclick="selectNoneEmployeePickerSelection()">None</button>
       <button class="btn btn-sm" type="button" onclick="closeEmployeePicker()">Cancel</button>
       <button class="btn btn-sm btn-primary" type="button" onclick="applyEmployeePickerSelection()">Apply</button>
     </div>`;
@@ -2471,6 +2646,10 @@ function rebuildEmployeePicker() {
 function resetEmployeePickerSelection() {
   if (!hiddenEmployeesDraft) hiddenEmployeesDraft = new Set(hiddenEmployees);
   hiddenEmployeesDraft.clear();
+  rebuildEmployeePicker();
+}
+function selectNoneEmployeePickerSelection() {
+  hiddenEmployeesDraft = new Set(employees.map(emp => emp.id));
   rebuildEmployeePicker();
 }
 function applyEmployeePickerSelection() {
@@ -2590,10 +2769,10 @@ function renderGrid() {
           </div>
           ${hiddenEmployees.size ? `<button class="btn btn-sm" onclick="showAllEmployees()">Show all employees</button>` : ''}
 
-          <!-- Holiday / red-day modal -->
+          <!-- Holiday modal -->
           <div class="modal-bg" id="holiday-modal">
             <div class="modal" style="width:520px">
-              <h3 id="holiday-modal-title">Add Holiday / Red days</h3>
+              <h3 id="holiday-modal-title">Add Holiday</h3>
               <p class="modal-desc">Highlight a holiday or calendar period in the grid. Capacity is only reduced when selected.</p>
               <div class="form-row"><label>Name *</label><input id="hf-name" placeholder="Summer vacation period"></div>
               <div class="form-row-2">
@@ -2628,6 +2807,30 @@ function renderGrid() {
               </div>
             </div>
           </div>
+
+          <!-- Activity schedule report modal (beta) -->
+          <div class="modal-bg" id="activity-schedule-modal">
+            <div class="modal" style="width:min(1100px, calc(100vw - 32px));max-height:92vh;display:flex;flex-direction:column">
+              <div class="flex items-center justify-between" style="gap:12px">
+                <h3 style="margin:0">Activity Schedule <span class="muted text-sm" style="font-weight:400">(beta)</span></h3>
+                <button class="icon-btn" title="Close" onclick="closeModal('activity-schedule-modal')">&times;</button>
+              </div>
+              <div class="form-row-2" style="margin-top:14px">
+                <div class="form-row" style="margin:0"><label>From</label><input id="as-start" type="date"></div>
+                <div class="form-row" style="margin:0"><label>To</label><input id="as-end" type="date"></div>
+              </div>
+              <div class="flex items-center" style="gap:16px;margin-top:4px">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin:0"><input id="as-filter-tentative" type="checkbox" checked> Planned</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin:0"><input id="as-filter-confirmed" type="checkbox" checked> Confirmed</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin:0"><input id="as-filter-cancelled" type="checkbox" checked> Cancelled</label>
+              </div>
+              <div id="activity-schedule-content" style="overflow:auto;margin-top:14px"></div>
+              <div class="modal-actions">
+                <button class="btn" onclick="renderActivityScheduleReport()">Update report</button>
+                <button class="btn btn-primary" onclick="printActivityScheduleReport()">Print / Save PDF</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div id="grid-scroll" style="position:relative">
@@ -2647,7 +2850,7 @@ function renderGrid() {
         </table>
       </div>
       <div id="holiday-add-popover" class="holiday-add-popover">
-        <button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday or red-day period</button>
+        <button class="holiday-add-option" type="button" onclick="openHolidayAddAction('add')">Add holiday period</button>
         <button class="holiday-add-option" type="button" onclick="openHolidayAddAction('import')">Import .ics holidays</button>
       </div>
       <div style="padding:6px 24px;border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;color:var(--muted)">
@@ -2684,10 +2887,12 @@ function renderGridBody(days, today) {
   html += `<tr class="sect-row"><td class="sticky-left" style="z-index:60">
       <span class="flex items-center justify-between">
         <span>Activities (${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''})</span>
-        <span class="flex items-center" style="gap:3px">
+        <span class="flex items-center" style="gap:6px">
           ${visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
           <button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
           <button class="icon-btn" title="Next activities" aria-label="Next activities" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
+          <button type="button" class="filter-chip${appSettings.showOnlyConfirmedActivities ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" title="Show only confirmed activities in Grid View" onclick="toggleShowOnlyConfirmedActivities(!appSettings.showOnlyConfirmedActivities)">Confirmed only</button>
+          <button class="icon-btn" title="Activity Schedule (beta)" aria-label="Activity Schedule (beta)" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
           <button class="icon-btn" title="Add activity" aria-label="Add activity" onclick="openActModal()">${svgIcon('plus')}</button>
         </span>
       </span>
@@ -2703,6 +2908,7 @@ function renderGridBody(days, today) {
     const barBackground = lifecycle.status === 'tentative'
       ? `repeating-linear-gradient(135deg,color-mix(in srgb,${act.color} 38%,transparent) 0 5px,color-mix(in srgb,${act.color} 12%,transparent) 5px 10px)`
       : act.color;
+    const barOpacity = lifecycle.status === 'tentative' ? '.9' : (dim ? '.16' : '.28');
     let row = `<tr><td class="gempl sticky-left" style="${dim ? 'opacity:.65;' : ''}cursor:pointer" onclick="openActModal(${act.id})" title="Click to edit ${esc(act.name)}">
       <div class="act-cell-name">
         <span class="flex items-center gap-2" style="min-width:0">
@@ -2730,8 +2936,8 @@ function renderGridBody(days, today) {
       if (inR) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
         row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
-          <div class="act-bar" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${lifecycle.status === 'confirmed' ? (dim ? '.16' : '.28') : '.9'};border-radius:${brl} ${brr}"></div>
-          ${isS ? `<span class="grid-span-label" style="color:${act.color};${lifecycle.status === 'cancelled' ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : ''}width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : ` · ${lifecycle.label}`}</span>` : ''}
+          <div class="act-bar${lifecycle.status === 'cancelled' ? ' cancelled-bar' : ''}" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${barOpacity};border-radius:${brl} ${brr}"></div>
+          ${isS ? `<span class="grid-span-label" style="color:${act.color};width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
         </td>`;
       } else {
         row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
@@ -2751,14 +2957,14 @@ function renderGridBody(days, today) {
   const currentHolidays = yearHolidays.filter(holiday => holiday.endDate >= today);
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
-      <span class="flex items-center justify-between"><span>Holidays / Red days (${currentHolidays.length})</span>
-        <span class="flex items-center gap-2"><label style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${showHolidays ? 'checked' : ''} onchange="showHolidays=this.checked;renderPage()"> Show holidays</label><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
+      <span class="flex items-center justify-between"><span>Holidays (${currentHolidays.length})</span>
+        <span class="flex items-center" style="gap:6px"><button type="button" class="filter-chip${showHolidays ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" onclick="showHolidays=!showHolidays;renderPage()">Show holidays</button><span class="icon-btn" style="visibility:hidden" aria-hidden="true">${svgIcon('report')}</span><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
         </span>
       </span></td><td colspan="${days.length}"></td></tr>`;
   if (!showHolidays) {
     html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Holidays hidden.</td><td colspan="${days.length}"></td></tr>`;
   } else if (!currentHolidays.length && !pastHolidays.length) {
-    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">No holidays or red-day periods added.</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
+    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">No holiday periods added.</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
   } else {
     const renderHolidayRow = holiday => {
       const start = holiday.startDate, end = holiday.endDate;
@@ -2772,13 +2978,13 @@ function renderGridBody(days, today) {
       days.forEach(day => {
         const ds = fmt(day), active = ds >= start && ds <= end;
         const isStart = ds === visibleStart;
-        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${active ? ' holiday-col' : ''}${isStart ? ' span-label-cell' : ''}" style="${active ? `--holiday-color:${color};background:${color}28 !important;color:${color};border-color:${color}55;` : ''}${planningHorizonStyle(ds)}" title="${active ? esc(holiday.name || 'Holiday') : ''}">${isStart ? `<span class="grid-span-label" style="width:${labelWidth}px;color:${color}">${esc(holiday.name || 'Holiday')}</span>` : ''}</td>`;
+        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${active ? ' holiday-col' : ''}${isStart ? ' span-label-cell' : ''}" style="${active ? `--holiday-color:${color};background:${color}28 !important;color:${color};border-color:${color}55;` : ''}${planningHorizonStyle(ds)}" title="${active ? esc(holiday.name || 'Holiday') : ''}">${isStart ? `<span class="grid-span-label" style="width:${labelWidth}px;color:${color}">${esc(holiday.name || 'Holiday')}</span>` : ''}</td>`;
       });
       html += '</tr>';
     };
     currentHolidays.forEach(renderHolidayRow);
     if (pastHolidays.length) {
-      html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)"><button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" onclick="pastHolidaysExpanded=!pastHolidaysExpanded;renderPage()">${svgIcon(pastHolidaysExpanded ? 'chevronLeft' : 'chevronRight')} Past red days / holidays (${pastHolidays.length})</button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
+      html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)"><button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" onclick="pastHolidaysExpanded=!pastHolidaysExpanded;renderPage()">${svgIcon(pastHolidaysExpanded ? 'chevronLeft' : 'chevronRight')} Past holidays (${pastHolidays.length})</button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
       if (pastHolidaysExpanded) pastHolidays.forEach(renderHolidayRow);
     }
   }
@@ -3839,6 +4045,23 @@ function normalizeActivityDateInput(input) {
   const isoDate = parseActivityDateInput(input?.value);
   if (isoDate) input.value = formatActivityDateInput(isoDate);
 }
+function openActivityDatePicker(inputId) {
+  const textInput = document.getElementById(inputId);
+  const nativeInput = document.getElementById(`${inputId}-native`);
+  if (!textInput || !nativeInput) return;
+  nativeInput.value = parseActivityDateInput(textInput.value) || '';
+  if (typeof nativeInput.showPicker === 'function') {
+    try { nativeInput.showPicker(); return; } catch (e) {}
+  }
+  nativeInput.focus();
+}
+function onActivityNativeDateChange(inputId) {
+  const textInput = document.getElementById(inputId);
+  const nativeInput = document.getElementById(`${inputId}-native`);
+  if (!textInput || !nativeInput?.value) return;
+  textInput.value = formatActivityDateInput(nativeInput.value);
+  updateActivityWeekLabels();
+}
 function updateActivityWeekLabels() {
   const update = (inputId, outputId) => {
     const el = document.getElementById(inputId);
@@ -4162,6 +4385,100 @@ function printTeamScheduleReport() {
   const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the team schedule.'); return; }
   printWindow.document.write(`<!doctype html><html><head><title>Team Work Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:170px}.date-column{width:auto}.total-column{width:38px;font-weight:600}.muted{color:#666;font-size:8px;margin-top:2px}.activity-name{margin-top:3px}.weekend{background:#fff7ed}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
+  printWindow.document.close(); printWindow.focus(); printWindow.print();
+}
+
+// ═══ ACTIVITY SCHEDULE REPORT (beta) ══════════════════════════════════════
+function activityScheduleStatuses() {
+  return ['tentative', 'confirmed', 'cancelled'].filter(status => document.getElementById(`as-filter-${status}`)?.checked);
+}
+function activityScheduleDates(start, end) {
+  const dates = [];
+  for (const d = new Date(`${start}T00:00:00`); fmt(d) <= end; d.setDate(d.getDate() + 1)) dates.push(fmt(d));
+  return dates;
+}
+function activityScheduleFilteredActivities(start, end, statuses) {
+  return activities
+    .filter(act => act.startDate <= end && act.endDate >= start && statuses.includes(activityStatus(act)))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
+}
+function activityScheduleBarRow(act, dates) {
+  const lifecycle = activityStatusMeta(act);
+  const barBackground = lifecycle.status === 'tentative'
+    ? `repeating-linear-gradient(135deg,color-mix(in srgb,${act.color} 38%,transparent) 0 5px,color-mix(in srgb,${act.color} 12%,transparent) 5px 10px)`
+    : act.color;
+  const barOpacity = lifecycle.status === 'tentative' ? '.9' : '.28';
+  const visibleStart = dates[0] > act.startDate ? dates[0] : act.startDate;
+  const visibleEnd = dates[dates.length - 1] < act.endDate ? dates[dates.length - 1] : act.endDate;
+  const startIdx = dates.indexOf(visibleStart);
+  const endIdx = dates.indexOf(visibleEnd);
+  const labelWidth = gridSpanLabelWidth(startIdx, endIdx);
+  let row = `<tr><td class="gempl sticky-left" style="min-width:210px">
+    <div class="act-cell-name">
+      <span class="flex items-center gap-2" style="min-width:0">
+        <span class="act-dot" style="background:${act.color}"></span>
+        <span class="act-name">${esc(act.name)}</span>
+        ${act.abbreviation ? `<span style="font-size:10px;font-weight:700;color:${act.color};flex-shrink:0">[${esc(act.abbreviation)}]</span>` : ''}
+        ${lifecycle.status === 'confirmed' ? '' : `<span class="act-lifecycle ${lifecycle.className}">${lifecycle.label}</span>`}
+      </span>
+    </div>
+    <div class="act-dates muted">${fmtShort(act.startDate)} – ${fmtShort(act.endDate)} · ${act.participants.length} attending</div>
+  </td>`;
+  for (const ds of dates) {
+    const d = new Date(`${ds}T00:00:00`);
+    const inR = ds >= act.startDate && ds <= act.endDate;
+    if (!inR) { row += `<td class="gday${isWknd(d) ? ' weekend' : ''}"></td>`; continue; }
+    const isS = ds === visibleStart, isE = ds === visibleEnd;
+    const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
+    row += `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="height:28px">
+        <div class="act-bar${lifecycle.status === 'cancelled' ? ' cancelled-bar' : ''}" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${barOpacity};border-radius:${brl} ${brr}"></div>
+        ${isS ? `<span class="grid-span-label" style="color:${act.color};width:${labelWidth}px">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
+      </td>`;
+  }
+  return row + '</tr>';
+}
+function openActivityScheduleReport() {
+  const start = new Date();
+  const end = new Date(start);
+  end.setDate(end.getDate() + 30);
+  document.getElementById('as-start').value = fmt(start);
+  document.getElementById('as-end').value = fmt(end);
+  document.getElementById('activity-schedule-modal').classList.add('open');
+  renderActivityScheduleReport();
+}
+function renderActivityScheduleReport() {
+  const start = document.getElementById('as-start').value;
+  const end = document.getElementById('as-end').value;
+  const content = document.getElementById('activity-schedule-content');
+  if (!start || !end || end < start) { content.innerHTML = '<div class="empty-note" style="padding:24px;text-align:center">Choose a valid date range.</div>'; return; }
+  const statuses = activityScheduleStatuses();
+  const dates = activityScheduleDates(start, end);
+  const filtered = activityScheduleFilteredActivities(start, end, statuses);
+  content.innerHTML = `
+    <div style="margin-bottom:14px"><div style="font-weight:600;font-size:14px">Activity Schedule</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div></div>
+    ${!filtered.length ? '<div class="empty-note" style="padding:24px;text-align:center">No activities match the selected period and filters.</div>' : `<div style="overflow:auto"><table class="gtable"><thead><tr><th class="gempl sticky-left" style="min-width:210px">Activity</th>${dates.map(ds => `<th class="gday${isWknd(new Date(`${ds}T00:00:00`)) ? ' weekend' : ''}" style="font-size:9px">${fmtShort(ds)}</th>`).join('')}</tr></thead><tbody>${filtered.map(act => activityScheduleBarRow(act, dates)).join('')}</tbody></table></div>`}
+  `;
+}
+function printActivityScheduleReport() {
+  const start = document.getElementById('as-start').value;
+  const end = document.getElementById('as-end').value;
+  if (!start || !end || end < start) { alert('Choose a valid date range first.'); return; }
+  const statuses = activityScheduleStatuses();
+  const dates = activityScheduleDates(start, end);
+  const filtered = activityScheduleFilteredActivities(start, end, statuses);
+  const sections = [];
+  for (let i = 0; i < dates.length; i += 14) {
+    const chunkDates = dates.slice(i, i + 14);
+    sections.push(`<section class="report-section">
+      <h1>Activity Schedule (beta)</h1>
+      <div class="period">Period: ${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])}</div>
+      <table><thead><tr><th class="employee-column">Activity</th>${chunkDates.map(ds => `<th class="date-column${isWknd(new Date(`${ds}T00:00:00`)) ? ' weekend' : ''}">${new Date(`${ds}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted">${fmtShort(ds)}</div></th>`).join('')}</tr></thead>
+      <tbody>${filtered.map(act => activityScheduleBarRow(act, chunkDates)).join('')}</tbody></table>
+    </section>`);
+  }
+  const printWindow = window.open('', '_blank', 'width=1400,height=900');
+  if (!printWindow) { alert('Please allow pop-ups to print the activity schedule.'); return; }
+  printWindow.document.write(`<!doctype html><html><head><title>Activity Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111;--destructive:#dc2626;--surface:#fff}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere;position:relative}.employee-column{width:170px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:#fff7ed}.act-cell-name{display:flex;flex-direction:column;gap:2px}.act-dot{display:inline-block;width:10px;height:10px;border-radius:50%}.act-lifecycle{padding:1px 4px;border-radius:4px;font-size:8px;font-weight:700;text-transform:uppercase}.act-lifecycle.planned{color:#92400e;background:#fef3c7;border:1px solid #f59e0b}.act-lifecycle.cancelled{color:#b91c1c;background:#fee2e2;border:1px solid #ef4444}.act-bar{position:absolute;top:4px;bottom:4px}.act-bar.cancelled-bar::after{content:'';position:absolute;left:0;right:0;top:50%;height:3px;background:var(--destructive);box-shadow:0 0 0 1px var(--surface);transform:translateY(-50%)}.grid-span-label{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:5}.grid-span-status.cancelled{color:#b91c1c;background:#fee2e2;border:1px solid #ef4444;font-size:9px;font-weight:800;padding:0 3px;border-radius:3px;margin-left:4px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
 
@@ -5542,6 +5859,7 @@ async function bootApp() {
   loadSettings();
   loadGridPreferences();
   localBackupFileHandle = await loadStoredLocalBackupHandle();
+  if (localBackupFileHandle) startRemoteUpdatePolling();
   try {
     const fileMeta = JSON.parse(lsGet(LOCAL_FILE_META_KEY) || '{}');
     hasUnsavedChanges = fileMeta.dirty === true;

@@ -22,8 +22,4 @@ Planned assignments remain visible with diagonal hatching, but only Confirmed ac
 
 Dragging across dates creates a visible selection. **Remove from [activity]** removes only that activity from the selected dates; daily statuses and other activities remain. **Clear all selected cells** is the separate action for clearing everything in the selection. Both actions participate in Undo and browser recovery.
 
-In Grid View, use **Import .ics holidays** in the Holidays / Red days section. Standard all-day `VEVENT` entries are shown for review before import. Only events in the active planner year are offered.
-
-## Legacy server implementation
-
-The server-based implementation has been removed. The active app is the standalone root [`index.html`](index.html).
+In Grid View, use **Import .ics holidays** in the Holidays section. Standard all-day `VEVENT` entries are shown for review before import. Only events in the active planner year are offered.
