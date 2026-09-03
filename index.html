@@ -207,6 +207,11 @@ tr:hover .act-cell-actions { opacity: 1; }
 .form-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 13px; }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 13px; }
+.date-input-row { display: flex; align-items: center; gap: 8px; }
+.date-input-row input[type=text] { flex: 1; }
+.date-picker-btn { flex: none; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--muted); cursor: pointer; }
+.date-picker-btn:hover { color: var(--text); background: var(--muted-bg); }
+.native-date-picker { position: fixed; left: -9999px; top: 0; width: 1px !important; height: 1px; opacity: 0; pointer-events: none; }
 .activity-meta-row .form-row > label { min-height: 30px; display: flex; align-items: flex-end; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .participant-list { max-height: 210px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
@@ -513,8 +518,8 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <input type="checkbox" id="af-include-weekends"> Include weekends in Work Schedule
     </label>
     <div class="form-row-2">
-      <div class="form-row" style="margin:0"><label>Start date * <span id="af-start-week" class="muted text-sm"></span></label><input id="af-start" type="text" inputmode="numeric" placeholder="dd.mm.yyyy" maxlength="10" autocomplete="off" onblur="normalizeActivityDateInput(this);updateActivityWeekLabels()"></div>
-      <div class="form-row" style="margin:0"><label>End date * <span id="af-end-week" class="muted text-sm"></span></label><input id="af-end" type="text" inputmode="numeric" placeholder="dd.mm.yyyy" maxlength="10" autocomplete="off" onblur="normalizeActivityDateInput(this);updateActivityWeekLabels()"></div>
+      <div class="form-row" style="margin:0"><label>Start date * <span id="af-start-week" class="muted text-sm"></span></label><div class="date-input-row"><input id="af-start" type="text" inputmode="numeric" placeholder="dd.mm.yyyy" maxlength="10" autocomplete="off" onblur="normalizeActivityDateInput(this);syncActivityDatePicker('start');updateActivityWeekLabels()"><button type="button" class="date-picker-btn" title="Pick start date" aria-label="Pick start date" onclick="openActivityDatePicker('start')">${svgIcon('calendar')}</button><input id="af-start-native" class="native-date-picker" type="date" tabindex="-1" aria-hidden="true" onchange="applyActivityDatePicker('start', this.value)"></div></div>
+      <div class="form-row" style="margin:0"><label>End date * <span id="af-end-week" class="muted text-sm"></span></label><div class="date-input-row"><input id="af-end" type="text" inputmode="numeric" placeholder="dd.mm.yyyy" maxlength="10" autocomplete="off" onblur="normalizeActivityDateInput(this);syncActivityDatePicker('end');updateActivityWeekLabels()"><button type="button" class="date-picker-btn" title="Pick end date" aria-label="Pick end date" onclick="openActivityDatePicker('end')">${svgIcon('calendar')}</button><input id="af-end-native" class="native-date-picker" type="date" tabindex="-1" aria-hidden="true" onchange="applyActivityDatePicker('end', this.value)"></div></div>
     </div>
     <div class="form-row">
       <label>Color</label>
@@ -743,6 +748,7 @@ function svgIcon(name, title = '') {
     chevronLeft: '<path d="m15 18-6-6 6-6"/>',
     chevronRight: '<path d="m9 18 6-6-6-6"/>',
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
+    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
     chevronUp: '<path d="m18 15-6-6-6 6"/>',
     chevronDown: '<path d="m6 9 6 6 6-6"/>',
     sort: '<path d="m8 7 4-4 4 4M16 17l-4 4-4-4"/>',
@@ -2730,7 +2736,7 @@ function renderGridBody(days, today) {
       if (inR) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
         row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
-          <div class="act-bar" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${lifecycle.status === 'confirmed' ? (dim ? '.16' : '.28') : '.9'};border-radius:${brl} ${brr}"></div>
+          <div class="act-bar" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${lifecycle.status === 'tentative' ? '.9' : (dim ? '.16' : '.28')};border-radius:${brl} ${brr}"></div>
           ${isS ? `<span class="grid-span-label" style="color:${act.color};${lifecycle.status === 'cancelled' ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : ''}width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : ` · ${lifecycle.label}`}</span>` : ''}
         </td>`;
       } else {
@@ -3809,6 +3815,8 @@ function openActModal(id) {
   document.getElementById('af-include-weekends').checked = act?.includeWeekends === true;
   document.getElementById('af-start').value = formatActivityDateInput(act?.startDate || defaultStart);
   document.getElementById('af-end').value = formatActivityDateInput(act?.endDate || defaultEnd);
+  syncActivityDatePicker('start');
+  syncActivityDatePicker('end');
   updateActivityWeekLabels();
   document.getElementById('af-notes').value = act?.notes || '';
   selectedActColor = act?.color || PALETTE[0];
@@ -3838,6 +3846,30 @@ function parseActivityDateInput(value) {
 function normalizeActivityDateInput(input) {
   const isoDate = parseActivityDateInput(input?.value);
   if (isoDate) input.value = formatActivityDateInput(isoDate);
+}
+function syncActivityDatePicker(which) {
+  const textInput = document.getElementById(`af-${which}`);
+  const nativeInput = document.getElementById(`af-${which}-native`);
+  if (!textInput || !nativeInput) return;
+  nativeInput.value = parseActivityDateInput(textInput.value) || '';
+}
+function applyActivityDatePicker(which, isoDate) {
+  const textInput = document.getElementById(`af-${which}`);
+  const nativeInput = document.getElementById(`af-${which}-native`);
+  if (!textInput || !nativeInput || !isoDate) return;
+  textInput.value = formatActivityDateInput(isoDate);
+  nativeInput.value = isoDate;
+  updateActivityWeekLabels();
+}
+function openActivityDatePicker(which) {
+  const nativeInput = document.getElementById(`af-${which}-native`);
+  if (!nativeInput) return;
+  syncActivityDatePicker(which);
+  if (typeof nativeInput.showPicker === 'function') nativeInput.showPicker();
+  else {
+    nativeInput.focus();
+    nativeInput.click();
+  }
 }
 function updateActivityWeekLabels() {
   const update = (inputId, outputId) => {
