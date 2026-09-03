@@ -1541,13 +1541,70 @@ async function requestLocalBackupHandle() {
   return handle;
 }
 
+function isObjectMap(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function stableJson(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+}
+
 async function writeLocalBackupFile(handle) {
-  const payload = JSON.stringify(snapshotData(), null, 2);
-  validatePlannerData(JSON.parse(payload));
+  const localSnapshot = snapshotData();
+  let mergedWithDisk = false;
+  try {
+    const diskFile = await handle.getFile();
+    const diskText = await diskFile.text();
+    if (diskText && diskText.trim()) {
+      const parsedDiskData = JSON.parse(diskText);
+      validatePlannerData(parsedDiskData);
+      const diskEntriesMap = isObjectMap(parsedDiskData.entriesMap);
+      const diskOvertimeMap = isObjectMap(parsedDiskData.overtimeMap);
+      const diskActivityShiftsMap = isObjectMap(parsedDiskData.activityShiftsMap);
+
+      const mergedEntriesMap = { ...diskEntriesMap, ...isObjectMap(entriesMap) };
+      const mergedOvertimeMap = { ...diskOvertimeMap, ...isObjectMap(overtimeMap) };
+      const mergedActivityShiftsMap = { ...diskActivityShiftsMap, ...isObjectMap(activityShiftsMap) };
+
+      const localBeforeMerge = {
+        entriesMap: isObjectMap(entriesMap),
+        overtimeMap: isObjectMap(overtimeMap),
+        activityShiftsMap: isObjectMap(activityShiftsMap),
+      };
+      const localAfterMerge = {
+        entriesMap: mergedEntriesMap,
+        overtimeMap: mergedOvertimeMap,
+        activityShiftsMap: mergedActivityShiftsMap,
+      };
+      mergedWithDisk = stableJson(localBeforeMerge) !== stableJson(localAfterMerge);
+      if (mergedWithDisk) {
+        entriesMap = mergedEntriesMap;
+        overtimeMap = mergedOvertimeMap;
+        activityShiftsMap = mergedActivityShiftsMap;
+      }
+    }
+  } catch (readError) {
+    if (!['NotFoundError', 'AbortError'].includes(readError?.name)) throw readError;
+  }
+
+  const payloadData = {
+    ...localSnapshot,
+    entriesMap: isObjectMap(entriesMap),
+    overtimeMap: isObjectMap(overtimeMap),
+    activityShiftsMap: isObjectMap(activityShiftsMap),
+  };
+  const payload = JSON.stringify(payloadData, null, 2);
+  validatePlannerData(payloadData);
   const writable = await handle.createWritable();
   try {
     await writable.write(payload);
     await writable.close();
+    if (mergedWithDisk) {
+      renderPage();
+      setTimeout(() => alert('Endringene dine ble lagret sammen med nye oppdateringer fra dine kollegaer!'), 0);
+    }
   } catch (err) {
     try { await writable.abort(); } catch (abortErr) { }
     throw err;
@@ -1560,7 +1617,7 @@ async function saveLocalBackupFile(forcePrompt = false) {
   }
   let handle = null;
   if (!forcePrompt) {
-    handle = await loadStoredLocalBackupHandle();
+    handle = localBackupFileHandle || await loadStoredLocalBackupHandle();
     if (handle) {
       const hasPermission = await ensureLocalBackupPermission(handle);
       if (!hasPermission) handle = null;
@@ -2735,7 +2792,6 @@ function togglePastActivities() {
 function cellActivities(empId, ds) {
   return activities
     .filter(act => {
-      if (activityStatus(act) === 'cancelled') return false;
       if (!(ds >= act.startDate && ds <= act.endDate && participantFor(act, empId))) return false;
       const assignment = activityAssignment(`${empId}_${ds}_${act.id}`);
       return assignment.assigned === true && !assignment.excluded;
@@ -2826,7 +2882,10 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const shiftMeta = primaryActivity ? activityShiftMeta(primaryActivity, primaryActivity.assignment.shift) : null;
   const shiftSymbol = !customActivityShift && shiftMeta?.icon ? `<span class="shift-symbol">${shiftMeta.icon}</span>` : '';
   if (primaryActivity && activityStatus(primaryActivity) === 'tentative') tipParts.push('Planned assignment');
-  const holidayTint = holiday ? 'background:color-mix(in srgb,var(--holiday-color) 8%,var(--surface)) !important;color:color-mix(in srgb,var(--holiday-color) 42%,var(--text)) !important;' : '';
+  const isCancelledActivity = primaryActivity && activityStatus(primaryActivity) === 'cancelled';
+  const holidayTint = holiday && !primaryActivity
+    ? 'background:color-mix(in srgb,var(--holiday-color) 8%,var(--surface));color:color-mix(in srgb,var(--holiday-color) 42%,var(--text));'
+    : '';
   const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">🎂</span>` : '';
   const overtimeBadge = overtime
     ? `<span class="overtime-badge" title="Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` · ${esc(overtime.note)}` : ''}">OT ${formatHoursNumber(overtime.hours)}h</span>`
@@ -2835,9 +2894,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const fullDayStatusStyle = !primaryActivity && !isPartial && si
     ? `background:${si.color}20 !important;color:${si.color} !important;`
     : '';
-  const finalCellStyle = holiday
-    ? `${cellStyleStr};${holidayTint}${fullDayStatusStyle}${planningHorizonStyle(ds)}`
-    : `${cellStyleStr}${planningHorizonStyle(ds)}`;
+  const finalCellStyle = `${cellStyleStr}${holidayTint}${fullDayStatusStyle}${planningHorizonStyle(ds)}`;
 
   const shiftClass = primaryActivity?.assignment.shift === 'day'
     ? ' day-shift-cell'
@@ -2850,7 +2907,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"
-    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
+    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner"${isCancelledActivity ? ' style="text-decoration:line-through;color:var(--destructive);"' : ''}>${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
