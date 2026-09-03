@@ -682,6 +682,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
         <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As...</button>
       </div>
       <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:12px"><input id="set-confirmed-activities-only" type="checkbox"> Show only confirmed activities in Grid View</label>
     </div>
     <div class="form-row" style="margin-top:2px">
       <label>About</label>
@@ -784,6 +785,7 @@ let appSettings = {
   appName: 'Team Manager',
   darkMode: false,
   autoSaveEnabled: true,
+  showOnlyConfirmedActivities: false,
   coreHoursPerDay: 7.5,
   coreWorkdayRange: '0730-1500',
   lightMax: 70,
@@ -840,6 +842,7 @@ function loadSettings() {
       appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
+      appSettings.showOnlyConfirmedActivities = parsed.showOnlyConfirmedActivities === true;
       appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(parsed.coreWorkdayRange, '0730-1500');
       appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || (typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5);
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
@@ -1001,6 +1004,7 @@ function loadSettings() {
       appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
+      appSettings.showOnlyConfirmedActivities = parsed.showOnlyConfirmedActivities === true;
       appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(parsed.coreWorkdayRange, '0730-1500');
       appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || (typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5);
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
@@ -1085,6 +1089,7 @@ function applyAppName() {
 function openSettings() {
   document.getElementById('set-app-name').value = appSettings.appName;
   document.getElementById('set-core-time').value = appSettings.coreWorkdayRange || '0730-1500';
+  document.getElementById('set-confirmed-activities-only').checked = appSettings.showOnlyConfirmedActivities === true;
   document.getElementById('set-core-time').oninput = updateCoreHoursDisplayFromRangeInput;
   document.getElementById('set-core-time').onchange = updateCoreHoursDisplayFromRangeInput;
   updateCoreHoursDisplayFromRangeInput();
@@ -1387,6 +1392,8 @@ function confirmHolidayImport() {
   renderPage();
 }
 function saveSettings() {
+  const confirmedOnlyToggle = document.getElementById('set-confirmed-activities-only');
+  const previousShowOnlyConfirmed = appSettings.showOnlyConfirmedActivities === true;
   const name = document.getElementById('set-app-name').value.trim();
   if (name) appSettings.appName = name;
   const coreTime = normalizeCoreWorkdayRange(document.getElementById('set-core-time').value, '');
@@ -1406,6 +1413,7 @@ function saveSettings() {
   appSettings.lightMax = lightMax;
   appSettings.normalMax = normalMax;
   appSettings.highMax = highMax;
+  appSettings.showOnlyConfirmedActivities = confirmedOnlyToggle?.checked === true;
   const planningHorizonDays = Number(document.getElementById('set-planning-horizon-days').value);
   if (!Number.isInteger(planningHorizonDays) || planningHorizonDays < 0 || planningHorizonDays > 365) {
     alert('Activity discussion deadline must be a whole number from 0 to 365 days.');
@@ -1421,6 +1429,7 @@ function saveSettings() {
   applyAppName();
   updateSaveButton();
   updateSbStatus();
+  if (previousShowOnlyConfirmed !== appSettings.showOnlyConfirmedActivities) activityPageOffset = 0;
   closeModal('settings-modal');
   renderPage();
 }
@@ -1628,7 +1637,7 @@ async function saveLocalBackupFile(forcePrompt = false) {
   }
   let handle = null;
   if (!forcePrompt) {
-    handle = localBackupFileHandle;
+    handle = localBackupFileHandle || await loadStoredLocalBackupHandle();
     if (handle) {
       const hasPermission = await ensureLocalBackupPermission(handle);
       if (!hasPermission) handle = null;
@@ -2052,7 +2061,8 @@ async function saveData() {
   const btn = document.getElementById('save-btn');
   const originalText = btn ? btn.innerHTML : '';
   try {
-    if (canUseFileSystemSave() && !localBackupFileHandle) {
+    const existingHandle = canUseFileSystemSave() ? (localBackupFileHandle || await loadStoredLocalBackupHandle()) : null;
+    if (canUseFileSystemSave() && !existingHandle) {
       try {
         localBackupFileHandle = await requestLocalBackupHandle();
       } catch (e) {
@@ -2656,8 +2666,11 @@ function renderGridBody(days, today) {
   if (!tbody) return;
   let html = '';
   const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
-  const currentActs = yearActs.filter(a => a.endDate >= today);
-  const pastActs = yearActs.filter(a => a.endDate < today);
+  const filteredYearActs = appSettings.showOnlyConfirmedActivities
+    ? yearActs.filter(a => activityStatus(a) === 'confirmed')
+    : yearActs;
+  const currentActs = filteredYearActs.filter(a => a.endDate >= today);
+  const pastActs = filteredYearActs.filter(a => a.endDate < today);
   const visibleActivities = pastActivitiesExpanded ? [...currentActs, ...pastActs] : currentActs;
   const pageSize = activityPageCapacity();
   activityPageSize = pageSize;
@@ -2670,7 +2683,7 @@ function renderGridBody(days, today) {
   // ── Activities section ────────────────────────────────────────
   html += `<tr class="sect-row"><td class="sticky-left" style="z-index:60">
       <span class="flex items-center justify-between">
-        <span>Activities (${yearActs.length})</span>
+        <span>Activities (${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''})</span>
         <span class="flex items-center" style="gap:3px">
           ${visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
           <button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
@@ -2681,7 +2694,7 @@ function renderGridBody(days, today) {
     </td><td colspan="${days.length}"></td></tr>`;
 
   if (!currentActs.length && !pastActs.length) {
-    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">No activities yet. Use the add activity button to create one.</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
+    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">${appSettings.showOnlyConfirmedActivities ? 'No confirmed activities to show. Turn off the filter in Settings to show planned or cancelled activities.' : 'No activities yet. Use the add activity button to create one.'}</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
   }
   const renderActRow = (act, dim) => {
     const attendCount = act.participants.length;
@@ -2804,7 +2817,16 @@ function activityPageCapacity() {
   return 8;
 }
 function changeActivityPage(direction) {
-  activityPageOffset = Math.max(0, activityPageOffset + direction * activityPageSize);
+  const today = todayStr();
+  const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
+  const filteredYearActs = appSettings.showOnlyConfirmedActivities
+    ? yearActs.filter(a => activityStatus(a) === 'confirmed')
+    : yearActs;
+  const currentActs = filteredYearActs.filter(a => a.endDate >= today);
+  const pastActs = filteredYearActs.filter(a => a.endDate < today);
+  const visibleActivities = pastActivitiesExpanded ? [...currentActs, ...pastActs] : currentActs;
+  const maxOffset = Math.max(0, Math.floor((visibleActivities.length - 1) / activityPageSize) * activityPageSize);
+  activityPageOffset = Math.min(Math.max(0, activityPageOffset + direction * activityPageSize), maxOffset);
   renderGridBody(daysOfYear(gridYear), todayStr());
 }
 function togglePastActivities() {
@@ -4042,23 +4064,37 @@ function teamReportCellInfo(emp, act, date) {
   const hours = info.administrativeMeasure.hours;
   const days = info.administrativeMeasure.units;
   const tint = info.assignment.shift === 'night' ? 0.22 : 0.12;
+  const activityLabel = act.abbreviation || act.name;
   return {
-    html: `<div style="font-weight:700">${esc(info.workCode.name)} (${esc(info.administrativeValue)})</div><div style="font-size:10px;margin-top:2px">${esc(info.physicalShift)}</div>`,
+    html: `<div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:${act.color || 'inherit'}"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:${act.color || 'currentColor'};flex:0 0 auto"></span>${esc(activityLabel)}</div><div style="font-weight:700">${esc(info.workCode.abbreviation || info.workCode.name)} (${esc(info.administrativeValue)})</div><div style="font-size:10px;margin-top:2px">${esc(info.physicalShift)}</div>`,
     hours,
     days,
     tint,
     workCode: info.workCode,
+    activity: act,
   };
 }
 function teamReportCell(emp, act, date) {
   const info = teamReportCellInfo(emp, act, date);
   return info ? info.html : '';
 }
+function teamReportEntryCellInfos(entry, date) {
+  return entry.activities
+    .map(act => teamReportCellInfo(entry.emp, act, date))
+    .filter(Boolean);
+}
 function teamReportEntryCellInfo(entry, date) {
-  const act = entry.activities.find(item => participantActivityShift(item, entry.emp.id, date));
-  if (!act) return null;
-  const info = teamReportCellInfo(entry.emp, act, date);
-  return info ? { ...info, act } : null;
+  const infos = teamReportEntryCellInfos(entry, date);
+  if (!infos.length) return null;
+  return {
+    html: infos.map((info, index) => `<div${index ? ' style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(0,0,0,0.08)"' : ''}>${info.html}</div>`).join(''),
+    hours: infos.reduce((sum, info) => sum + info.hours, 0),
+    days: infos.reduce((sum, info) => sum + info.days, 0),
+    tint: infos[0].tint,
+    workCode: infos[0].workCode,
+    activity: infos[0].activity,
+    items: infos,
+  };
 }
 function teamReportActivityLabels(employeeActivities) {
   return employeeActivities.length
