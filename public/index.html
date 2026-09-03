@@ -1621,11 +1621,56 @@ async function requestLocalBackupHandle() {
   return handle;
 }
 
+function isObjectMap(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function stableJson(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+}
+
 async function writeLocalBackupFile(handle) {
+  let mergedWithDisk = false;
+  try {
+    const diskFile = await handle.getFile();
+    const diskText = await diskFile.text();
+    if (diskText && diskText.trim()) {
+      const parsedDiskData = JSON.parse(diskText);
+      validatePlannerData(parsedDiskData);
+      const mergedEntriesMap = { ...isObjectMap(parsedDiskData.entriesMap), ...isObjectMap(entriesMap) };
+      const mergedActivityShiftsMap = { ...isObjectMap(parsedDiskData.activityShiftsMap), ...isObjectMap(activityShiftsMap) };
+      const localBeforeMerge = {
+        entriesMap: isObjectMap(entriesMap),
+        activityShiftsMap: isObjectMap(activityShiftsMap),
+      };
+      const localAfterMerge = {
+        entriesMap: mergedEntriesMap,
+        activityShiftsMap: mergedActivityShiftsMap,
+      };
+      mergedWithDisk = stableJson(localBeforeMerge) !== stableJson(localAfterMerge);
+      if (mergedWithDisk) {
+        entriesMap = mergedEntriesMap;
+        activityShiftsMap = mergedActivityShiftsMap;
+      }
+    }
+  } catch (readError) {
+    if (!['NotFoundError', 'AbortError'].includes(readError?.name)) throw readError;
+  }
+
+  const payloadData = snapshotData();
+  payloadData.entriesMap = isObjectMap(entriesMap);
+  payloadData.activityShiftsMap = isObjectMap(activityShiftsMap);
+  validatePlannerData(payloadData);
   const writable = await handle.createWritable();
   try {
-    await writable.write(JSON.stringify(snapshotData(), null, 2));
+    await writable.write(JSON.stringify(payloadData, null, 2));
     await writable.close();
+    if (mergedWithDisk) {
+      renderPage();
+      setTimeout(() => alert('Endringene dine ble lagret sammen med nye oppdateringer fra dine kollegaer!'), 0);
+    }
   } catch (err) {
     try { await writable.abort(); } catch (abortErr) { }
     throw err;
@@ -1639,7 +1684,7 @@ async function saveLocalBackupFile(forcePrompt = false) {
   }
   let handle = null;
   if (!forcePrompt) {
-    handle = await loadStoredLocalBackupHandle();
+    handle = localBackupFileHandle || await loadStoredLocalBackupHandle();
     if (handle) {
       const hasPermission = await ensureLocalBackupPermission(handle);
       if (!hasPermission) handle = null;
@@ -2787,7 +2832,6 @@ function togglePastActivities() {
 function cellActivities(empId, ds) {
   return activities
     .filter(act => {
-      if (activityStatus(act) !== 'confirmed') return false;
       if (!(ds >= act.startDate && ds <= act.endDate && participantFor(act, empId))) return false;
       const assignment = activityAssignment(`${empId}_${ds}_${act.id}`);
       return assignment.assigned === true && !assignment.excluded;
@@ -2864,21 +2908,16 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const shiftMeta = primaryActivity ? activityShiftMeta(primaryActivity, primaryActivity.assignment.shift) : null;
   const shiftSymbol = !customActivityShift && shiftMeta?.icon ? `<span class="shift-symbol">${shiftMeta.icon}</span>` : '';
   const activityUnderline = acts.length && primaryActivity ? `box-shadow: inset 0 -3px 0 ${primaryActivity.color};` : '';
-  const holidayTint = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
+  const isCancelledActivity = primaryActivity && activityStatus(primaryActivity) === 'cancelled';
+  const holidayTint = holiday && !primaryActivity ? `background:${holiday.color || '#ef4444'}28;color:${holiday.color || '#ef4444'};` : '';
   const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">🎂</span>` : '';
-
-  const dayBackground = holiday ? `background:${holiday.color || '#ef4444'}28 !important;` : '';
-  const dayTextColor = holiday ? `color:${holiday.color || '#ef4444'} !important;` : '';
-
-  const finalCellStyle = holiday
-    ? `${dayBackground}${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${dayTextColor}${holidayTint}${planningHorizonStyle(ds)}`
-    : `${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${planningHorizonStyle(ds)}`;
+  const finalCellStyle = `${cellStyleStr}${activityUnderline ? `;${activityUnderline}` : ''}${holidayTint}${planningHorizonStyle(ds)}`;
 
   return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"
-    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}<div class="gday-inner">${esc(cellText)}${birthdayBadge}</div></td>`;
+    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}<div class="gday-inner"${isCancelledActivity ? ' style="text-decoration:line-through;color:var(--destructive);"' : ''}>${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
