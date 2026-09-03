@@ -69,7 +69,8 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sa
 .gh-day.today-col { background: color-mix(in srgb, var(--accent-blue) 18%, var(--surface)) !important; color: var(--accent-blue) !important; font-weight: 800; box-shadow: inset 2px 0 color-mix(in srgb, var(--text) 45%, var(--border)), inset -2px 0 color-mix(in srgb, var(--text) 45%, var(--border)); }
 .gh-day.holiday-col { background: #fee2e2 !important; color: #b91c1c; }
 body.dark .gh-day.holiday-col { background: #451a1a !important; color: #fca5a5; }
-.gday.status-cell.holiday-col { border-right: 1px solid color-mix(in srgb, var(--holiday-color, #ef4444) 16%, var(--border)) !important; border-bottom: 1px solid color-mix(in srgb, var(--holiday-color, #ef4444) 16%, var(--border)) !important; }
+.gday.status-cell.holiday-col { border-right: 1px solid color-mix(in srgb, var(--holiday-color, #ef4444) 16%, var(--border)) !important; border-bottom: 1px solid color-mix(in srgb, var(--holiday-color, #ef4444) 16%, var(--border)); }
+.gday.has-activity.holiday-col { border-bottom: 3px solid var(--activity-color, transparent) !important; }
 .gday.span-label-cell { overflow: visible; z-index: 4; }
 .grid-span-label { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); z-index: 5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; font-weight: 700; pointer-events: none; text-align: left; }
 .sticky-left { position: sticky; left: 0; z-index: 20; background: var(--surface); }
@@ -480,7 +481,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="form-row" style="margin:0"><label>Abbreviation <span class="muted" style="font-weight:400">(optional, max 4)</span></label><input id="af-abbr" maxlength="4" placeholder="e.g. APAM" style="text-transform:uppercase"></div>
     </div>
     <div class="form-row-3 activity-meta-row">
-      <div class="form-row" style="margin:0"><label>Cost Center <span class="muted" style="font-weight:400">(letters/num)</span></label><input id="af-project" placeholder="e.g. PRJ2026A" pattern="[A-Za-z0-9]*"></div>
+      <div class="form-row" style="margin:0"><label>Cost Center <span class="muted" style="font-weight:400">(letters/num)</span></label><input id="af-project" placeholder="e.g. PRJ2026A" pattern="[A-Za-z0-9\-]*"></div>
       <div class="form-row" style="margin:0"><label>Order <span class="muted" style="font-weight:400">(max 9 chars)</span></label><input id="af-order" maxlength="9" placeholder="e.g. ORD123456" pattern="[A-Za-z0-9]*"></div>
       <div class="form-row" style="margin:0"><label>Billing explanation</label><input id="af-billing" placeholder="e.g. Customer"></div>
     </div>
@@ -1568,6 +1569,9 @@ async function writeLocalBackupFile(handle) {
         const mergedEntriesMap = { ...diskEntriesMap, ...isObjectMap(entriesMap) };
         const mergedOvertimeMap = { ...diskOvertimeMap, ...isObjectMap(overtimeMap) };
         const mergedActivityShiftsMap = { ...diskActivityShiftsMap, ...isObjectMap(activityShiftsMap) };
+        for (const key of Object.keys(mergedEntriesMap)) if (mergedEntriesMap[key] === null) delete mergedEntriesMap[key];
+        for (const key of Object.keys(mergedOvertimeMap)) if (mergedOvertimeMap[key] === null) delete mergedOvertimeMap[key];
+        for (const key of Object.keys(mergedActivityShiftsMap)) if (mergedActivityShiftsMap[key] === null) delete mergedActivityShiftsMap[key];
 
         const localBeforeMerge = {
           entriesMap: isObjectMap(entriesMap),
@@ -1590,6 +1594,9 @@ async function writeLocalBackupFile(handle) {
   } catch (readError) {
     if (!['NotFoundError', 'AbortError'].includes(readError?.name)) throw readError;
   }
+  for (const key of Object.keys(entriesMap)) if (entriesMap[key] === null) delete entriesMap[key];
+  for (const key of Object.keys(overtimeMap)) if (overtimeMap[key] === null) delete overtimeMap[key];
+  for (const key of Object.keys(activityShiftsMap)) if (activityShiftsMap[key] === null) delete activityShiftsMap[key];
 
   lastSyncTime = new Date().toISOString();
   localSnapshot.savedAt = lastSyncTime;
@@ -2047,6 +2054,14 @@ async function saveData() {
   try {
     if (btn) btn.innerHTML = 'Saving...';
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+    if (canUseFileSystemSave() && !localBackupFileHandle) {
+      localBackupFileHandle = await requestLocalBackupHandle();
+      const hasPermission = await ensureLocalBackupPermission(localBackupFileHandle);
+      if (!hasPermission) {
+        await clearStoredLocalBackupHandle();
+        throw new Error('No local backup file permission');
+      }
+    }
     try {
       await saveState(true);
     } catch (recoveryError) {
@@ -2287,7 +2302,7 @@ function pruneImplicitDefaultActivityShifts() {
       if (!participantShiftKeys.length) continue;
       const hasOnlyFulldayEntries = participantShiftKeys.every(key => activityAssignmentShift(key) === 'fullday');
       if (!hasOnlyFulldayEntries) continue;
-      participantShiftKeys.forEach(key => delete activityShiftsMap[key]);
+      participantShiftKeys.forEach(key => activityShiftsMap[key] = null);
     }
   }
 }
@@ -2670,13 +2685,13 @@ function renderGridBody(days, today) {
     const barBackground = lifecycle.status === 'tentative'
       ? `repeating-linear-gradient(135deg,color-mix(in srgb,${act.color} 38%,transparent) 0 5px,color-mix(in srgb,${act.color} 12%,transparent) 5px 10px)`
       : (lifecycle.status === 'cancelled'
-        ? 'repeating-linear-gradient(135deg,rgba(220,38,38,.42) 0 5px,rgba(220,38,38,.12) 5px 10px)'
+        ? 'rgba(220, 38, 38, 0.15)'
         : act.color);
     let row = `<tr><td class="gempl sticky-left" style="${dim ? 'opacity:.65;' : ''}cursor:pointer" onclick="openActModal(${act.id})" title="Click to edit ${esc(act.name)}">
       <div class="act-cell-name">
         <span class="flex items-center gap-2" style="min-width:0">
           <span class="act-dot" style="background:${act.color}"></span>
-          <span class="act-name">${esc(act.name)}</span>
+          <span class="act-name"${lifecycle.status === 'cancelled' ? ' style="text-decoration:line-through;text-decoration-thickness:2px;color:var(--destructive);"' : ''}>${esc(act.name)}</span>
           ${act.abbreviation ? `<span style="font-size:10px;font-weight:700;color:${act.color};flex-shrink:0">[${esc(act.abbreviation)}]</span>` : ''}
           ${lifecycleBadge}
         </span>
@@ -2700,7 +2715,7 @@ function renderGridBody(days, today) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
         row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
           <div class="act-bar" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${lifecycle.status === 'confirmed' ? (dim ? '.16' : '.28') : '.9'};border-radius:${brl} ${brr}"></div>
-          ${isS ? `<span class="grid-span-label" style="color:${lifecycle.status === 'cancelled' ? '#b91c1c' : act.color};width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : ` · ${lifecycle.label}`}</span>` : ''}
+          ${isS ? `<span class="grid-span-label" style="color:${lifecycle.status === 'cancelled' ? 'var(--destructive)' : act.color};${lifecycle.status === 'cancelled' ? 'text-decoration:line-through;text-decoration-thickness:2px;' : ''}width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : ` · ${lifecycle.label}`}</span>` : ''}
         </td>`;
       } else {
         row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
@@ -2913,7 +2928,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"
-    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner"${isCancelledActivity ? ' style="text-decoration:line-through;color:var(--destructive);"' : ''}>${esc(cellText)}${birthdayBadge}</div></td>`;
+    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner"${isCancelledActivity ? ' style="text-decoration:line-through;text-decoration-thickness:2px;color:var(--destructive);"' : ''}>${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
@@ -3342,7 +3357,7 @@ async function removeSelectedStatus() {
   if (pickerEmpId == null || !pickerDate) return;
   const dates = pickerDates.length ? pickerDates : [pickerDate];
   recordUndo();
-  dates.forEach(date => delete entriesMap[`${pickerEmpId}_${date}`]);
+  dates.forEach(date => entriesMap[`${pickerEmpId}_${date}`] = null);
   pickerSelectedStatus = null;
   document.querySelectorAll('#pk-status-btns .pk-btn').forEach(button => button.classList.remove('pk-sel'));
   document.getElementById('pk-duration-section').style.display = 'none';
@@ -3392,7 +3407,7 @@ async function removeOvertime() {
   if (pickerEmpId == null || !pickerDate) return;
   const dates = pickerDates.length ? pickerDates : [pickerDate];
   recordUndo();
-  dates.forEach(date => delete overtimeMap[`${pickerEmpId}_${date}`]);
+  dates.forEach(date => overtimeMap[`${pickerEmpId}_${date}`] = null);
   markUnsaved();
   await saveState();
   dates.forEach(date => updateCell(pickerEmpId, date));
@@ -3403,8 +3418,8 @@ async function clearStatus() {
   const dates = pickerDates.length ? pickerDates : [pickerDate];
   recordUndo();
   dates.forEach(date => {
-    delete entriesMap[`${pickerEmpId}_${date}`];
-    delete overtimeMap[`${pickerEmpId}_${date}`];
+    entriesMap[`${pickerEmpId}_${date}`] = null;
+    overtimeMap[`${pickerEmpId}_${date}`] = null;
     activities.filter(act => actParticipantIds(act).includes(pickerEmpId) && date >= act.startDate && date <= act.endDate).forEach(act => {
       excludeActivityAssignment(`${pickerEmpId}_${date}_${act.id}`);
     });
@@ -3830,7 +3845,7 @@ async function saveActivity() {
   const includeWeekends = document.getElementById('af-include-weekends').checked;
   if (!name) { alert('Activity name is required.'); return; }
   if (abbr.length > 4) { alert('Activity abbreviation can be at most 4 characters.'); return; }
-  if (project && !/^[A-Za-z0-9]+$/.test(project)) { alert('Cost Center must contain only letters and numbers.'); return; }
+  if (project && !/^[A-Za-z0-9\-]+$/.test(project)) { alert('Cost Center must contain only letters, numbers, and hyphens.'); return; }
   if (order && !/^[A-Za-z0-9]{1,9}$/.test(order)) { alert('Order must contain up to 9 alphanumeric characters.'); return; }
   if (!start || !end) { alert('Enter valid start and end dates using dd.mm.yyyy.'); return; }
   if (end < start) { alert('End date must be on or after start date.'); return; }
@@ -3846,7 +3861,7 @@ async function saveActivity() {
     const keepIds = new Set(rec.participants.map(p => p.id));
     for (const key of Object.keys(activityShiftsMap)) {
       const [empIdStr, , actIdStr] = key.split('_');
-      if (+actIdStr === rec.id && !keepIds.has(+empIdStr)) delete activityShiftsMap[key];
+      if (+actIdStr === rec.id && !keepIds.has(+empIdStr)) activityShiftsMap[key] = null;
     }
   } else {
     rec.id = nextActId++;
@@ -3854,7 +3869,7 @@ async function saveActivity() {
   }
   for (const key of Object.keys(activityShiftsMap)) {
     const parts = key.split('_');
-    if (+parts[2] === rec.id && (parts[1] < rec.startDate || parts[1] > rec.endDate)) delete activityShiftsMap[key];
+    if (+parts[2] === rec.id && (parts[1] < rec.startDate || parts[1] > rec.endDate)) activityShiftsMap[key] = null;
   }
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
   markUnsaved();
@@ -4578,13 +4593,13 @@ function confirmDelete(kind, id) {
   document.getElementById('confirm-ok').onclick = async () => {
     if (kind === 'employee') {
       employees = employees.filter(e => e.id !== id);
-      for (const key of Object.keys(entriesMap)) if (key.startsWith(`${id}_`)) delete entriesMap[key];
-      for (const key of Object.keys(overtimeMap)) if (key.startsWith(`${id}_`)) delete overtimeMap[key];
-      for (const key of Object.keys(activityShiftsMap)) if (key.startsWith(`${id}_`)) delete activityShiftsMap[key];
+      for (const key of Object.keys(entriesMap)) if (key.startsWith(`${id}_`)) entriesMap[key] = null;
+      for (const key of Object.keys(overtimeMap)) if (key.startsWith(`${id}_`)) overtimeMap[key] = null;
+      for (const key of Object.keys(activityShiftsMap)) if (key.startsWith(`${id}_`)) activityShiftsMap[key] = null;
       for (const act of activities) act.participants = act.participants.filter(p => p.id !== id);
     } else if (kind === 'activity') {
       activities = activities.filter(a => a.id !== id);
-      for (const key of Object.keys(activityShiftsMap)) if (key.endsWith(`_${id}`)) delete activityShiftsMap[key];
+      for (const key of Object.keys(activityShiftsMap)) if (key.endsWith(`_${id}`)) activityShiftsMap[key] = null;
     } else if (kind === 'status') {
       statuses = statuses.filter(s => s.id !== id);
     } else if (kind === 'category') {
