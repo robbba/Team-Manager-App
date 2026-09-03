@@ -2052,20 +2052,25 @@ async function saveData() {
   const btn = document.getElementById('save-btn');
   const originalText = btn ? btn.innerHTML : '';
   try {
-    if (btn) btn.innerHTML = 'Saving...';
-    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
     if (canUseFileSystemSave() && !localBackupFileHandle) {
-      localBackupFileHandle = await requestLocalBackupHandle();
-      const hasPermission = await ensureLocalBackupPermission(localBackupFileHandle);
-      if (!hasPermission) {
-        await clearStoredLocalBackupHandle();
-        throw new Error('No local backup file permission');
+      try {
+        localBackupFileHandle = await requestLocalBackupHandle();
+      } catch (e) {
+        alert("No JSON-file selected. Save aborted.");
+        return;
+      }
+      if (!localBackupFileHandle) {
+        alert("No JSON-file selected. Save aborted.");
+        return;
       }
     }
+
+    if (btn) btn.innerHTML = 'Saving...';
+    if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
     try {
       await saveState(true);
     } catch (recoveryError) {
-      alert('Browser recovery is unavailable. The JSON file will still be saved.');
+      console.warn(recoveryError);
     }
     await saveLocalBackupFile(false);
     markFileSaved();
@@ -2073,7 +2078,7 @@ async function saveData() {
     updateSbStatus();
   } catch (err) {
     if (err && err.name === 'AbortError') return;
-    alert('Could not save local backup file.');
+    alert('Could not save local backup file. Please ensure a JSON file is selected.');
     updateSaveButton();
   } finally {
     if (btn) btn.innerHTML = originalText;
@@ -2684,14 +2689,12 @@ function renderGridBody(days, today) {
     const lifecycleBadge = lifecycle.status === 'confirmed' ? '' : `<span class="act-lifecycle ${lifecycle.className}">${lifecycle.label}</span>`;
     const barBackground = lifecycle.status === 'tentative'
       ? `repeating-linear-gradient(135deg,color-mix(in srgb,${act.color} 38%,transparent) 0 5px,color-mix(in srgb,${act.color} 12%,transparent) 5px 10px)`
-      : (lifecycle.status === 'cancelled'
-        ? 'rgba(220, 38, 38, 0.15)'
-        : act.color);
+      : act.color;
     let row = `<tr><td class="gempl sticky-left" style="${dim ? 'opacity:.65;' : ''}cursor:pointer" onclick="openActModal(${act.id})" title="Click to edit ${esc(act.name)}">
       <div class="act-cell-name">
         <span class="flex items-center gap-2" style="min-width:0">
           <span class="act-dot" style="background:${act.color}"></span>
-          <span class="act-name"${lifecycle.status === 'cancelled' ? ' style="text-decoration:line-through;text-decoration-thickness:2px;color:var(--destructive);"' : ''}>${esc(act.name)}</span>
+          <span class="act-name"${lifecycle.status === 'cancelled' ? ' style="text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;"' : ''}>${esc(act.name)}</span>
           ${act.abbreviation ? `<span style="font-size:10px;font-weight:700;color:${act.color};flex-shrink:0">[${esc(act.abbreviation)}]</span>` : ''}
           ${lifecycleBadge}
         </span>
@@ -2715,7 +2718,7 @@ function renderGridBody(days, today) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
         row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
           <div class="act-bar" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${lifecycle.status === 'confirmed' ? (dim ? '.16' : '.28') : '.9'};border-radius:${brl} ${brr}"></div>
-          ${isS ? `<span class="grid-span-label" style="color:${lifecycle.status === 'cancelled' ? 'var(--destructive)' : act.color};${lifecycle.status === 'cancelled' ? 'text-decoration:line-through;text-decoration-thickness:2px;' : ''}width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : ` · ${lifecycle.label}`}</span>` : ''}
+          ${isS ? `<span class="grid-span-label" style="color:${act.color};${lifecycle.status === 'cancelled' ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : ''}width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : ` · ${lifecycle.label}`}</span>` : ''}
         </td>`;
       } else {
         row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
@@ -2928,7 +2931,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"
-    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner"${isCancelledActivity ? ' style="text-decoration:line-through;text-decoration-thickness:2px;color:var(--destructive);"' : ''}>${esc(cellText)}${birthdayBadge}</div></td>`;
+    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner"${isCancelledActivity ? ' style="text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;"' : ''}>${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
