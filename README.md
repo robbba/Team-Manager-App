@@ -26,4 +26,4 @@ In Grid View, use **Import .ics holidays** in the Holidays / Red days section. S
 
 ## Legacy server implementation
 
-The previous server-based version is preserved separately in [`public/index.html`](public/index.html), [`server.js`](server.js), [`package.json`](package.json), [`Dockerfile`](Dockerfile), and [`docker-compose.yml`](docker-compose.yml). It is not part of the active standalone application and is not kept in sync with changes to the root HTML file.
+The server-based implementation has been removed. The active app is the standalone root [`index.html`](index.html).
