@@ -1808,16 +1808,34 @@ async function saveLocalBackupFile(forcePrompt = false) {
   if (!forcePrompt) {
     handle = localBackupFileHandle || await loadStoredLocalBackupHandle();
     if (handle) {
-      const hasPermission = await ensureLocalBackupPermission(handle);
-      if (!hasPermission) handle = null;
+      try {
+        const hasPermission = await ensureLocalBackupPermission(handle);
+        if (!hasPermission) handle = null;
+      } catch (err) {
+        console.warn('Permission check failed for existing handle:', err);
+        handle = null;
+      }
     }
   }
   if (!handle) {
-    handle = await requestLocalBackupHandle();
-    const hasPermission = await ensureLocalBackupPermission(handle);
-    if (!hasPermission) {
+    try {
+      handle = await requestLocalBackupHandle();
+    } catch (err) {
+      if (err?.name === 'AbortError') throw err;
+      throw new Error('No JSON file selected. Please select a JSON file to save your data.');
+    }
+    if (!handle) {
+      throw new Error('No JSON file selected. Please select a JSON file to save your data.');
+    }
+    try {
+      const hasPermission = await ensureLocalBackupPermission(handle);
+      if (!hasPermission) {
+        await clearStoredLocalBackupHandle();
+        throw new Error('Permission denied. Please select a different JSON file.');
+      }
+    } catch (err) {
       await clearStoredLocalBackupHandle();
-      throw new Error('No local backup file permission');
+      throw err;
     }
   }
   try {
@@ -1844,6 +1862,7 @@ async function saveDataAs() {
     try {
       await saveState(true);
     } catch (recoveryError) {
+      console.warn('Browser recovery error:', recoveryError);
       alert('Browser recovery is unavailable. The JSON file will still be saved.');
     }
     await saveLocalBackupFile(true);
@@ -1852,7 +1871,7 @@ async function saveDataAs() {
     updateSbStatus();
   } catch (err) {
     if (err && err.name === 'AbortError') return;
-    alert('Could not save local backup file.');
+    alert(`Could not save JSON file: ${err?.message || 'Unknown error occurred.'}`);
     updateSaveButton();
   } finally {
     if (btn) btn.innerHTML = originalText;
@@ -2240,11 +2259,13 @@ async function saveData() {
       try {
         localBackupFileHandle = await requestLocalBackupHandle();
       } catch (e) {
-        alert("No JSON-file selected. Save aborted.");
+        if (e?.name !== 'AbortError') {
+          alert("No JSON file selected. Please select a JSON file to save your data.");
+        }
         return;
       }
       if (!localBackupFileHandle) {
-        alert("No JSON-file selected. Save aborted.");
+        alert("No JSON file selected. Please select a JSON file to save your data.");
         return;
       }
     }
@@ -2254,7 +2275,7 @@ async function saveData() {
     try {
       await saveState(true);
     } catch (recoveryError) {
-      console.warn(recoveryError);
+      console.warn('Browser recovery error:', recoveryError);
     }
     await saveLocalBackupFile(false);
     markFileSaved();
@@ -2262,7 +2283,13 @@ async function saveData() {
     updateSbStatus();
   } catch (err) {
     if (err && err.name === 'AbortError') return;
-    alert('Could not save local backup file. Please ensure a JSON file is selected.');
+    let message = err?.message || 'Could not save the JSON file.';
+    if (message.includes('permission') || message.includes('Permission')) {
+      message += ' Try using "Save As..." from settings to select a different file.';
+    } else if (!message.includes('selected')) {
+      message += ' Please ensure a JSON file is selected.';
+    }
+    alert(message);
     updateSaveButton();
   } finally {
     if (btn) btn.innerHTML = originalText;
@@ -2477,7 +2504,10 @@ function activityHasScheduledShift(act, empId, start, end) {
   return Object.keys(activityShiftsMap).some(key => {
     if (!key.startsWith(prefix) || !key.endsWith(suffix)) return false;
     const [, date] = key.split('_', 3);
-    return date >= start && date <= end && Boolean(activityAssignment(key).workCodeId);
+    if (date < start || date > end) return false;
+    // Respect includeWeekends flag: if activity is weekday-only, skip weekend shifts
+    if (!act.includeWeekends && isWknd(new Date(`${date}T00:00:00`))) return false;
+    return Boolean(activityAssignment(key).workCodeId);
   });
 }
 function pruneImplicitDefaultActivityShifts() {
