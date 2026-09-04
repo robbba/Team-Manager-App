@@ -5865,7 +5865,7 @@ function renderSummary() {
         <div class="page-sub">Selected statuses, absence totals, overtime, and Work Codes for ${range.label}. Period: ${range.subtitle}.</div>
       </div>
       <div class="year-nav" style="gap:8px">
-        <button class="btn" onclick="openSummaryColumns()">${svgIcon('sliders')} Columns</button>
+        <button class="btn" onclick="openSummaryColumns()">Columns</button>
         <select class="plain-select" onchange="setSummaryPeriod(this.value)" aria-label="Summary period">
           <option value="year" ${summaryPeriod === 'year' ? 'selected' : ''}>Full year</option>
           <option value="month" ${summaryPeriod === 'month' ? 'selected' : ''}>Month</option>
