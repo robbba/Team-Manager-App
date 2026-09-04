@@ -1959,6 +1959,7 @@ function validatePlannerData(data) {
   });
   if (data.overtimeMap != null && (typeof data.overtimeMap !== 'object' || Array.isArray(data.overtimeMap))) throw new Error('Invalid overtime entries');
   Object.entries(data.overtimeMap || {}).forEach(([key, value]) => {
+    if (value === null) return;
     const separator = key.indexOf('_');
     const date = key.slice(separator + 1);
     const hours = Number(value?.hours);
