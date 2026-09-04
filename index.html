@@ -4488,7 +4488,7 @@ function activityScheduleBarRow(act, dates) {
     if (!inR) { row += `<td class="gday${isWknd(d) ? ' weekend' : ''}"></td>`; continue; }
     const isS = ds === visibleStart, isE = ds === visibleEnd;
     const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
-    row += `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="height:28px">
+    row += `<td class="gday${isWknd(d) ? ' weekend' : ''}${isS ? ' span-label-cell' : ''}" style="height:28px${isS ? ';overflow:visible;z-index:4' : ''}">
         <div class="act-bar${lifecycle.status === 'cancelled' ? ' cancelled-bar' : ''}" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${barOpacity};border-radius:${brl} ${brr}"></div>
         ${isS ? `<span class="grid-span-label" style="color:${act.color};width:${labelWidth}px">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
       </td>`;
