@@ -4433,6 +4433,33 @@ function activityScheduleFilteredActivities(start, end, statuses) {
     .filter(act => act.startDate <= end && act.endDate >= start && statuses.includes(activityStatus(act)))
     .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
 }
+function activityScheduleHeaderGroups(dates, keyFor, labelFor, className) {
+  const groups = [];
+  for (const ds of dates) {
+    const date = new Date(`${ds}T00:00:00`);
+    const key = keyFor(date);
+    const group = groups[groups.length - 1];
+    if (group && group.key === key) group.span += 1;
+    else groups.push({ key, label: labelFor(date), span: 1 });
+  }
+  return `<tr class="${className}">${groups.map(group => `<th class="gday" colspan="${group.span}">${esc(group.label)}</th>`).join('')}</tr>`;
+}
+function activityScheduleDateHeaders(dates) {
+  return `${activityScheduleHeaderGroups(
+    dates,
+    date => `${date.getFullYear()}-${date.getMonth()}`,
+    date => date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    'activity-schedule-months'
+  )}${activityScheduleHeaderGroups(
+    dates,
+    date => isoWeekStringFromDate(date),
+    date => `Week ${isoWeek(date)}`,
+    'activity-schedule-weeks'
+  )}<tr class="activity-schedule-days">${dates.map(ds => {
+    const date = new Date(`${ds}T00:00:00`);
+    return `<th class="gday${isWknd(date) ? ' weekend' : ''}"><span>${date.toLocaleDateString('en-US', { weekday: 'short' })}</span><div>${date.getDate()}</div></th>`;
+  }).join('')}</tr>`;
+}
 function activityScheduleBarRow(act, dates) {
   const lifecycle = activityStatusMeta(act);
   const barBackground = lifecycle.status === 'tentative'
@@ -4487,7 +4514,7 @@ function renderActivityScheduleReport() {
   const filtered = activityScheduleFilteredActivities(start, end, statuses);
   content.innerHTML = `
     <div style="margin-bottom:14px"><div style="font-weight:600;font-size:14px">Activity Schedule</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div></div>
-    ${!filtered.length ? '<div class="empty-note" style="padding:24px;text-align:center">No activities match the selected period and filters.</div>' : `<div style="overflow:auto"><table class="gtable"><thead><tr><th class="gempl sticky-left" style="min-width:210px">Activity</th>${dates.map(ds => `<th class="gday${isWknd(new Date(`${ds}T00:00:00`)) ? ' weekend' : ''}" style="font-size:9px">${fmtShort(ds)}</th>`).join('')}</tr></thead><tbody>${filtered.map(act => activityScheduleBarRow(act, dates)).join('')}</tbody></table></div>`}
+    ${!filtered.length ? '<div class="empty-note" style="padding:24px;text-align:center">No activities match the selected period and filters.</div>' : `<div style="overflow:auto"><table class="gtable"><thead><tr><th class="gempl sticky-left" rowspan="3" style="min-width:210px">Activity</th></tr>${activityScheduleDateHeaders(dates)}</thead><tbody>${filtered.map(act => activityScheduleBarRow(act, dates)).join('')}</tbody></table></div>`}
   `;
 }
 function printActivityScheduleReport() {
@@ -4503,7 +4530,7 @@ function printActivityScheduleReport() {
     sections.push(`<section class="report-section">
       <h1>Activity Schedule (beta)</h1>
       <div class="period">Period: ${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])}</div>
-      <table><thead><tr><th class="employee-column">Activity</th>${chunkDates.map(ds => `<th class="date-column${isWknd(new Date(`${ds}T00:00:00`)) ? ' weekend' : ''}">${new Date(`${ds}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted">${fmtShort(ds)}</div></th>`).join('')}</tr></thead>
+      <table><thead><tr><th class="employee-column" rowspan="3">Activity</th></tr>${activityScheduleDateHeaders(chunkDates)}</thead>
       <tbody>${filtered.map(act => activityScheduleBarRow(act, chunkDates)).join('')}</tbody></table>
     </section>`);
   }
