@@ -1989,11 +1989,14 @@ function validatePlannerData(data) {
   if (activityAssignmentIssues.length) throw new Error(formatActivityAssignmentIssueMessage(activityAssignmentIssues));
 }
 
+function normalizeWorkCodeReferenceId(value) {
+  return value === null || value === undefined || value === '' ? null : String(value);
+}
 function normalizedActivityAssignmentValue(value) {
   if (!value) return { shift: '', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: false, excluded: false };
   return typeof value === 'string'
     ? { shift: value, workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false }
-    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: value.workCodeId || null, administrativeTime: String(value.administrativeTime || ''), staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
+    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: normalizeWorkCodeReferenceId(value.workCodeId), administrativeTime: String(value.administrativeTime || ''), staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
 }
 function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
@@ -2023,7 +2026,7 @@ function activityAssignmentIssueForKey(key, value, context) {
   const participantIds = new Set((activity.participants || []).map(participant => Number(participant?.id)).filter(Number.isFinite));
   if (!participantIds.has(employeeId)) return { key, kind: 'participant', employeeId, activityId, date };
   const assignment = normalizedActivityAssignmentValue(value);
-  if (assignment.workCodeId && context.workCodeIds && !context.workCodeIds.has(String(assignment.workCodeId))) {
+  if (assignment.workCodeId !== null && assignment.workCodeId !== '' && context.workCodeIds && !context.workCodeIds.has(String(assignment.workCodeId))) {
     return { key, kind: 'workCode', employeeId, activityId, date };
   }
   return null;
@@ -2308,13 +2311,13 @@ function loadFromData(data) {
     : {};
   if (normalized.activityShiftsMap && typeof normalized.activityShiftsMap === 'object' && !Array.isArray(normalized.activityShiftsMap)) {
     activityShiftsMap = Object.fromEntries(Object.entries(normalized.activityShiftsMap).map(([key, value]) => [key,
-      typeof value === 'string' ? { shift: value || 'normal', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), workCodeId: value?.workCodeId || null, administrativeTime: String(value?.administrativeTime || ''), staffingImpactOverride: null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
+      typeof value === 'string' ? { shift: value || 'normal', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), workCodeId: normalizeWorkCodeReferenceId(value?.workCodeId), administrativeTime: String(value?.administrativeTime || ''), staffingImpactOverride: null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
     ]));
   } else if (Array.isArray(normalized.activityShifts)) {
     activityShiftsMap = {};
     normalized.activityShifts.forEach(s => {
       const eid = +s.employeeId, pid = +(s.activityId ?? s.projectId);
-      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: s.workCodeId || null, administrativeTime: String(s.administrativeTime || ''), staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
+      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: normalizeWorkCodeReferenceId(s.workCodeId), administrativeTime: String(s.administrativeTime || ''), staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
     });
   } else activityShiftsMap = {};
   const rawStatuses = Array.isArray(normalized.statuses) && normalized.statuses.length
@@ -2515,7 +2518,10 @@ function friendlyStatusLabel(key) {
 }
 function actParticipantIds(act) { return (act.participants || []).map(p => p.id); }
 function participantFor(act, empId) { return (act.participants || []).find(p => p.id === empId) || null; }
-function workCodeById(id) { return (appSettings.workCodes || []).find(code => code.id === id) || null; }
+function workCodeById(id) {
+  const normalizedId = normalizeWorkCodeReferenceId(id);
+  return normalizedId === null ? null : (appSettings.workCodes || []).find(code => String(code.id) === normalizedId) || null;
+}
 function canAssignActivityToEmployee(act, empId, date = '') {
   if (!act || !empById(empId) || !actParticipantIds(act).includes(empId)) return false;
   return !date || (date >= act.startDate && date <= act.endDate);
