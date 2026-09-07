@@ -1069,19 +1069,39 @@ function normalizeGridCollapsedSections(value) {
     employees: value.employees === true,
   };
 }
+function applyGridPreferences(preferences, options = {}) {
+  const resetMissing = options.resetMissing === true;
+  if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) return;
+  const prefYear = Number(preferences.year);
+  if (Number.isInteger(prefYear)) gridYear = prefYear;
+  if (Object.prototype.hasOwnProperty.call(preferences, 'hiddenEmployeeIds')) {
+    hiddenEmployees = Array.isArray(preferences.hiddenEmployeeIds)
+      ? new Set(preferences.hiddenEmployeeIds.map(Number).filter(Number.isFinite))
+      : new Set();
+  } else if (resetMissing) hiddenEmployees = new Set();
+  if (Object.prototype.hasOwnProperty.call(preferences, 'viewMode')) {
+    gridViewMode = normalizeGridViewMode(preferences.viewMode);
+  } else if (resetMissing) gridViewMode = 'all';
+  if (Object.prototype.hasOwnProperty.call(preferences, 'collapsedSections')) {
+    collapsedGridSections = normalizeGridCollapsedSections(preferences.collapsedSections);
+  } else if (resetMissing) collapsedGridSections = { activities: false, holidays: false, employees: false };
+}
 function loadGridPreferences() {
-  const savedYear = parseInt(lsGet(GRID_YEAR_KEY), 10);
-  if (Number.isInteger(savedYear)) gridYear = savedYear;
-  gridViewMode = normalizeGridViewMode(lsGet(GRID_VIEW_MODE_KEY) || 'all');
+  let savedHidden = [];
+  let savedCollapsed = {};
   try {
-    const savedHidden = JSON.parse(lsGet(GRID_HIDDEN_EMPLOYEES_KEY) || '[]');
-    hiddenEmployees = new Set(Array.isArray(savedHidden) ? savedHidden.map(Number).filter(Number.isFinite) : []);
-  } catch (err) { hiddenEmployees = new Set(); }
+    const parsed = JSON.parse(lsGet(GRID_HIDDEN_EMPLOYEES_KEY) || '[]');
+    savedHidden = Array.isArray(parsed) ? parsed : [];
+  } catch (err) { savedHidden = []; }
   try {
-    collapsedGridSections = normalizeGridCollapsedSections(JSON.parse(lsGet(GRID_SECTION_COLLAPSE_KEY) || '{}'));
-  } catch (err) {
-    collapsedGridSections = { activities: false, holidays: false, employees: false };
-  }
+    savedCollapsed = JSON.parse(lsGet(GRID_SECTION_COLLAPSE_KEY) || '{}');
+  } catch (err) { savedCollapsed = {}; }
+  applyGridPreferences({
+    year: parseInt(lsGet(GRID_YEAR_KEY), 10),
+    hiddenEmployeeIds: savedHidden,
+    viewMode: lsGet(GRID_VIEW_MODE_KEY) || 'all',
+    collapsedSections: savedCollapsed,
+  }, { resetMissing: true });
 }
 function saveGridPreferences() {
   lsSet(GRID_YEAR_KEY, String(gridYear));
@@ -2134,21 +2154,7 @@ function loadFromData(data) {
   const rawGridPreferences = normalized.gridPreferences && typeof normalized.gridPreferences === 'object' && !Array.isArray(normalized.gridPreferences)
     ? normalized.gridPreferences
     : null;
-  if (rawGridPreferences) {
-    const prefYear = Number(rawGridPreferences.year);
-    if (Number.isInteger(prefYear)) gridYear = prefYear;
-    if (Object.prototype.hasOwnProperty.call(rawGridPreferences, 'hiddenEmployeeIds')) {
-      hiddenEmployees = Array.isArray(rawGridPreferences.hiddenEmployeeIds)
-        ? new Set(rawGridPreferences.hiddenEmployeeIds.map(Number).filter(Number.isFinite))
-        : new Set();
-    }
-    if (Object.prototype.hasOwnProperty.call(rawGridPreferences, 'viewMode')) {
-      gridViewMode = normalizeGridViewMode(rawGridPreferences.viewMode);
-    }
-    if (Object.prototype.hasOwnProperty.call(rawGridPreferences, 'collapsedSections')) {
-      collapsedGridSections = normalizeGridCollapsedSections(rawGridPreferences.collapsedSections);
-    }
-  }
+  if (rawGridPreferences) applyGridPreferences(rawGridPreferences);
   if (normalized.appSettings) {
     appSettings = { ...appSettings, ...normalized.appSettings };
     appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(appSettings.coreWorkdayRange, '0730-1500');
@@ -3058,7 +3064,7 @@ function renderGridBody(days, today) {
     }
     return row + '</tr>';
   };
-  if (showTimelineSections && !collapsedGridSections.activities) {
+  if (showTimelineSections && !collapsedGridSections.activities && (currentActs.length || pastActs.length)) {
     activityPage.forEach(act => { html += renderActRow(act, act.endDate < today); });
     if (pastActs.length) {
       html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)">
