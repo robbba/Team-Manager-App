@@ -1508,19 +1508,6 @@ function toggleGridSection(section) {
   saveGridPreferences();
   renderGridBody(daysOfYear(gridYear), todayStr());
 }
-function setAllGridSectionsCollapsed(collapsed) {
-  collapsedGridSections = {
-    activities: collapsed === true,
-    holidays: collapsed === true,
-    employees: collapsed === true,
-  };
-  saveGridPreferences();
-  renderGridBody(daysOfYear(gridYear), todayStr());
-}
-function toggleAllGridSectionsCollapsed() {
-  const allCollapsed = Object.values(collapsedGridSections).every(Boolean);
-  setAllGridSectionsCollapsed(!allCollapsed);
-}
 
 function downloadDataFile() {
   const payload = JSON.stringify(snapshotData(), null, 2);
@@ -2329,6 +2316,13 @@ async function saveState(force = false) {
 }
 
 async function saveData() {
+  if (canUseFileSystemSave()) {
+    const existingHandle = localBackupFileHandle || await loadStoredLocalBackupHandle();
+    if (!existingHandle) {
+      await saveDataAs();
+      return;
+    }
+  }
   const btn = document.getElementById('save-btn');
   const originalText = btn ? btn.innerHTML : '';
   try {
@@ -2842,8 +2836,6 @@ function renderGrid() {
     dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
-  const allSectionsCollapsed = Object.values(collapsedGridSections).every(Boolean);
-
   document.getElementById('content').innerHTML = `
     <div id="grid-wrap">
       <div class="grid-topbar">
@@ -2860,7 +2852,6 @@ function renderGrid() {
             <option value="timeline" ${gridViewMode === 'timeline' ? 'selected' : ''}>Timeline only</option>
             <option value="employees" ${gridViewMode === 'employees' ? 'selected' : ''}>Employees only</option>
           </select>
-          <button class="btn btn-sm" onclick="toggleAllGridSectionsCollapsed()">${allSectionsCollapsed ? 'Expand sections' : 'Collapse sections'}</button>
           <div class="year-nav" aria-label="Calendar year">
             <button class="btn btn-icon" onclick="changeGridYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
             <span class="year-label">${gridYear}</span>
