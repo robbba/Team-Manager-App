@@ -5141,17 +5141,24 @@ function statusLoadMeasure(entry) {
   if (entry.durationType === 'time') return { units: 0, hours: timeRangeHours(entry.time) ?? 0 };
   return { units: 1, hours: 0 };
 }
+function workloadHoursBeyondCore(hours) {
+  const value = Number(hours);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.max(0, value - (Number(appSettings.coreHoursPerDay) || 0));
+}
 function activityAdministrativeMeasure(activity, empId, date) {
   if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return { units: 0, hours: 0 };
+  if (!activity.includeWeekends && isWknd(new Date(`${date}T00:00:00`))) return { units: 0, hours: 0 };
   const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
   if (!assignment.assigned || assignment.excluded) return { units: 0, hours: 0 };
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
   if (!workCode) return { units: 0, hours: 0 };
   if (workCode.aggregationMode === 'days') return { units: 1, hours: 0 };
-  if (workCode.durationMode === 'fixed') return { units: 0, hours: Number(workCode.fixedHours) || 0 };
+  if (workCode.durationMode === 'fixed') return { units: 0, hours: workloadHoursBeyondCore(workCode.fixedHours) };
   const shiftMeta = activityShiftMeta(activity, assignment.shift);
   const legacyInterval = shiftMeta?.range || (timeRangeHours(assignment.shift) ? assignment.shift : '');
-  return { units: 0, hours: timeRangeHours(assignment.administrativeTime || legacyInterval) || 0 };
+  const enteredHours = timeRangeHours(assignment.administrativeTime || legacyInterval) || 0;
+  return { units: 0, hours: workloadHoursBeyondCore(enteredHours) };
 }
 function activityLoadMeasure(activity, empId, date) {
   if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return { units: 0, hours: 0 };
@@ -5198,13 +5205,13 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
       if (st?.isOutOfOffice) { oooUnits += measure.units; oooHours += measure.hours; }
     }
 
-    Object.entries(activityShiftsMap).forEach(([key, shift]) => {
+    Object.entries(activityShiftsMap).forEach(([key]) => {
       if (!key.startsWith(`${emp.id}_${ds}_`)) return;
       const activityId = +key.split('_')[2];
       const activity = activities.find(act => act.id === activityId);
       if (!activity || activityStatus(activity) !== 'confirmed') return;
       if (activity && !activityCountsTowardLoad(activity)) return;
-      const measure = activityLoadMeasure(activity, emp.id, ds);
+      const measure = activityAdministrativeMeasure(activity, emp.id, ds);
       activityUnits += measure.units;
       timedActivityHours += measure.hours;
     });
