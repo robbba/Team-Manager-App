@@ -2003,7 +2003,7 @@ function normalizedActivityAssignmentValue(value) {
   if (!value) return { shift: '', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: false, excluded: false };
   return typeof value === 'string'
     ? { shift: value, workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false }
-    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: normalizeWorkCodeReferenceId(value.workCodeId), administrativeTime: String(value.administrativeTime || ''), staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
+    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: normalizeWorkCodeReferenceId(value.workCodeId), administrativeTime: String(value.administrativeTime || ''), staffingImpactOverride: value.staffingImpactOverride ?? null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
 }
 function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
@@ -2321,13 +2321,13 @@ function loadFromData(data) {
     : {};
   if (normalized.activityShiftsMap && typeof normalized.activityShiftsMap === 'object' && !Array.isArray(normalized.activityShiftsMap)) {
     activityShiftsMap = Object.fromEntries(Object.entries(normalized.activityShiftsMap).map(([key, value]) => [key,
-      typeof value === 'string' ? { shift: value || 'normal', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), workCodeId: normalizeWorkCodeReferenceId(value?.workCodeId), administrativeTime: String(value?.administrativeTime || ''), staffingImpactOverride: null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
+      typeof value === 'string' ? { shift: value || 'normal', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), workCodeId: normalizeWorkCodeReferenceId(value?.workCodeId), administrativeTime: String(value?.administrativeTime || ''), staffingImpactOverride: value?.staffingImpactOverride ?? null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
     ]));
   } else if (Array.isArray(normalized.activityShifts)) {
     activityShiftsMap = {};
     normalized.activityShifts.forEach(s => {
       const eid = +s.employeeId, pid = +(s.activityId ?? s.projectId);
-      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: normalizeWorkCodeReferenceId(s.workCodeId), administrativeTime: String(s.administrativeTime || ''), staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
+      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: normalizeWorkCodeReferenceId(s.workCodeId), administrativeTime: String(s.administrativeTime || ''), staffingImpactOverride: s.staffingImpactOverride ?? null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
     });
   } else activityShiftsMap = {};
   const rawStatuses = Array.isArray(normalized.statuses) && normalized.statuses.length
