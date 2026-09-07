@@ -1,10 +1,10 @@
 # Team Manager
 
-The active application is the standalone [`index.html`](index.html). For the smoothest portable workflow in Edge, keep `index.html`, any `assets/` files, and `data.json` together in one folder and open the app from a simple local static server such as `http://localhost:8080`.
+The active application is the standalone [`index.html`](index.html). For the smoothest portable workflow in Edge, keep `index.html`, any `assets/` files, and your real planner `data.json` together in one folder and open the app from a simple local static server such as `http://localhost:8080`.
 
 ## Planner files
 
-Team Manager now auto-loads `./data.json` on startup. This is the normal portable planner source for shared use.
+Team Manager uses recovered browser state first when it already contains planner data. `./data.json` auto-load is used for fresh/empty local state and remains the normal shared portable planner source.
 
 Browser storage provides automatic crash and reload recovery, but it is not a replacement for saving the JSON file. The JSON file contains personnel, activities, assignments, statuses, holidays, settings, courses, requirements, and grid preferences. Store portable folders in the approved secure location for your environment.
 
@@ -16,17 +16,24 @@ Recommended folder layout:
 portable-team-manager/
 ├── index.html
 ├── data.json
+├── data.example.json
 └── assets/   (if present in your build)
 ```
 
 Recommended startup:
 
 - Serve the folder locally for reliable `fetch('./data.json')` behavior in Edge.
+- If needed, copy `data.example.json` to `data.json` before first launch.
 - `python -m http.server 8080`
 - `py -m http.server 8080`
 - Then open `http://localhost:8080`
 
 Opening `index.html` directly with `file://` may block or inconsistently allow loading `data.json`, depending on browser policy. If `data.json` is missing, unreadable, or invalid, Team Manager shows a clear message and you can use **Open Different JSON** as the manual fallback.
+
+Startup precedence is safety-first:
+- If recovered browser state exists and contains planner content, Team Manager loads that recovered data first.
+- If recovered state is missing or effectively empty, Team Manager auto-loads `data.json`.
+- If `data.json` is empty while recovered state has real planner content, Team Manager keeps the recovered state to avoid silent data loss.
 
 Use **Open Different JSON** to temporarily work from another planner file and **Save As** to create a writable copy. That override is for exceptions; the next normal launch returns to `data.json`.
 
