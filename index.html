@@ -130,7 +130,6 @@ tr:hover .act-cell-actions { opacity: 1; }
 .planning-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; }
 .planning-control-group { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .planning-control-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .emp-name-btn { border: none; background: none; padding: 0; display: block; font: inherit; color: inherit; text-align: left; cursor: pointer; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .emp-name-btn:hover { color: var(--text); }
 .emp-name-btn.active { color: var(--accent-blue); font-weight: 700; }
@@ -3111,7 +3110,7 @@ function renderGridBody(days, today) {
     for (const emp of group.emps) {
       const isHighlighted = highlightedEmployeeId === emp.id;
       html += `<tr><td class="gempl sticky-left${isHighlighted ? ' emp-highlight-label' : ''}" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-right:2px solid ${colors.accent} !important">
-        <div class="flex items-center justify-between gap-2"><button type="button" class="emp-name-btn emp-name${isHighlighted ? ' active' : ''}" onclick="toggleEmployeeHighlight(${emp.id})" aria-pressed="${isHighlighted ? 'true' : 'false'}" aria-labelledby="emp-name-${emp.id} emp-action-${emp.id}" title="${isHighlighted ? 'Clear highlight' : 'Highlight this employee'}"><span id="emp-name-${emp.id}">${esc(emp.name)}</span><span id="emp-action-${emp.id}" class="sr-only">${isHighlighted ? 'Clear highlight for employee row' : 'Highlight employee row'}</span></button></div>
+        <div class="flex items-center justify-between gap-2"><button type="button" class="emp-name-btn emp-name${isHighlighted ? ' active' : ''}" onclick="toggleEmployeeHighlight(${emp.id})" aria-pressed="${isHighlighted ? 'true' : 'false'}" aria-label="${esc(isHighlighted ? `Clear highlight for ${emp.name}` : `Highlight ${emp.name}`)}" title="${isHighlighted ? 'Clear highlight' : 'Highlight this employee'}">${esc(emp.name)}</button></div>
         <div class="emp-sub">${esc(emp.role)}</div>
       </td>`;
       for (const d of days) {
