@@ -338,7 +338,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     <button class="sb-link" id="save-btn" onclick="saveData()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l3 3v13H4V4z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg> Save</button>
     <button class="sb-link" id="sync-btn" onclick="syncNow()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6"/><path d="M4 20v-6h6"/><path d="M6.5 9.5A7 7 0 0 1 19 10"/><path d="M17.5 14.5A7 7 0 0 1 5 14"/></svg> Sync Now</button>
     <button class="sb-link" id="auto-sync-btn" onclick="toggleAutoSync()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6"/><path d="M4 20v-6h6"/><path d="M6.5 9.5A7 7 0 0 1 19 10"/><path d="M17.5 14.5A7 7 0 0 1 5 14"/></svg> Auto-update: On</button>
-    <button class="sb-link" id="autosave-btn" onclick="toggleAutoSave()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/><circle cx="12" cy="12" r="8"/></svg> Auto-recovery: On</button>
     <button class="sb-link" id="undo-btn" onclick="undoLastChange()" disabled><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/></svg> Undo Change</button>
     <div class="sb-info" id="file-status" title="No active JSON file"><span class="db-indicator connected" id="db-dot"></span><span id="db-status-text">Updated</span></div>
   </div>
@@ -1135,35 +1134,6 @@ function applyTheme() {
   if (toggle) toggle.innerHTML = `${svgIcon(appSettings.darkMode ? 'sun' : 'moon')} ${appSettings.darkMode ? 'Light mode' : 'Dark mode'}`;
 }
 function toggleTheme() { appSettings.darkMode = !appSettings.darkMode; persistSettings(); applyTheme(); renderPage(); }
-function updateAutoSaveButton() {
-  const button = document.getElementById('autosave-btn');
-  if (!button) return;
-  const enabled = appSettings.autoSaveEnabled !== false;
-  button.innerHTML = `${svgIcon('save')} Auto-recovery: ${enabled ? 'On' : 'Off'}`;
-}
-async function toggleAutoSave() {
-  appSettings.autoSaveEnabled = appSettings.autoSaveEnabled === false;
-  if (appSettings.autoSaveEnabled === false && autoSaveTimer) {
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = null;
-  }
-  persistSettings();
-  updateAutoSaveButton();
-  updateSaveButton();
-  updateSbStatus();
-  if (appSettings.autoSaveEnabled && hasUnsavedChanges) {
-    try {
-      await saveState(true);
-    } catch (err) {
-      appSettings.autoSaveEnabled = false;
-      persistSettings();
-      updateAutoSaveButton();
-      updateSaveButton();
-      updateSbStatus();
-      alert('Could not enable auto-save because local save failed.');
-    }
-  }
-}
 function setSyncStatusState(state) {
   syncStatusState = state || 'updated';
   updateSbStatus();
@@ -3077,13 +3047,12 @@ function closeEmployeePicker() {
 function setStartupFileSelectionRequired(required) {
   startupFileSelectionRequired = required === true;
   if (startupFileSelectionRequired) {
-    document.querySelectorAll('.nav-btn, #save-btn, #sync-btn, #auto-sync-btn, #autosave-btn, #undo-btn').forEach(button => {
+    document.querySelectorAll('.nav-btn, #save-btn, #sync-btn, #auto-sync-btn, #undo-btn').forEach(button => {
       if (button) button.disabled = true;
     });
   } else {
     updateSaveButton();
     updateAutoSyncButton();
-    updateAutoSaveButton();
     updateUndoButton();
     document.querySelectorAll('.nav-btn').forEach(button => { if (button) button.disabled = false; });
   }
@@ -6385,7 +6354,7 @@ async function bootApp() {
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
   updateDefaultJsonStatus();
-  applyTheme(); applyAppName(); updateSaveButton(); updateAutoSaveButton(); updateAutoSyncButton(); updateUndoButton();
+  applyTheme(); applyAppName(); updateSaveButton(); updateAutoSyncButton(); updateUndoButton();
   document.getElementById('af-start').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-end').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-start').addEventListener('input', updateActivityWeekLabels);
