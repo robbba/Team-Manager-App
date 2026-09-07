@@ -2148,19 +2148,19 @@ window.addEventListener('beforeunload', event => {
 function safeColor(c) { return /^#[0-9a-fA-F]{3,8}$/.test(String(c || '')) ? c : PALETTE[0]; }
 function loadFromData(data) {
   const normalized = normalizeStateVersion(data || {});
-  lastSyncTime = data.savedAt || new Date().toISOString();
-  undoStack = [];
-  updateUndoButton();
   const rawGridPreferences = normalized.gridPreferences && typeof normalized.gridPreferences === 'object' && !Array.isArray(normalized.gridPreferences)
     ? normalized.gridPreferences
     : null;
-  applyGridPreferences(rawGridPreferences || {}, { resetMissing: true });
+  lastSyncTime = data.savedAt || new Date().toISOString();
+  undoStack = [];
+  updateUndoButton();
   if (normalized.appSettings) {
     appSettings = { ...appSettings, ...normalized.appSettings };
     appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(appSettings.coreWorkdayRange, '0730-1500');
     appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || 7.5;
     appSettings.holidays = Array.isArray(appSettings.holidays) ? appSettings.holidays : [];
   }
+  applyGridPreferences(rawGridPreferences || {}, { resetMissing: true });
   appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
     ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
     : {};
@@ -2328,22 +2328,6 @@ async function saveData() {
   const btn = document.getElementById('save-btn');
   const originalText = btn ? btn.innerHTML : '';
   try {
-    const existingHandle = canUseFileSystemSave() ? (localBackupFileHandle || await loadStoredLocalBackupHandle()) : null;
-    if (canUseFileSystemSave() && !existingHandle) {
-      try {
-        localBackupFileHandle = await requestLocalBackupHandle();
-      } catch (e) {
-        if (e?.name !== 'AbortError') {
-          alert("No JSON file selected. Please select a JSON file to save your data.");
-        }
-        return;
-      }
-      if (!localBackupFileHandle) {
-        alert("No JSON file selected. Please select a JSON file to save your data.");
-        return;
-      }
-    }
-
     if (btn) btn.innerHTML = 'Saving...';
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
     try {
