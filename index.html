@@ -1637,7 +1637,7 @@ async function checkForRemoteFileUpdate() {
     nextActId = Math.max(nextActId, ...activities.map(a => a.id || 0)) + 1;
     const repairSummary = repairCurrentPlannerRelations();
     lastSyncTime = parsedDiskData.savedAt;
-    baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
+    refreshBaseSnapshot();
     renderPage();
     const conflicts = [...employeeMerge.conflicts, ...activityMerge.conflicts];
     const conflictNote = conflicts.length ? ` ${conflicts.length} record(s) had conflicting edits — yours were kept.` : '';
@@ -1793,7 +1793,7 @@ async function writeLocalBackupFile(handle) {
   try {
     await writable.write(payload);
     await writable.close();
-    baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
+    refreshBaseSnapshot();
     if (mergedWithDisk) {
       renderPage();
       const conflictNote = entityConflicts.length
@@ -1932,11 +1932,11 @@ async function loadDataFile(file, handle) {
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
   persistSettings();
-  if (hasPlannerRepairs(repairSummary)) markUnsaved();
-  else markFileSaved();
   try {
     await saveState(true);
+    markFileSaved();
   } catch (recoveryError) {
+    if (hasPlannerRepairs(repairSummary)) markUnsaved();
     alert('The planner is open, but browser recovery could not be updated. Save the JSON file after changes.');
   }
   closeModal('settings-modal');
@@ -2140,6 +2140,15 @@ function repairCurrentPlannerRelations() {
   overtimeMap = state.overtimeMap || {};
   activityShiftsMap = state.activityShiftsMap || {};
   return summary;
+}
+function refreshBaseSnapshot() {
+  baseSnapshot = {
+    employees: JSON.parse(JSON.stringify(employees)),
+    activities: JSON.parse(JSON.stringify(activities)),
+    entriesMap: JSON.parse(JSON.stringify(entriesMap)),
+    overtimeMap: JSON.parse(JSON.stringify(overtimeMap)),
+    activityShiftsMap: JSON.parse(JSON.stringify(activityShiftsMap)),
+  };
 }
 
 // ═══ DATA STATE ══════════════════════════════════════════════════════════════
@@ -2359,7 +2368,7 @@ function loadFromData(data) {
   pruneImplicitDefaultActivityShifts();
   employees.sort((a, b) => a.name.localeCompare(b.name));
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
-  baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
+  refreshBaseSnapshot();
 }
 function updateSbStatus() {
   const dot = document.getElementById('db-dot');
