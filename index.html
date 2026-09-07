@@ -2979,6 +2979,7 @@ function renderGridBody(days, today) {
   const activityPage = visibleActivities.slice(activityPageOffset, activityPageOffset + pageSize);
   const pageStart = visibleActivities.length ? activityPageOffset + 1 : 0;
   const pageEnd = Math.min(activityPageOffset + pageSize, visibleActivities.length);
+  const hasAnyActivities = (currentActs.length + pastActs.length) > 0;
 
   // ── Activities section ────────────────────────────────────────
   if (showTimelineSections) {
@@ -2998,10 +2999,8 @@ function renderGridBody(days, today) {
 
     if (collapsedGridSections.activities) {
       html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Activities collapsed.</td><td colspan="${days.length}"></td></tr>`;
-    } else {
-      if (!currentActs.length && !pastActs.length) {
-        html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">${appSettings.showOnlyConfirmedActivities ? 'No confirmed activities to show. Turn off the filter in Settings to show planned or cancelled activities.' : 'No activities yet. Use the add activity button to create one.'}</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
-      }
+    } else if (!hasAnyActivities) {
+      html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">${appSettings.showOnlyConfirmedActivities ? 'No confirmed activities to show. Turn off the filter in Settings to show planned or cancelled activities.' : 'No activities yet. Use the add activity button to create one.'}</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
     }
   }
   const renderActRow = (act, dim) => {
@@ -3048,11 +3047,11 @@ function renderGridBody(days, today) {
     }
     return row + '</tr>';
   };
-  if (showTimelineSections && !collapsedGridSections.activities && (currentActs.length || pastActs.length)) {
+  if (showTimelineSections && !collapsedGridSections.activities && hasAnyActivities) {
     activityPage.forEach(act => { html += renderActRow(act, act.endDate < today); });
     if (pastActs.length) {
       html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)">
-        <button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" onclick="togglePastActivities()">
+        <button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" aria-expanded="${pastActivitiesExpanded ? 'true' : 'false'}" onclick="togglePastActivities()">
           ${svgIcon(pastActivitiesExpanded ? 'chevronLeft' : 'chevronRight')} Past activities (${pastActs.length})
         </button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
     }
