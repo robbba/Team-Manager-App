@@ -36,6 +36,10 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sa
 .ui-icon { width: 14px; height: 14px; flex: 0 0 14px; display: inline-block; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; }
 .icon-btn .ui-icon { width: 13px; height: 13px; flex-basis: 13px; vertical-align: 0; }
 .sb-link:hover { background: var(--muted-bg); color: var(--text); }
+.sb-link.unsaved-action { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; font-weight: 700; }
+.sb-link.unsaved-action:hover { background: #fde68a; color: #78350f; }
+body.dark .sb-link.unsaved-action { background: #3b2f12; color: #fbbf24; border-color: #f59e0b; }
+body.dark .sb-link.unsaved-action:hover { background: #4a3815; color: #fcd34d; }
 .sb-today { font-size: 13px; }
 .sb-today .today-date { font-weight: 500; }
 .sb-today .today-count { font-size: 24px; font-weight: 700; line-height: 1.1; }
@@ -766,6 +770,7 @@ let localBackupFileHandle = null;
 let activeFileName = '';
 let remoteUpdateSource = 'none';
 let portableDefaultLoadIssue = '';
+let preferBrowserJsonFileInput = false;
 function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 function svgIcon(name, title = '') {
   const paths = {
@@ -1872,40 +1877,48 @@ async function requestLocalBackupHandle() {
       accept: { 'application/json': ['.json'] },
     }],
   };
-  const startIn = resolvePickerStartDirectory();
-  if (startIn) pickerOptions.startIn = startIn;
-  let handle;
-  try {
-    handle = await window.showSaveFilePicker(pickerOptions);
-  } catch (err) {
-    if (!pickerOptions.startIn || !['TypeError', 'NotFoundError'].includes(err?.name)) throw err;
-    delete pickerOptions.startIn;
-    handle = await window.showSaveFilePicker(pickerOptions);
-  }
+  const handle = await window.showSaveFilePicker(pickerOptions);
   await storeLocalBackupHandle(handle);
   return handle;
 }
 
-function resolvePickerStartDirectory() {
-  const candidate = window.__TEAM_MANAGER_APP_DIRECTORY_HANDLE || window.teamManagerAppDirectoryHandle;
-  if (candidate && candidate.kind === 'directory') return candidate;
-  return null;
-}
-
-async function openJsonFilePicker() {
-  const pickerOptions = {
+function openJsonFilePicker() {
+  return window.showOpenFilePicker({
     id: 'team-manager-json-file',
     multiple: false,
     types: [{ description: 'Team Manager JSON', accept: { 'application/json': ['.json'] } }],
-  };
-  const startIn = resolvePickerStartDirectory();
-  if (startIn) pickerOptions.startIn = startIn;
+  });
+}
+
+function openJsonFileInput(options = {}) {
+  const input = document.getElementById('import-json-file');
+  if (!input) {
+    alert('Could not open a JSON file chooser in this browser.');
+    return false;
+  }
+  input.dataset.requiredOpen = options.required ? 'true' : 'false';
+  input.click();
+  return false;
+}
+
+async function importDataWithPicker(options = {}) {
   try {
-    return await window.showOpenFilePicker(pickerOptions);
+    const handles = await openJsonFilePicker();
+    const handle = Array.isArray(handles) ? handles[0] : null;
+    if (!handle) return false;
+    preferBrowserJsonFileInput = false;
+    const file = await handle.getFile();
+    await loadDataFile(file, handle);
+    if (options.required && startupFileSelectionRequired) completeStartupFileSelection();
+    if (!options.required) showToast(`Opened JSON: ${handle.name}.`, 5000);
+    return true;
   } catch (err) {
-    if (!pickerOptions.startIn || !['TypeError', 'NotFoundError'].includes(err?.name)) throw err;
-    delete pickerOptions.startIn;
-    return window.showOpenFilePicker(pickerOptions);
+    if (err?.name === 'AbortError') return false;
+    const firstFallback = !preferBrowserJsonFileInput;
+    preferBrowserJsonFileInput = true;
+    console.error('Native JSON picker failed:', err);
+    if (firstFallback) showToast('Could not open the native JSON picker. Using the browser file chooser instead.', 7000);
+    return openJsonFileInput(options);
   }
 }
 
@@ -2134,24 +2147,13 @@ async function saveDataAs() {
   }
 }
 
-async function importData(options = {}) {
-  if (typeof window.showOpenFilePicker === 'function') {
-    try {
-      const [handle] = await openJsonFilePicker();
-      const file = await handle.getFile();
-      await loadDataFile(file, handle);
-      if (!options.required) showToast(`Opened JSON: ${handle.name}.`, 5000);
-      return true;
-    } catch (err) {
-      if (err?.name !== 'AbortError') alert('Could not open JSON file. Verify the file format and try again.');
-    }
+function importData(options = {}) {
+  if (!preferBrowserJsonFileInput && typeof window.showOpenFilePicker === 'function') {
+    void importDataWithPicker(options);
     return false;
   }
-  const input = document.getElementById('import-json-file');
-  if (!input) return false;
-  input.dataset.requiredOpen = options.required ? 'true' : 'false';
-  input.click();
-  return false;
+  if (!preferBrowserJsonFileInput) showToast('Native file access is unavailable here. Using the browser file chooser instead.', 7000);
+  return openJsonFileInput(options);
 }
 
 async function handleImportDataFile(event) {
@@ -2339,10 +2341,8 @@ function updateSaveButton() {
   if (!button) return;
   button.style.display = '';
   button.disabled = startupFileSelectionRequired || !hasUnsavedChanges;
-  button.innerHTML = `${svgIcon('save')} Save`;
-  button.style.background = '';
-  button.style.color = '';
-  button.style.fontWeight = '';
+  button.innerHTML = `${svgIcon('save')} ${hasUnsavedChanges ? 'Save Changes' : 'Save'}`;
+  button.classList.toggle('unsaved-action', hasUnsavedChanges && !startupFileSelectionRequired);
   updateSyncButton();
 }
 function markUnsaved() {
@@ -2487,15 +2487,18 @@ function updateSbStatus() {
   const dot = document.getElementById('db-dot');
   const text = document.getElementById('db-status-text');
   const status = document.getElementById('file-status');
+  let label = 'Updated';
   if (syncStatusState === 'syncing') {
     dot.className = 'db-indicator syncing';
-    text.textContent = 'Syncing…';
+    label = 'Syncing…';
   } else if (syncStatusState === 'out-of-sync') {
     dot.className = 'db-indicator';
-    text.textContent = 'Out of sync';
+    label = 'Out of sync';
   } else {
     dot.className = 'db-indicator connected';
-    text.textContent = 'Updated';
+  }
+  if (text) {
+    text.textContent = hasUnsavedChanges ? `${label} • Unsaved changes` : label;
   }
   if (status) {
     const unsavedHint = hasUnsavedChanges ? ' • Unsaved local changes' : '';
@@ -3104,9 +3107,8 @@ function completeStartupFileSelection() {
   nav(currentPage || 'grid');
   setSyncStatusState('updated');
 }
-async function beginStartupFileSelection() {
-  const loaded = await importData({ required: true });
-  if (loaded) completeStartupFileSelection();
+function beginStartupFileSelection() {
+  importData({ required: true });
 }
 function nav(page) {
   if (startupFileSelectionRequired) return;
