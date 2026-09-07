@@ -1457,9 +1457,10 @@ function toggleShowOnlyConfirmedActivities(checked) {
 }
 
 function downloadDataFile() {
-  const repairSummary = repairCurrentPlannerRelations();
-  const payload = JSON.stringify(snapshotData(), null, 2);
-  validatePlannerData(JSON.parse(payload));
+  const payloadData = snapshotData();
+  const repairSummary = repairPlannerRelations(payloadData);
+  validatePlannerData(payloadData);
+  const payload = JSON.stringify(payloadData, null, 2);
   const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
