@@ -1055,17 +1055,39 @@ function persistSettings() {
 }
 const GRID_YEAR_KEY = 'teamManagerGridYear';
 const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
+const GRID_VIEW_MODE_KEY = 'teamManagerGridViewMode';
+const GRID_SECTION_COLLAPSE_KEY = 'teamManagerGridCollapsedSections';
+function normalizeGridViewMode(value) {
+  return ['all', 'timeline', 'employees'].includes(value) ? value : 'all';
+}
+function normalizeGridCollapsedSections(value) {
+  const defaults = { activities: false, holidays: false, employees: false };
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return defaults;
+  return {
+    activities: value.activities === true,
+    holidays: value.holidays === true,
+    employees: value.employees === true,
+  };
+}
 function loadGridPreferences() {
   const savedYear = parseInt(lsGet(GRID_YEAR_KEY), 10);
   if (Number.isInteger(savedYear)) gridYear = savedYear;
+  gridViewMode = normalizeGridViewMode(lsGet(GRID_VIEW_MODE_KEY) || 'all');
   try {
     const savedHidden = JSON.parse(lsGet(GRID_HIDDEN_EMPLOYEES_KEY) || '[]');
     hiddenEmployees = new Set(Array.isArray(savedHidden) ? savedHidden.map(Number).filter(Number.isFinite) : []);
   } catch (err) { hiddenEmployees = new Set(); }
+  try {
+    collapsedGridSections = normalizeGridCollapsedSections(JSON.parse(lsGet(GRID_SECTION_COLLAPSE_KEY) || '{}'));
+  } catch (err) {
+    collapsedGridSections = { activities: false, holidays: false, employees: false };
+  }
 }
 function saveGridPreferences() {
   lsSet(GRID_YEAR_KEY, String(gridYear));
   lsSet(GRID_HIDDEN_EMPLOYEES_KEY, JSON.stringify([...hiddenEmployees]));
+  lsSet(GRID_VIEW_MODE_KEY, gridViewMode);
+  lsSet(GRID_SECTION_COLLAPSE_KEY, JSON.stringify(collapsedGridSections));
 }
 function applyTheme() {
   document.body.classList.toggle('dark', appSettings.darkMode);
@@ -1454,6 +1476,26 @@ function toggleShowOnlyConfirmedActivities(checked) {
   activityPageOffset = 0;
   persistSettings();
   renderPage();
+}
+function setGridViewMode(mode) {
+  gridViewMode = normalizeGridViewMode(mode);
+  saveGridPreferences();
+  renderPage();
+}
+function toggleGridSection(section) {
+  if (!Object.prototype.hasOwnProperty.call(collapsedGridSections, section)) return;
+  collapsedGridSections[section] = !collapsedGridSections[section];
+  saveGridPreferences();
+  renderGridBody(daysOfYear(gridYear), todayStr());
+}
+function setAllGridSectionsCollapsed(collapsed) {
+  collapsedGridSections = {
+    activities: collapsed === true,
+    holidays: collapsed === true,
+    employees: collapsed === true,
+  };
+  saveGridPreferences();
+  renderGridBody(daysOfYear(gridYear), todayStr());
 }
 
 function downloadDataFile() {
@@ -1993,6 +2035,8 @@ let deptColorsExpanded = false;
 let hiddenEmployees = new Set();
 let hiddenEmployeesDraft = null;
 let pastActivitiesExpanded = false;
+let gridViewMode = 'all';
+let collapsedGridSections = { activities: false, holidays: false, employees: false };
 let activityPageOffset = 0;
 let activityPageSize = activityPageCapacity();
 
@@ -2087,6 +2131,18 @@ function loadFromData(data) {
   lastSyncTime = data.savedAt || new Date().toISOString();
   undoStack = [];
   updateUndoButton();
+  const rawGridPreferences = normalized.gridPreferences && typeof normalized.gridPreferences === 'object' && !Array.isArray(normalized.gridPreferences)
+    ? normalized.gridPreferences
+    : null;
+  if (rawGridPreferences) {
+    const prefYear = Number(rawGridPreferences.year);
+    if (Number.isInteger(prefYear)) gridYear = prefYear;
+    if (Array.isArray(rawGridPreferences.hiddenEmployeeIds)) {
+      hiddenEmployees = new Set(rawGridPreferences.hiddenEmployeeIds.map(Number).filter(Number.isFinite));
+    }
+    gridViewMode = normalizeGridViewMode(rawGridPreferences.viewMode || gridViewMode);
+    collapsedGridSections = normalizeGridCollapsedSections(rawGridPreferences.collapsedSections || collapsedGridSections);
+  }
   if (normalized.appSettings) {
     appSettings = { ...appSettings, ...normalized.appSettings };
     appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(appSettings.coreWorkdayRange, '0730-1500');
@@ -2222,7 +2278,12 @@ function snapshotData() {
     savedAt: new Date().toISOString(),
     dailyStatusesSeparated: true,
     appSettings: JSON.parse(JSON.stringify(appSettings)),
-    gridPreferences: { year: gridYear, hiddenEmployeeIds: [...hiddenEmployees] },
+    gridPreferences: {
+      year: gridYear,
+      hiddenEmployeeIds: [...hiddenEmployees],
+      viewMode: gridViewMode,
+      collapsedSections: { ...collapsedGridSections },
+    },
     departmentColors: appSettings.departmentColors || {},
     activityTypes: appSettings.activityTypes || [],
     workCodes: appSettings.workCodes || [],
@@ -2793,6 +2854,13 @@ function renderGrid() {
           <button class="btn btn-sm" onclick="openStatusManager()">Manage Planning Options</button>
           <button class="btn btn-sm" onclick="openTeamScheduleReport()">Team Work Schedule</button>
           <button class="btn btn-sm" onclick="goToday()">Today</button>
+          <select class="plain-select" style="height:32px;padding:5px 9px" onchange="setGridViewMode(this.value)" aria-label="Grid sections view">
+            <option value="all" ${gridViewMode === 'all' ? 'selected' : ''}>All sections</option>
+            <option value="timeline" ${gridViewMode === 'timeline' ? 'selected' : ''}>Timeline only</option>
+            <option value="employees" ${gridViewMode === 'employees' ? 'selected' : ''}>Employees only</option>
+          </select>
+          <button class="btn btn-sm" onclick="setAllGridSectionsCollapsed(false)">Expand sections</button>
+          <button class="btn btn-sm" onclick="setAllGridSectionsCollapsed(true)">Collapse sections</button>
           <div class="year-nav" aria-label="Calendar year">
             <button class="btn btn-icon" onclick="changeGridYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
             <span class="year-label">${gridYear}</span>
@@ -2899,6 +2967,8 @@ function renderGridBody(days, today) {
   const tbody = document.getElementById('gtbody');
   if (!tbody) return;
   let html = '';
+  const showTimelineSections = gridViewMode !== 'employees';
+  const showEmployeeSection = gridViewMode !== 'timeline';
   const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
   const filteredYearActs = appSettings.showOnlyConfirmedActivities
     ? yearActs.filter(a => activityStatus(a) === 'confirmed')
@@ -2915,22 +2985,28 @@ function renderGridBody(days, today) {
   const pageEnd = Math.min(activityPageOffset + pageSize, visibleActivities.length);
 
   // ── Activities section ────────────────────────────────────────
-  html += `<tr class="sect-row"><td class="sticky-left" style="z-index:60">
-      <span class="flex items-center justify-between">
-        <span>Activities (${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''})</span>
-        <span class="flex items-center" style="gap:6px">
-          ${visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
-          <button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
-          <button class="icon-btn" title="Next activities" aria-label="Next activities" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
-          <button type="button" class="filter-chip${appSettings.showOnlyConfirmedActivities ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" title="Show only confirmed activities in Grid View" onclick="toggleShowOnlyConfirmedActivities(!appSettings.showOnlyConfirmedActivities)">Confirmed only</button>
-          <button class="icon-btn" title="Activity Schedule" aria-label="Activity Schedule" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
-          <button class="icon-btn" title="Add activity" aria-label="Add activity" onclick="openActModal()">${svgIcon('plus')}</button>
+  if (showTimelineSections) {
+    html += `<tr class="sect-row"><td class="sticky-left" style="z-index:60">
+        <span class="flex items-center justify-between">
+          <span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.activities ? 'Expand activities' : 'Collapse activities'}" onclick="toggleGridSection('activities')">${svgIcon(collapsedGridSections.activities ? 'chevronRight' : 'chevronDown')}</button>Activities (${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''})</span>
+          <span class="flex items-center" style="gap:6px">
+            ${visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
+            <button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
+            <button class="icon-btn" title="Next activities" aria-label="Next activities" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
+            <button type="button" class="filter-chip${appSettings.showOnlyConfirmedActivities ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" title="Show only confirmed activities in Grid View" onclick="toggleShowOnlyConfirmedActivities(!appSettings.showOnlyConfirmedActivities)">Confirmed only</button>
+            <button class="icon-btn" title="Activity Schedule" aria-label="Activity Schedule" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
+            <button class="icon-btn" title="Add activity" aria-label="Add activity" onclick="openActModal()">${svgIcon('plus')}</button>
+          </span>
         </span>
-      </span>
-    </td><td colspan="${days.length}"></td></tr>`;
+      </td><td colspan="${days.length}"></td></tr>`;
 
-  if (!currentActs.length && !pastActs.length) {
-    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">${appSettings.showOnlyConfirmedActivities ? 'No confirmed activities to show. Turn off the filter in Settings to show planned or cancelled activities.' : 'No activities yet. Use the add activity button to create one.'}</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
+    if (collapsedGridSections.activities) {
+      html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Activities collapsed.</td><td colspan="${days.length}"></td></tr>`;
+    } else {
+      if (!currentActs.length && !pastActs.length) {
+        html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">${appSettings.showOnlyConfirmedActivities ? 'No confirmed activities to show. Turn off the filter in Settings to show planned or cancelled activities.' : 'No activities yet. Use the add activity button to create one.'}</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
+      }
+    }
   }
   const renderActRow = (act, dim) => {
     const attendCount = act.participants.length;
@@ -2976,27 +3052,33 @@ function renderGridBody(days, today) {
     }
     return row + '</tr>';
   };
-  activityPage.forEach(act => { html += renderActRow(act, act.endDate < today); });
-  if (pastActs.length) {
-    html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)">
-      <button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" onclick="togglePastActivities()">
-        ${svgIcon(pastActivitiesExpanded ? 'chevronLeft' : 'chevronRight')} Past activities (${pastActs.length})
-      </button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
+  if (showTimelineSections && !collapsedGridSections.activities) {
+    activityPage.forEach(act => { html += renderActRow(act, act.endDate < today); });
+    if (pastActs.length) {
+      html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)">
+        <button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" onclick="togglePastActivities()">
+          ${svgIcon(pastActivitiesExpanded ? 'chevronLeft' : 'chevronRight')} Past activities (${pastActs.length})
+        </button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
+    }
   }
 
   const yearHolidays = holidayPeriodsForYear(gridYear);
   const currentHolidays = yearHolidays.filter(holiday => holiday.endDate >= today);
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
-  html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
-      <span class="flex items-center justify-between"><span>Holidays (${currentHolidays.length})</span>
-        <span class="flex items-center" style="gap:6px"><button type="button" class="filter-chip${showHolidays ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" onclick="showHolidays=!showHolidays;renderPage()">Show holidays</button><span class="icon-btn" style="visibility:hidden" aria-hidden="true">${svgIcon('report')}</span><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
-        </span>
-      </span></td><td colspan="${days.length}"></td></tr>`;
-  if (!showHolidays) {
+  if (showTimelineSections) {
+    html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
+        <span class="flex items-center justify-between"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.holidays ? 'Expand holidays' : 'Collapse holidays'}" onclick="toggleGridSection('holidays')">${svgIcon(collapsedGridSections.holidays ? 'chevronRight' : 'chevronDown')}</button>Holidays (${currentHolidays.length})</span>
+          <span class="flex items-center" style="gap:6px"><button type="button" class="filter-chip${showHolidays ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" onclick="showHolidays=!showHolidays;renderPage()">Show holidays</button><span class="icon-btn" style="visibility:hidden" aria-hidden="true">${svgIcon('report')}</span><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
+          </span>
+        </span></td><td colspan="${days.length}"></td></tr>`;
+  }
+  if (showTimelineSections && collapsedGridSections.holidays) {
+    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Holidays collapsed.</td><td colspan="${days.length}"></td></tr>`;
+  } else if (showTimelineSections && !showHolidays) {
     html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Holidays hidden.</td><td colspan="${days.length}"></td></tr>`;
-  } else if (!currentHolidays.length && !pastHolidays.length) {
+  } else if (showTimelineSections && !currentHolidays.length && !pastHolidays.length) {
     html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">No holiday periods added.</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
-  } else {
+  } else if (showTimelineSections) {
     const renderHolidayRow = holiday => {
       const start = holiday.startDate, end = holiday.endDate;
       const color = holiday.color || '#ef4444';
@@ -3021,28 +3103,34 @@ function renderGridBody(days, today) {
   }
 
   // ── Employee section ──────────────────────────────────────────
-  html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">Employee</td><td colspan="${days.length}"></td></tr>`;
-  if (!employees.length) {
-    html += `<tr><td colspan="${days.length + 1}" style="padding:40px;text-align:center;color:var(--muted)">
-      No employees yet. <button class="btn btn-sm btn-primary" onclick="nav('employees')" style="margin-left:8px">Add personnel</button></td></tr>`;
-  }
-  const colorMap = deptColorMap();
-  for (const group of deptGroups()) {
-    const colors = colorMap[group.dept] || { bg: 'transparent', accent: 'var(--border)' };
-    html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-bottom:2px solid ${colors.accent};border-right:2px solid ${colors.accent} !important;z-index:21;padding:2px 7px">
-        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">${esc(group.dept)}</span>
-        <span style="font-size:10px;color:var(--muted);opacity:.7"> · ${group.emps.length} ${group.emps.length === 1 ? 'person' : 'people'}</span>
-      </td><td colspan="${days.length}" style="background:${colors.bg};opacity:.45;border-bottom:2px solid ${colors.accent}"></td></tr>`;
-    for (const emp of group.emps) {
-      html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-right:2px solid ${colors.accent} !important">
-        <div class="flex items-center justify-between gap-2"><div class="emp-name">${esc(emp.name)}</div></div>
-        <div class="emp-sub">${esc(emp.role)}</div>
-      </td>`;
-      for (const d of days) {
-        const ds = fmt(d);
-        html += buildEmployeeCell(emp, ds, isWknd(d), ds === today);
+  if (showEmployeeSection) {
+    html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.employees ? 'Expand employees' : 'Collapse employees'}" onclick="toggleGridSection('employees')">${svgIcon(collapsedGridSections.employees ? 'chevronRight' : 'chevronDown')}</button>Employee</span></td><td colspan="${days.length}"></td></tr>`;
+    if (collapsedGridSections.employees) {
+      html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Employees collapsed.</td><td colspan="${days.length}"></td></tr>`;
+    } else {
+      if (!employees.length) {
+        html += `<tr><td colspan="${days.length + 1}" style="padding:40px;text-align:center;color:var(--muted)">
+          No employees yet. <button class="btn btn-sm btn-primary" onclick="nav('employees')" style="margin-left:8px">Add personnel</button></td></tr>`;
       }
-      html += '</tr>';
+      const colorMap = deptColorMap();
+      for (const group of deptGroups()) {
+        const colors = colorMap[group.dept] || { bg: 'transparent', accent: 'var(--border)' };
+        html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-bottom:2px solid ${colors.accent};border-right:2px solid ${colors.accent} !important;z-index:21;padding:2px 7px">
+            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">${esc(group.dept)}</span>
+            <span style="font-size:10px;color:var(--muted);opacity:.7"> · ${group.emps.length} ${group.emps.length === 1 ? 'person' : 'people'}</span>
+          </td><td colspan="${days.length}" style="background:${colors.bg};opacity:.45;border-bottom:2px solid ${colors.accent}"></td></tr>`;
+        for (const emp of group.emps) {
+          html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-right:2px solid ${colors.accent} !important">
+            <div class="flex items-center justify-between gap-2"><div class="emp-name">${esc(emp.name)}</div></div>
+            <div class="emp-sub">${esc(emp.role)}</div>
+          </td>`;
+          for (const d of days) {
+            const ds = fmt(d);
+            html += buildEmployeeCell(emp, ds, isWknd(d), ds === today);
+          }
+          html += '</tr>';
+        }
+      }
     }
   }
   tbody.innerHTML = html;
