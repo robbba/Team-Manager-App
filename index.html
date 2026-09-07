@@ -764,7 +764,7 @@ const LOCAL_BACKUP_HANDLE_STORE = 'handles';
 const LOCAL_BACKUP_HANDLE_KEY = 'local-backup-json';
 const PORTABLE_DEFAULT_JSON_URL = './data.json';
 const PORTABLE_DEFAULT_JSON_NAME = 'data.json';
-const AUTO_SYNC_INTERVAL_MS = 60000;
+const AUTO_SYNC_INTERVAL_MS = 30000;
 let localBackupFileHandle = null;
 let activeFileName = '';
 let remoteUpdateSource = 'none';
@@ -1761,10 +1761,18 @@ async function checkForRemoteFileUpdate(options = {}) {
         pendingRemoteRefreshData = parsedDiskData;
         pendingRemoteRefreshSavedAt = parsedDiskData.savedAt;
         setSyncStatusState('out-of-sync');
+        showToast('Colleague changes detected in the JSON file.', 12000, {
+          label: 'Apply',
+          onClick: refreshPendingRemoteData
+        });
         return false;
       }
       applyRemotePlannerData(parsedDiskData);
       setSyncStatusState('updated');
+      showToast('Colleague changes detected and loaded.', 8000, {
+        label: 'Dismiss',
+        onClick: () => {}
+      });
       return true;
     }
     if (appSettings.autoSyncEnabled === false && !forced) {
