@@ -2160,7 +2160,7 @@ function loadFromData(data) {
     appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || 7.5;
     appSettings.holidays = Array.isArray(appSettings.holidays) ? appSettings.holidays : [];
   }
-  if (rawGridPreferences) applyGridPreferences(rawGridPreferences, { resetMissing: true });
+  applyGridPreferences(rawGridPreferences || {}, { resetMissing: true });
   appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
     ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
     : {};
@@ -3062,7 +3062,7 @@ function renderGridBody(days, today) {
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   if (showTimelineSections) {
     html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
-        <span class="flex items-center justify-between"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.holidays ? 'Expand holidays' : 'Collapse holidays'}" aria-label="${collapsedGridSections.holidays ? 'Expand holidays section' : 'Collapse holidays section'}" aria-expanded="${collapsedGridSections.holidays ? 'false' : 'true'}" onclick="toggleGridSection('holidays')">${svgIcon(collapsedGridSections.holidays ? 'chevronRight' : 'chevronDown')}</button>Holidays (${currentHolidays.length})</span>
+        <span class="flex items-center justify-between"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.holidays ? 'Expand holidays' : 'Collapse holidays'}" aria-label="${collapsedGridSections.holidays ? 'Expand holidays section' : 'Collapse holidays section'}" aria-expanded="${collapsedGridSections.holidays ? 'false' : 'true'}" onclick="toggleGridSection('holidays')">${svgIcon(collapsedGridSections.holidays ? 'chevronRight' : 'chevronDown')}</button>Holidays (${yearHolidays.length})</span>
           <span class="flex items-center" style="gap:6px"><button type="button" class="filter-chip${showHolidays ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" onclick="showHolidays=!showHolidays;renderPage()">Show holidays</button><span class="icon-btn" style="visibility:hidden" aria-hidden="true">${svgIcon('report')}</span><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" aria-label="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
           </span>
         </span></td><td colspan="${days.length}"></td></tr>`;
