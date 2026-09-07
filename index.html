@@ -1997,7 +1997,7 @@ function workCodeReferenceSetFor(state) {
   const source = Array.isArray(state?.workCodes)
     ? state.workCodes
     : (Array.isArray(state?.appSettings?.workCodes) ? state.appSettings.workCodes : null);
-  return source ? new Set(source.map(code => String(code?.id || '')).filter(Boolean)) : null;
+  return source && source.length ? new Set(source.map(code => String(code?.id || '')).filter(Boolean)) : null;
 }
 function normalizedActivityAssignmentValue(value) {
   if (!value) return { shift: '', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: false, excluded: false };
