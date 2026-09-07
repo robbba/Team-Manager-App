@@ -2141,8 +2141,8 @@ function loadFromData(data) {
     if (Array.isArray(rawGridPreferences.hiddenEmployeeIds)) {
       hiddenEmployees = new Set(rawGridPreferences.hiddenEmployeeIds.map(Number).filter(Number.isFinite));
     }
-    gridViewMode = normalizeGridViewMode(rawGridPreferences.viewMode || gridViewMode);
-    collapsedGridSections = normalizeGridCollapsedSections(rawGridPreferences.collapsedSections || collapsedGridSections);
+    gridViewMode = normalizeGridViewMode(rawGridPreferences.viewMode);
+    collapsedGridSections = normalizeGridCollapsedSections(rawGridPreferences.collapsedSections);
   }
   if (normalized.appSettings) {
     appSettings = { ...appSettings, ...normalized.appSettings };
