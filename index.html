@@ -1984,7 +1984,7 @@ function validatePlannerData(data) {
   const activityAssignmentIssues = [];
   Object.keys(data.activityShiftsMap || {}).forEach(key => {
     const issue = activityAssignmentIssueForKey(key, (data.activityShiftsMap || {})[key], { employeeIds, activityIds, activityList, workCodeIds });
-    if (issue && issue.kind !== 'workCode') activityAssignmentIssues.push(issue);
+    if (issue) activityAssignmentIssues.push(issue);
   });
   if (activityAssignmentIssues.length) throw new Error(formatActivityAssignmentIssueMessage(activityAssignmentIssues));
 }
