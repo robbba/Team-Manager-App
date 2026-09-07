@@ -2789,6 +2789,7 @@ function gridDayWidth() {
 }
 function gridShowsActivities() { return gridViewMode !== 'employees'; }
 function gridShowsEmployees() { return gridViewMode !== 'activities'; }
+function gridShowsOnlyActivities() { return gridShowsActivities() && !gridShowsEmployees(); }
 function setGridViewMode(mode) {
   const nextMode = normalizeGridViewMode(mode);
   if (gridViewMode === nextMode) return;
@@ -2979,10 +2980,10 @@ function renderGridBody(days, today) {
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
   const visibleActivities = pastActivitiesExpanded ? [...currentActs, ...pastActs] : currentActs;
-  const pageSize = gridViewMode === 'activities' ? Math.max(visibleActivities.length, 1) : activityPageCapacity();
+  const pageSize = gridShowsOnlyActivities() ? Math.max(visibleActivities.length, 1) : activityPageCapacity();
   activityPageSize = pageSize;
   const maxOffset = Math.max(0, Math.floor((visibleActivities.length - 1) / pageSize) * pageSize);
-  activityPageOffset = gridViewMode === 'activities' ? 0 : Math.min(activityPageOffset, maxOffset);
+  activityPageOffset = gridShowsOnlyActivities() ? 0 : Math.min(activityPageOffset, maxOffset);
   const activityPage = visibleActivities.slice(activityPageOffset, activityPageOffset + pageSize);
   const pageStart = visibleActivities.length ? activityPageOffset + 1 : 0;
   const pageEnd = Math.min(activityPageOffset + pageSize, visibleActivities.length);
@@ -2992,7 +2993,7 @@ function renderGridBody(days, today) {
       <span class="flex items-center justify-between">
         <span>Activities (${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''})</span>
         <span class="flex items-center" style="gap:6px">
-          ${gridViewMode !== 'activities' && visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
+          ${!gridShowsOnlyActivities() && visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
           <button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
           <button class="icon-btn" title="Next activities" aria-label="Next activities" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
           <button class="icon-btn" title="Activity Schedule (beta)" aria-label="Activity Schedule (beta)" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
