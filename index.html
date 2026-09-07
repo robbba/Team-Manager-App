@@ -2479,6 +2479,17 @@ function formatPortableDefaultLoadIssue(err) {
   return 'Could not load data.json automatically. In Edge, serve the folder on localhost or open a different JSON file.';
 }
 
+function plannerDataHasContent(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+  const listFields = ['employees', 'activities', 'projects', 'statuses', 'statusTypes', 'categories', 'courses', 'requirements'];
+  if (listFields.some(field => Array.isArray(data[field]) && data[field].length > 0)) return true;
+  const mapFields = ['entriesMap', 'overtimeMap', 'activityShiftsMap', 'requirementRecords', 'courseStatuses'];
+  return mapFields.some(field => {
+    const value = data[field];
+    return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0;
+  });
+}
+
 async function fetchPortableDefaultPlannerData() {
   const response = await fetch(PORTABLE_DEFAULT_JSON_URL, { cache: 'no-store' });
   if (!response.ok) throw new Error(`Could not load portable default JSON (${response.status}).`);
@@ -2491,6 +2502,9 @@ async function fetchPortableDefaultPlannerData() {
 
 async function loadPortableDefaultPlannerData(options = {}) {
   const parsed = await fetchPortableDefaultPlannerData();
+  if (plannerDataHasContent(options.fallbackData) && !plannerDataHasContent(parsed)) {
+    throw new Error('Portable default JSON is empty compared with recovered local planner data.');
+  }
   await applyLoadedPlannerData(parsed, {
     fileName: PORTABLE_DEFAULT_JSON_NAME,
     remoteUpdateSource: 'portable-default',
@@ -6173,10 +6187,15 @@ async function bootApp() {
     console.warn('Could not load local JSON data.');
   }
   const shouldPreserveRecoveredState = hasUnsavedChanges && parsedLocalState;
+  const localRecoveredStateHasContent = plannerDataHasContent(parsedLocalState);
+  const shouldPreferRecoveredState = !!parsedLocalState && (shouldPreserveRecoveredState || localRecoveredStateHasContent);
   let autoLoadedDefault = false;
-  if (!shouldPreserveRecoveredState) {
+  if (!shouldPreferRecoveredState) {
     try {
-      await loadPortableDefaultPlannerData({ closeSettings: false });
+      await loadPortableDefaultPlannerData({
+        closeSettings: false,
+        fallbackData: parsedLocalState,
+      });
       autoLoadedDefault = true;
       showToast('Auto-loaded data.json from the app folder.', 7000);
     } catch (err) {
@@ -6186,7 +6205,7 @@ async function bootApp() {
   }
   if (!autoLoadedDefault && parsedLocalState) {
     loadFromData(parsedLocalState);
-    if (shouldPreserveRecoveredState && storedRemoteSource === 'portable-default') {
+    if (storedRemoteSource === 'portable-default') {
       activeFileName = activeFileName || PORTABLE_DEFAULT_JSON_NAME;
       setRemoteUpdateSource('portable-default');
     } else {
