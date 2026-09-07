@@ -2134,6 +2134,7 @@ function loadFromData(data) {
   const rawGridPreferences = normalized.gridPreferences && typeof normalized.gridPreferences === 'object' && !Array.isArray(normalized.gridPreferences)
     ? normalized.gridPreferences
     : null;
+  hiddenEmployees = new Set();
   if (rawGridPreferences) {
     const prefYear = Number(rawGridPreferences.year);
     if (Number.isInteger(prefYear)) gridYear = prefYear;
