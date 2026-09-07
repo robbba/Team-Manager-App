@@ -43,8 +43,9 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sa
 .sb-footrow { display: flex; align-items: center; gap: 8px; }
 .sb-info { padding: 4px 8px; font-size: 11px; color: var(--muted); line-height: 1.4; display: flex; align-items: center; gap: 6px; min-width: 0; }
 .sb-info #db-status-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; flex: 1; min-width: 0; }
-.db-indicator { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; background: #94a3b8; vertical-align: middle; }
+.db-indicator { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; background: #ef4444; vertical-align: middle; }
 .db-indicator.connected { background: #22c55e; }
+.db-indicator.syncing { background: #f59e0b; }
 
 /* ── Main ────────────────────────────────────────────────────── */
 #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
@@ -331,9 +332,11 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   <div class="sb-section">
     <div class="sb-section-label">Local Data</div>
     <button class="sb-link" id="save-btn" onclick="saveData()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l3 3v13H4V4z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg> Save</button>
+    <button class="sb-link" id="sync-btn" onclick="syncNow()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6"/><path d="M4 20v-6h6"/><path d="M6.5 9.5A7 7 0 0 1 19 10"/><path d="M17.5 14.5A7 7 0 0 1 5 14"/></svg> Sync Now</button>
+    <button class="sb-link" id="auto-sync-btn" onclick="toggleAutoSync()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6"/><path d="M4 20v-6h6"/><path d="M6.5 9.5A7 7 0 0 1 19 10"/><path d="M17.5 14.5A7 7 0 0 1 5 14"/></svg> Auto-update: On</button>
     <button class="sb-link" id="autosave-btn" onclick="toggleAutoSave()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/><circle cx="12" cy="12" r="8"/></svg> Auto-recovery: On</button>
     <button class="sb-link" id="undo-btn" onclick="undoLastChange()" disabled><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/></svg> Undo Change</button>
-    <div class="sb-info" id="file-status" title="No active JSON file"><span class="db-indicator" id="db-dot"></span><span id="db-status-text">Saved</span></div>
+    <div class="sb-info" id="file-status" title="No active JSON file"><span class="db-indicator connected" id="db-dot"></span><span id="db-status-text">Updated</span></div>
   </div>
   <div class="sb-section">
     <div class="sb-today" id="sb-today"></div>
@@ -702,10 +705,10 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     </div>
     <div class="form-row">
       <label>Local data</label>
-      <div class="form-hint">Auto-recovery protects work in this browser. The normal portable startup source is <code>data.json</code> in this app folder; opening a different JSON is the advanced exception path.</div>
+      <div class="form-hint">Choose your data file to work with planner data in this browser. Auto-recovery only protects local recovery state.</div>
       <div class="form-hint" id="default-json-status" style="margin-top:6px"></div>
       <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" type="button" onclick="importData()">Open Different JSON</button>
+        <button class="btn btn-sm" type="button" onclick="importData()">Choose Data File</button>
         <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As...</button>
       </div>
       <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
@@ -758,6 +761,7 @@ const LOCAL_BACKUP_HANDLE_STORE = 'handles';
 const LOCAL_BACKUP_HANDLE_KEY = 'local-backup-json';
 const PORTABLE_DEFAULT_JSON_URL = './data.json';
 const PORTABLE_DEFAULT_JSON_NAME = 'data.json';
+const AUTO_SYNC_INTERVAL_MS = 60000;
 let localBackupFileHandle = null;
 let activeFileName = '';
 let remoteUpdateSource = 'none';
@@ -779,6 +783,7 @@ function svgIcon(name, title = '') {
     check: '<path d="m5 12 4 4L19 6"/>',
     report: '<path d="M5 20V10M12 20V4M19 20v-7"/>',
     save: '<path d="M5 4h12l3 3v13H4V4z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/>',
+    sync: '<path d="M20 4v6h-6"/><path d="M4 20v-6h6"/><path d="M6.5 9.5A7 7 0 0 1 19 10"/><path d="M17.5 14.5A7 7 0 0 1 5 14"/>',
   };
   return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="${title ? 'false' : 'true'}"${title ? ` role="img"><title>${esc(title)}</title>` : '>'}${paths[name] || ''}</svg>`;
 }
@@ -815,6 +820,7 @@ let appSettings = {
   appName: 'Team Manager',
   darkMode: false,
   autoSaveEnabled: true,
+  autoSyncEnabled: true,
   showOnlyConfirmedActivities: false,
   coreHoursPerDay: 7.5,
   coreWorkdayRange: '0730-1500',
@@ -1152,6 +1158,28 @@ async function toggleAutoSave() {
       alert('Could not enable auto-save because local save failed.');
     }
   }
+}
+function setSyncStatusState(state) {
+  syncStatusState = state || 'updated';
+  updateSbStatus();
+}
+function updateAutoSyncButton() {
+  const button = document.getElementById('auto-sync-btn');
+  if (!button) return;
+  const enabled = appSettings.autoSyncEnabled !== false;
+  button.innerHTML = `${svgIcon('sync')} Auto-update: ${enabled ? 'On' : 'Off'}`;
+}
+function updateSyncButton() {
+  const button = document.getElementById('sync-btn');
+  if (!button) return;
+  button.disabled = remoteUpdateSource === 'none' || remoteUpdateCheckInFlight;
+}
+function toggleAutoSync() {
+  appSettings.autoSyncEnabled = appSettings.autoSyncEnabled === false;
+  persistSettings();
+  updateAutoSyncButton();
+  if (appSettings.autoSyncEnabled !== false && syncStatusState === 'out-of-sync') setSyncStatusState('updated');
+  updateSyncButton();
 }
 function applyAppName() {
   document.getElementById('sb-app-name').textContent = appSettings.appName;
@@ -1670,65 +1698,105 @@ function setRemoteUpdateSource(source) {
   remoteUpdateSource = source || 'none';
   if (remoteUpdateSource === 'none') stopRemoteUpdatePolling();
   else startRemoteUpdatePolling();
+  if (remoteUpdateSource === 'none') setSyncStatusState('out-of-sync');
+  else if (syncStatusState !== 'syncing') setSyncStatusState('updated');
   updateDefaultJsonStatus();
+  updateSyncButton();
 }
 
 function updateDefaultJsonStatus() {
   const el = document.getElementById('default-json-status');
   if (!el) return;
   if (remoteUpdateSource === 'file-handle' && localBackupFileHandle?.name) {
-    el.textContent = `Current override JSON: ${localBackupFileHandle.name}. External-change checks stay on for this session, and the next launch returns to data.json.`;
+    el.textContent = `Current data file: ${localBackupFileHandle.name}. External-change checks stay on for this file.`;
     return;
   }
   if (portableDefaultLoadIssue) {
-    el.textContent = `${portableDefaultLoadIssue} Use Open Different JSON only when you need an exception.`;
+    el.textContent = `${portableDefaultLoadIssue} Choose your data file to continue.`;
     return;
   }
-  if (remoteUpdateSource === 'portable-default') {
-    el.textContent = 'Portable default: data.json loads automatically from the same folder as the app, with refresh prompts when that file changes externally.';
-    return;
-  }
-  el.textContent = 'Portable default: data.json is the normal startup source. Use Open Different JSON only for exceptions.';
+  el.textContent = remoteUpdateSource === 'none'
+    ? 'No active data file selected.'
+    : 'Data file selected. External changes will sync in this session.';
 }
 
 function startRemoteUpdatePolling() {
   stopRemoteUpdatePolling();
-  remoteUpdatePollTimer = setInterval(checkForRemoteFileUpdate, REMOTE_UPDATE_POLL_MS);
+  remoteUpdatePollTimer = setInterval(() => { checkForRemoteFileUpdate().catch(() => {}); }, AUTO_SYNC_INTERVAL_MS);
 }
 function stopRemoteUpdatePolling() {
   if (remoteUpdatePollTimer) clearInterval(remoteUpdatePollTimer);
   remoteUpdatePollTimer = null;
 }
-// Detects a colleague's save while this tab is open; prompts to refresh when safe, merges into unsaved edits otherwise
-async function checkForRemoteFileUpdate() {
-  if (remoteUpdateSource === 'none' || document.hidden || remoteUpdateCheckInFlight) return;
-  if (document.querySelector('.modal-bg.open')) return;
+function applyRemotePlannerData(parsedDiskData) {
+  pendingRemoteRefreshData = null;
+  pendingRemoteRefreshSavedAt = null;
+  loadFromData(parsedDiskData);
+  applyTheme();
+  applyAppName();
+  renderPage();
+  updateSbStatus();
+}
+// Detects a colleague's save while this tab is open; auto-syncs when enabled, keeps persistent out-of-sync status when disabled
+async function checkForRemoteFileUpdate(options = {}) {
+  const forced = options.force === true;
+  if (remoteUpdateSource === 'none' || remoteUpdateCheckInFlight) return false;
+  if (!forced && document.hidden) return false;
+  if (!forced && document.querySelector('.modal-bg.open')) return false;
   remoteUpdateCheckInFlight = true;
+  setSyncStatusState('syncing');
+  updateSyncButton();
   try {
     let parsedDiskData = null;
     if (remoteUpdateSource === 'file-handle') {
-      if (!localBackupFileHandle) return;
+      if (!localBackupFileHandle) {
+        setSyncStatusState('out-of-sync');
+        return false;
+      }
       if (typeof localBackupFileHandle.queryPermission === 'function') {
         const permission = await localBackupFileHandle.queryPermission({ mode: 'read' });
-        if (permission !== 'granted') return;
+        if (permission !== 'granted') {
+          setSyncStatusState('out-of-sync');
+          return false;
+        }
       }
       const diskFile = await localBackupFileHandle.getFile();
       const diskText = await diskFile.text();
-      if (!diskText || !diskText.trim()) return;
+      if (!diskText || !diskText.trim()) {
+        setSyncStatusState('out-of-sync');
+        return false;
+      }
       parsedDiskData = JSON.parse(diskText);
     } else if (remoteUpdateSource === 'portable-default') {
       parsedDiskData = await fetchPortableDefaultPlannerData();
     } else {
-      return;
+      return false;
     }
-    if (!parsedDiskData.savedAt || !lastSyncTime || !(parsedDiskData.savedAt > lastSyncTime)) return;
+    if (!parsedDiskData.savedAt || !lastSyncTime || !(parsedDiskData.savedAt > lastSyncTime)) {
+      setSyncStatusState('updated');
+      return false;
+    }
     validatePlannerData(parsedDiskData);
-    if (pendingRemoteRefreshSavedAt && pendingRemoteRefreshSavedAt === parsedDiskData.savedAt) return;
+    if (!forced && pendingRemoteRefreshSavedAt && pendingRemoteRefreshSavedAt === parsedDiskData.savedAt) {
+      setSyncStatusState(appSettings.autoSyncEnabled === false ? 'out-of-sync' : 'updated');
+      return false;
+    }
     if (!hasUnsavedChanges) {
+      if (appSettings.autoSyncEnabled === false && !forced) {
+        pendingRemoteRefreshData = parsedDiskData;
+        pendingRemoteRefreshSavedAt = parsedDiskData.savedAt;
+        setSyncStatusState('out-of-sync');
+        return false;
+      }
+      applyRemotePlannerData(parsedDiskData);
+      setSyncStatusState('updated');
+      return true;
+    }
+    if (appSettings.autoSyncEnabled === false && !forced) {
       pendingRemoteRefreshData = parsedDiskData;
       pendingRemoteRefreshSavedAt = parsedDiskData.savedAt;
-      showToast('JSON file changed externally. Refresh to load the latest data.', 12000, { label: 'Refresh', onClick: refreshPendingRemoteData });
-      return;
+      setSyncStatusState('out-of-sync');
+      return false;
     }
     pendingRemoteRefreshData = null;
     pendingRemoteRefreshSavedAt = null;
@@ -1748,7 +1816,11 @@ async function checkForRemoteFileUpdate() {
 
     const before = stableJson({ entriesMap: isObjectMap(entriesMap), overtimeMap: isObjectMap(overtimeMap), activityShiftsMap: isObjectMap(activityShiftsMap), employees, activities });
     const after = stableJson({ entriesMap: mergedEntriesMap, overtimeMap: mergedOvertimeMap, activityShiftsMap: mergedActivityShiftsMap, employees: employeeMerge.merged, activities: activityMerge.merged });
-    if (before === after) { lastSyncTime = parsedDiskData.savedAt; return; }
+    if (before === after) {
+      lastSyncTime = parsedDiskData.savedAt;
+      setSyncStatusState('updated');
+      return false;
+    }
 
     entriesMap = mergedEntriesMap;
     overtimeMap = mergedOvertimeMap;
@@ -1763,34 +1835,78 @@ async function checkForRemoteFileUpdate() {
     const conflicts = [...employeeMerge.conflicts, ...activityMerge.conflicts];
     const conflictNote = conflicts.length ? ` ${conflicts.length} record(s) had conflicting edits — yours were kept.` : '';
     showToast(`Colleague updates were merged into your unsaved work.${conflictNote} Save when ready.`, 8000);
+    setSyncStatusState('updated');
+    return true;
   } catch (err) {
-    if (!['NotFoundError', 'AbortError'].includes(err?.name)) console.warn('Remote update check failed:', err?.message);
+    setSyncStatusState('out-of-sync');
+    if (!['NotFoundError', 'AbortError'].includes(err?.name)) {
+      console.warn('Remote update check failed:', err?.message);
+      showToast('Sync failed. The data file may be out of sync.', 7000);
+    }
+    return false;
   } finally {
     remoteUpdateCheckInFlight = false;
+    updateSyncButton();
   }
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForRemoteFileUpdate(); });
 
 function refreshPendingRemoteData() {
   if (!pendingRemoteRefreshData) return;
-  loadFromData(pendingRemoteRefreshData);
-  applyTheme();
-  applyAppName();
-  renderPage();
-  updateSbStatus();
-  showToast('Reloaded the latest JSON file changes.');
+  applyRemotePlannerData(pendingRemoteRefreshData);
+  setSyncStatusState('updated');
+  showToast('Updated to the latest JSON file changes.');
+}
+
+async function syncNow() {
+  if (startupFileSelectionRequired) return;
+  await checkForRemoteFileUpdate({ force: true });
 }
 
 async function requestLocalBackupHandle() {
-  const handle = await window.showSaveFilePicker({
+  const pickerOptions = {
+    id: 'team-manager-json-file',
     suggestedName: activeFileName || `team-manager-${todayStr()}.json`,
     types: [{
       description: 'JSON backup',
       accept: { 'application/json': ['.json'] },
     }],
-  });
+  };
+  const startIn = resolvePickerStartDirectory();
+  if (startIn) pickerOptions.startIn = startIn;
+  let handle;
+  try {
+    handle = await window.showSaveFilePicker(pickerOptions);
+  } catch (err) {
+    if (!pickerOptions.startIn || !['TypeError', 'NotFoundError'].includes(err?.name)) throw err;
+    delete pickerOptions.startIn;
+    handle = await window.showSaveFilePicker(pickerOptions);
+  }
   await storeLocalBackupHandle(handle);
   return handle;
+}
+
+function resolvePickerStartDirectory() {
+  const candidate = window.__TEAM_MANAGER_APP_DIRECTORY_HANDLE || window.teamManagerAppDirectoryHandle;
+  if (candidate && candidate.kind === 'directory') return candidate;
+  return null;
+}
+
+async function openJsonFilePicker() {
+  const pickerOptions = {
+    id: 'team-manager-json-file',
+    multiple: false,
+    types: [{ description: 'Team Manager JSON', accept: { 'application/json': ['.json'] } }],
+  };
+  const startIn = resolvePickerStartDirectory();
+  if (startIn) pickerOptions.startIn = startIn;
+  try {
+    return await window.showOpenFilePicker(pickerOptions);
+  } catch (err) {
+    if (!pickerOptions.startIn || !['TypeError', 'NotFoundError'].includes(err?.name)) throw err;
+    delete pickerOptions.startIn;
+    return window.showOpenFilePicker(pickerOptions);
+  }
 }
 
 function isObjectMap(value) {
@@ -2006,7 +2122,7 @@ async function saveDataAs() {
     }
     await saveLocalBackupFile(true);
     markFileSaved();
-    if (localBackupFileHandle?.name) showToast(`Using override JSON: ${localBackupFileHandle.name}. Reload the app to return to data.json.`, 7000);
+    if (localBackupFileHandle?.name) showToast(`Using JSON file: ${localBackupFileHandle.name}.`, 5000);
     updateSaveButton();
     updateSbStatus();
   } catch (err) {
@@ -2018,35 +2134,38 @@ async function saveDataAs() {
   }
 }
 
-async function importData() {
+async function importData(options = {}) {
   if (typeof window.showOpenFilePicker === 'function') {
     try {
-      const [handle] = await window.showOpenFilePicker({
-        multiple: false,
-        types: [{ description: 'Team Manager JSON', accept: { 'application/json': ['.json'] } }],
-      });
+      const [handle] = await openJsonFilePicker();
       const file = await handle.getFile();
       await loadDataFile(file, handle);
-      showToast(`Opened override JSON: ${handle.name}. Reload the app to return to data.json.`, 7000);
+      if (!options.required) showToast(`Opened JSON: ${handle.name}.`, 5000);
+      return true;
     } catch (err) {
       if (err?.name !== 'AbortError') alert('Could not open JSON file. Verify the file format and try again.');
     }
-    return;
+    return false;
   }
   const input = document.getElementById('import-json-file');
-  if (!input) return;
+  if (!input) return false;
+  input.dataset.requiredOpen = options.required ? 'true' : 'false';
   input.click();
+  return false;
 }
 
 async function handleImportDataFile(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
+  const requiredOpen = event.target.dataset.requiredOpen === 'true';
   try {
     await loadDataFile(file, null);
-    showToast(`Opened JSON: ${file.name}. Reload the app to return to data.json.`, 7000);
+    if (!requiredOpen) showToast(`Opened JSON: ${file.name}.`, 5000);
+    if (startupFileSelectionRequired) completeStartupFileSelection();
   } catch (err) {
     alert('Could not open JSON planner. Verify the file format and try again.');
   } finally {
+    delete event.target.dataset.requiredOpen;
     event.target.value = '';
   }
 }
@@ -2181,7 +2300,8 @@ let remoteUpdatePollTimer = null;
 let remoteUpdateCheckInFlight = false;
 let pendingRemoteRefreshData = null;
 let pendingRemoteRefreshSavedAt = null;
-const REMOTE_UPDATE_POLL_MS = 25000;
+let syncStatusState = 'updated';
+let startupFileSelectionRequired = false;
 
 function updateUndoButton() {
   const button = document.getElementById('undo-btn');
@@ -2218,11 +2338,12 @@ function updateSaveButton() {
   const button = document.getElementById('save-btn');
   if (!button) return;
   button.style.display = '';
-  button.disabled = !hasUnsavedChanges;
+  button.disabled = startupFileSelectionRequired || !hasUnsavedChanges;
   button.innerHTML = `${svgIcon('save')} Save`;
   button.style.background = '';
   button.style.color = '';
   button.style.fontWeight = '';
+  updateSyncButton();
 }
 function markUnsaved() {
   hasUnsavedChanges = true;
@@ -2366,9 +2487,20 @@ function updateSbStatus() {
   const dot = document.getElementById('db-dot');
   const text = document.getElementById('db-status-text');
   const status = document.getElementById('file-status');
-  dot.className = hasUnsavedChanges ? 'db-indicator' : 'db-indicator connected';
-  text.textContent = hasUnsavedChanges ? 'Unsaved' : 'Saved';
-  if (status) status.title = activeFileName || 'No active JSON file';
+  if (syncStatusState === 'syncing') {
+    dot.className = 'db-indicator syncing';
+    text.textContent = 'Syncing…';
+  } else if (syncStatusState === 'out-of-sync') {
+    dot.className = 'db-indicator';
+    text.textContent = 'Out of sync';
+  } else {
+    dot.className = 'db-indicator connected';
+    text.textContent = 'Updated';
+  }
+  if (status) {
+    const unsavedHint = hasUnsavedChanges ? ' • Unsaved local changes' : '';
+    status.title = `${activeFileName || 'No active JSON file'}${unsavedHint}`;
+  }
   renderSbToday();
 }
 function renderSbToday() {
@@ -2471,12 +2603,12 @@ function persistFileMeta() {
 }
 
 function formatPortableDefaultLoadIssue(err) {
-  if (err?.name === 'SyntaxError') return 'Could not load data.json because it is not valid JSON.';
+  if (err?.name === 'SyntaxError') return 'Could not load the JSON file because it is not valid JSON.';
   if (typeof err?.message === 'string') {
-    if (err.message.includes('404')) return 'Could not find data.json next to the app files.';
-    if (err.message.includes('empty')) return 'Could not load data.json because the file is empty.';
+    if (err.message.includes('404')) return 'Could not find the JSON file next to the app files.';
+    if (err.message.includes('empty')) return 'Could not load the JSON file because it is empty.';
   }
-  return 'Could not load data.json automatically. In Edge, serve the folder on localhost or open a different JSON file.';
+  return 'Could not load the JSON file automatically. In Edge, serve the folder on localhost or choose a different JSON file.';
 }
 
 function plannerDataHasContent(data) {
@@ -2517,6 +2649,7 @@ function markFileSaved() {
   pendingRemoteRefreshData = null;
   pendingRemoteRefreshSavedAt = null;
   persistFileMeta();
+  if (!startupFileSelectionRequired) setSyncStatusState('updated');
   updateSaveButton();
   updateSbStatus();
 }
@@ -2938,7 +3071,45 @@ function closeEmployeePicker() {
 }
 
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
+function setStartupFileSelectionRequired(required) {
+  startupFileSelectionRequired = required === true;
+  if (startupFileSelectionRequired) {
+    document.querySelectorAll('.nav-btn, #save-btn, #sync-btn, #auto-sync-btn, #autosave-btn, #undo-btn').forEach(button => {
+      if (button) button.disabled = true;
+    });
+  } else {
+    updateSaveButton();
+    updateAutoSyncButton();
+    updateAutoSaveButton();
+    updateUndoButton();
+    document.querySelectorAll('.nav-btn').forEach(button => { if (button) button.disabled = false; });
+  }
+  if (startupFileSelectionRequired) {
+    const content = document.getElementById('content');
+    if (content) {
+      content.style.cssText = 'flex:1;overflow:auto;padding:24px;display:flex;align-items:center;justify-content:center';
+      content.innerHTML = `
+        <div class="card" style="max-width:520px;padding:20px">
+          <h3 style="margin-bottom:8px">Choose your data file</h3>
+          <p class="muted" style="line-height:1.5">A JSON data file is required before you can use Team Manager.</p>
+          <div style="margin-top:14px">
+            <button class="btn btn-primary" type="button" onclick="beginStartupFileSelection()">Choose JSON file</button>
+          </div>
+        </div>`;
+    }
+  }
+}
+function completeStartupFileSelection() {
+  setStartupFileSelectionRequired(false);
+  nav(currentPage || 'grid');
+  setSyncStatusState('updated');
+}
+async function beginStartupFileSelection() {
+  const loaded = await importData({ required: true });
+  if (loaded) completeStartupFileSelection();
+}
 function nav(page) {
+  if (startupFileSelectionRequired) return;
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
   closePicker();
@@ -6186,43 +6357,45 @@ async function bootApp() {
   } catch (err) {
     console.warn('Could not load local JSON data.');
   }
-  const shouldPreserveRecoveredState = hasUnsavedChanges && parsedLocalState;
-  const localRecoveredStateHasContent = plannerDataHasContent(parsedLocalState);
-  const shouldPreferRecoveredState = !!parsedLocalState && (shouldPreserveRecoveredState || localRecoveredStateHasContent);
-  let autoLoadedDefault = false;
-  if (!shouldPreferRecoveredState) {
+  let configuredFileLoaded = false;
+  if (storedRemoteSource === 'file-handle') {
     try {
-      await loadPortableDefaultPlannerData({
-        closeSettings: false,
-        fallbackData: parsedLocalState,
-      });
-      autoLoadedDefault = true;
-      showToast('Auto-loaded data.json from the app folder.', 7000);
+      const storedHandle = await loadStoredLocalBackupHandle();
+      if (storedHandle) {
+        const hasPermission = await ensureLocalBackupPermission(storedHandle);
+        if (hasPermission) {
+          const file = await storedHandle.getFile();
+          await loadDataFile(file, storedHandle);
+          configuredFileLoaded = true;
+        }
+      }
     } catch (err) {
-      portableDefaultLoadIssue = formatPortableDefaultLoadIssue(err);
-      showToast(portableDefaultLoadIssue, 12000, { label: 'Open Different JSON', onClick: importData });
+      console.warn('Could not restore the configured JSON file:', err?.message || err);
     }
   }
-  if (!autoLoadedDefault && parsedLocalState) {
+  if (!configuredFileLoaded && parsedLocalState) {
     loadFromData(parsedLocalState);
-    if (storedRemoteSource === 'portable-default') {
-      activeFileName = activeFileName || PORTABLE_DEFAULT_JSON_NAME;
-      setRemoteUpdateSource('portable-default');
-    } else {
-      setRemoteUpdateSource('none');
-    }
+    setRemoteUpdateSource('none');
+  } else if (!configuredFileLoaded) {
+    setRemoteUpdateSource('none');
   }
 
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
   updateDefaultJsonStatus();
-  applyTheme(); applyAppName(); updateSaveButton(); updateAutoSaveButton(); updateUndoButton();
+  applyTheme(); applyAppName(); updateSaveButton(); updateAutoSaveButton(); updateAutoSyncButton(); updateUndoButton();
   document.getElementById('af-start').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-end').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-start').addEventListener('input', updateActivityWeekLabels);
   document.getElementById('af-end').addEventListener('input', updateActivityWeekLabels);
   
   updateSbStatus();
+  if (remoteUpdateSource === 'none') {
+    setSyncStatusState('out-of-sync');
+    setStartupFileSelectionRequired(true);
+    return;
+  }
+  setSyncStatusState('updated');
   nav('grid');
 }
 
