@@ -5402,6 +5402,11 @@ function renderDashboard() {
     const color = st ? st.color : '#22c55e';
     return `<span class="badge-status" style="${statusStyle(color)}">${esc(label)}</span>`;
   };
+  const upcomingInlineName = item => {
+    const st = siFor(item.entry.status);
+    const label = st ? st.label : friendlyStatusLabel(item.entry.status);
+    return `${esc(item.emp.name)} <span class="muted" style="font-size:12px">(${esc(label)})</span>`;
+  };
 
   const wlRange = workloadRange();
   const workloadDates = datesInRange(new Date(`${wlRange.start}T00:00:00`), new Date(`${wlRange.end}T00:00:00`));
@@ -5530,7 +5535,7 @@ function renderDashboard() {
           ? `<div style="max-height:300px;overflow:auto;padding-right:6px">${[...upcomingByDate.entries()].slice(0, 30).map(([date, items]) => `
               <div class="absence-row" style="align-items:flex-start;justify-content:flex-start;flex-wrap:wrap;padding:8px 0;">
                 <div style="font-size:12px;font-weight:700;color:var(--text);flex:0 0 auto">${fmtMed(date)}:</div>
-                <div style="font-size:13.5px;font-weight:500;line-height:1.4;flex:1 1 260px;min-width:0">${items.map(u => esc(u.emp.name)).join(', ')}</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.4;flex:1 1 260px;min-width:0">${items.map(upcomingInlineName).join(', ')}</div>
               </div>`).join('')}</div>`
           : '<div class="empty-note" style="height:250px;display:flex;align-items:center;justify-content:center">No upcoming absences scheduled.</div>'}
       </div>
