@@ -2808,7 +2808,7 @@ function setGridZoom(zoom) {
 }
 function toggleEmployeeHighlight(empId) {
   highlightedEmployeeId = highlightedEmployeeId === empId ? null : empId;
-  if (currentPage === 'grid' && document.getElementById('gtbody')) renderGridBody(daysOfYear(gridYear), todayStr());
+  if (currentPage === 'grid') renderPage();
 }
 function gridSpanLabelWidth(startIndex, endIndex) {
   const spanColumns = startIndex >= 0 && endIndex >= startIndex ? endIndex - startIndex + 1 : 1;
