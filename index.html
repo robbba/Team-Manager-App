@@ -1959,7 +1959,7 @@ function validatePlannerData(data) {
   };
   const employeeIds = uniqueIds(employeeList, 'employee');
   const activityIds = uniqueIds(activityList, 'activity');
-  const workCodeIds = new Set((data.workCodes || data.appSettings?.workCodes || []).map(code => String(code?.id || '')).filter(Boolean));
+  const workCodeIds = workCodeReferenceSetFor(data);
   activityList.forEach(activity => {
     const participants = Array.isArray(activity.participants) ? activity.participants : (activity.employeeIds || []).map(id => ({ id }));
     if (!Array.isArray(participants) || participants.some(participant => !employeeIds.has(Number(participant?.id)))) {
@@ -1992,6 +1992,12 @@ function validatePlannerData(data) {
 
 function normalizeWorkCodeReferenceId(value) {
   return value === null || value === undefined || value === '' ? null : String(value);
+}
+function workCodeReferenceSetFor(state) {
+  const source = Array.isArray(state?.workCodes)
+    ? state.workCodes
+    : (Array.isArray(state?.appSettings?.workCodes) ? state.appSettings.workCodes : null);
+  return source ? new Set(source.map(code => String(code?.id || '')).filter(Boolean)) : null;
 }
 function normalizedActivityAssignmentValue(value) {
   if (!value) return { shift: '', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: false, excluded: false };
@@ -2083,7 +2089,7 @@ function repairPlannerRelations(state) {
     activity.participants = nextParticipants.map(participant => ({ id: Number(participant.id) }));
   });
   const activityIds = new Set(activityList.map(activity => Number(activity?.id)).filter(Number.isFinite));
-  const workCodeIds = new Set((state.workCodes || state.appSettings?.workCodes || []).map(code => String(code?.id || '')).filter(Boolean));
+  const workCodeIds = workCodeReferenceSetFor(state);
   Object.keys(state.entriesMap || {}).forEach(key => {
     const separator = key.indexOf('_');
     if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(key.slice(separator + 1))) {
