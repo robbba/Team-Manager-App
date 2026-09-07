@@ -2030,7 +2030,10 @@ function activityAssignmentIssueForKey(key, value, context) {
   const activity = context.activityList.find(item => Number(item?.id) === activityId);
   if (!activity) return { key, kind: 'activity', employeeId, activityId, date };
   if (date < activity.startDate || date > activity.endDate) return { key, kind: 'date', employeeId, activityId, date };
-  const participantIds = new Set((activity.participants || []).map(participant => Number(participant?.id)).filter(Number.isFinite));
+  const participantSource = Array.isArray(activity.participants) && activity.participants.length
+    ? activity.participants
+    : (activity.employeeIds || []).map(id => ({ id }));
+  const participantIds = new Set(participantSource.map(participant => Number(participant?.id)).filter(Number.isFinite));
   if (!participantIds.has(employeeId)) return { key, kind: 'participant', employeeId, activityId, date };
   const assignment = normalizedActivityAssignmentValue(value);
   if (assignment.workCodeId !== null && assignment.workCodeId !== '' && context.workCodeIds && !context.workCodeIds.has(String(assignment.workCodeId))) {
