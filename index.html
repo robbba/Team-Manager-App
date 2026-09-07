@@ -2857,6 +2857,11 @@ function renderGrid() {
             <button type="button" class="filter-chip${gridZoom === 'fortnight' ? ' active' : ''}" onclick="setGridZoom('fortnight')">2 weeks</button>
             <button type="button" class="filter-chip${gridZoom === 'month' ? ' active' : ''}" onclick="setGridZoom('month')">Month</button>
           </div>
+          <div class="planning-control-group" role="group" aria-label="Planning board filters">
+            <span class="planning-control-label">Filters</span>
+            <button type="button" class="filter-chip${appSettings.showOnlyConfirmedActivities ? ' active' : ''}" onclick="toggleShowOnlyConfirmedActivities(!appSettings.showOnlyConfirmedActivities)">Confirmed only</button>
+            <button type="button" class="filter-chip${!pastActivitiesExpanded ? ' active' : ''}" onclick="togglePastActivities()">Hide past activities</button>
+          </div>
           <button class="btn btn-sm" onclick="openTeamScheduleReport()">Team Work Schedule</button>
           <button class="btn btn-sm" onclick="goToday()">Today</button>
           <div class="year-nav" aria-label="Calendar year">
@@ -2990,7 +2995,6 @@ function renderGridBody(days, today) {
           ${gridViewMode !== 'activities' && visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
           <button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
           <button class="icon-btn" title="Next activities" aria-label="Next activities" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
-          <button type="button" class="filter-chip${appSettings.showOnlyConfirmedActivities ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" title="Show only confirmed activities in Grid View" onclick="toggleShowOnlyConfirmedActivities(!appSettings.showOnlyConfirmedActivities)">Confirmed only</button>
           <button class="icon-btn" title="Activity Schedule (beta)" aria-label="Activity Schedule (beta)" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
           <button class="icon-btn" title="Add activity" aria-label="Add activity" onclick="openActModal()">${svgIcon('plus')}</button>
         </span>
