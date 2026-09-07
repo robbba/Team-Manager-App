@@ -279,8 +279,12 @@ tr:hover .act-cell-actions { opacity: 1; }
 .year-nav .year-label { min-width: 68px; text-align: center; font-weight: 600; font-size: 17px; font-variant-numeric: tabular-nums; }
 .legend-row { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--muted); margin-top: 12px; }
 .legend-row .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
-#app-toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); background: var(--text); color: var(--surface); padding: 10px 16px; border-radius: 8px; font-size: 12.5px; max-width: 440px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 500; }
+#app-toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); background: var(--text); color: var(--surface); padding: 10px 16px; border-radius: 8px; font-size: 12.5px; max-width: 440px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 500; display: flex; align-items: center; justify-content: center; gap: 10px; }
 #app-toast.show { opacity: 1; transform: translate(-50%, 0); }
+#app-toast.interactive { pointer-events: auto; }
+#app-toast .toast-message { flex: 1; }
+#app-toast .toast-action { border: 1px solid color-mix(in srgb, var(--surface) 35%, transparent); background: transparent; color: inherit; border-radius: 999px; padding: 4px 10px; font: inherit; cursor: pointer; }
+#app-toast .toast-action:hover { background: color-mix(in srgb, var(--surface) 12%, transparent); }
 
 /* ── Misc utils ──────────────────────────────────────────────── */
 .flex { display: flex; } .items-center { align-items: center; } .justify-between { justify-content: space-between; }
@@ -699,6 +703,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     <div class="form-row">
       <label>Local data</label>
       <div class="form-hint">Auto-recovery protects work in this browser. Open or save a JSON file to move and archive all app data.</div>
+      <div class="form-hint" id="default-json-status" style="margin-top:6px"></div>
       <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
         <button class="btn btn-sm" type="button" onclick="importData()">Open JSON</button>
         <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As...</button>
@@ -1161,6 +1166,7 @@ function openSettings() {
   document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
   document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
   renderHolidaySettings();
+  updateDefaultJsonStatus();
   const about = document.getElementById('set-about-version');
   if (about) about.textContent = `Team Manager v${APP_VERSION} · Data format v${DATA_VERSION}`;
   document.getElementById('settings-modal').classList.add('open');
@@ -1551,6 +1557,7 @@ async function storeLocalBackupHandle(handle) {
   localBackupFileHandle = handle || null;
   activeFileName = handle?.name || activeFileName;
   if (localBackupFileHandle) startRemoteUpdatePolling(); else stopRemoteUpdatePolling();
+  updateDefaultJsonStatus();
   const db = await openLocalBackupHandleDb();
   if (!db) return;
   try {
@@ -1571,6 +1578,7 @@ async function storeLocalBackupHandle(handle) {
 async function clearStoredLocalBackupHandle() {
   localBackupFileHandle = null;
   stopRemoteUpdatePolling();
+  updateDefaultJsonStatus();
   const db = await openLocalBackupHandleDb();
   if (!db) return;
   try {
@@ -1616,17 +1624,58 @@ async function ensureLocalBackupPermission(handle) {
   return permission === 'granted';
 }
 
-function showToast(message, duration = 5000) {
+function showToast(message, duration = 5000, action = null) {
   let el = document.getElementById('app-toast');
   if (!el) {
     el = document.createElement('div');
     el.id = 'app-toast';
+    el.setAttribute('role', 'status');
     document.body.appendChild(el);
   }
-  el.textContent = message;
+  el.innerHTML = '';
+  const text = document.createElement('span');
+  text.className = 'toast-message';
+  text.textContent = message;
+  el.appendChild(text);
+  if (action && action.label && typeof action.onClick === 'function') {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'toast-action';
+    button.textContent = action.label;
+    button.onclick = () => {
+      el.classList.remove('show');
+      el.classList.remove('interactive');
+      Promise.resolve(action.onClick()).catch(err => console.warn('Toast action failed:', err?.message || err));
+    };
+    el.appendChild(button);
+    el.classList.add('interactive');
+  } else {
+    el.classList.remove('interactive');
+  }
   el.classList.add('show');
   clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(() => el.classList.remove('show'), duration);
+  showToast._timer = setTimeout(() => {
+    el.classList.remove('show');
+    el.classList.remove('interactive');
+  }, duration);
+}
+
+function canPersistDefaultJsonFile() {
+  return typeof window.showOpenFilePicker === 'function' && !!window.indexedDB;
+}
+
+function updateDefaultJsonStatus() {
+  const el = document.getElementById('default-json-status');
+  if (!el) return;
+  if (localBackupFileHandle?.name) {
+    el.textContent = `Default JSON: ${localBackupFileHandle.name}. The app will try to reopen it on startup while this browser still has file access.`;
+    return;
+  }
+  if (canPersistDefaultJsonFile()) {
+    el.textContent = 'No default JSON saved yet. Open a JSON file once in this browser to reuse it automatically next time.';
+    return;
+  }
+  el.textContent = 'This browser can still open JSON files manually, but it may not be able to remember a default file between launches.';
 }
 
 function startRemoteUpdatePolling() {
@@ -1637,7 +1686,7 @@ function stopRemoteUpdatePolling() {
   if (remoteUpdatePollTimer) clearInterval(remoteUpdatePollTimer);
   remoteUpdatePollTimer = null;
 }
-// Detects a colleague's save while this tab is open; refreshes when safe, merges into unsaved edits otherwise
+// Detects a colleague's save while this tab is open; prompts to refresh when safe, merges into unsaved edits otherwise
 async function checkForRemoteFileUpdate() {
   if (!localBackupFileHandle || document.hidden || remoteUpdateCheckInFlight) return;
   if (document.querySelector('.modal-bg.open')) return;
@@ -1653,12 +1702,15 @@ async function checkForRemoteFileUpdate() {
     const parsedDiskData = JSON.parse(diskText);
     if (!parsedDiskData.savedAt || !lastSyncTime || !(parsedDiskData.savedAt > lastSyncTime)) return;
     validatePlannerData(parsedDiskData);
+    if (pendingRemoteRefreshSavedAt && pendingRemoteRefreshSavedAt === parsedDiskData.savedAt) return;
     if (!hasUnsavedChanges) {
-      loadFromData(parsedDiskData);
-      renderPage();
-      showToast('Updated with the latest changes from your colleagues.');
+      pendingRemoteRefreshData = parsedDiskData;
+      pendingRemoteRefreshSavedAt = parsedDiskData.savedAt;
+      showToast('JSON file changed externally. Refresh to load the latest data.', 12000, { label: 'Refresh', onClick: refreshPendingRemoteData });
       return;
     }
+    pendingRemoteRefreshData = null;
+    pendingRemoteRefreshSavedAt = null;
     const diskEntriesMap = isObjectMap(parsedDiskData.entriesMap);
     const diskOvertimeMap = isObjectMap(parsedDiskData.overtimeMap);
     const diskActivityShiftsMap = isObjectMap(parsedDiskData.activityShiftsMap);
@@ -1697,6 +1749,16 @@ async function checkForRemoteFileUpdate() {
   }
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForRemoteFileUpdate(); });
+
+function refreshPendingRemoteData() {
+  if (!pendingRemoteRefreshData) return;
+  loadFromData(pendingRemoteRefreshData);
+  applyTheme();
+  applyAppName();
+  renderPage();
+  updateSbStatus();
+  showToast('Reloaded the latest JSON file changes.');
+}
 
 async function requestLocalBackupHandle() {
   const handle = await window.showSaveFilePicker({
@@ -1920,6 +1982,7 @@ async function saveDataAs() {
     }
     await saveLocalBackupFile(true);
     markFileSaved();
+    if (localBackupFileHandle?.name) showToast(`Default JSON saved: ${localBackupFileHandle.name}. Future launches will try to load it automatically.`, 7000);
     updateSaveButton();
     updateSbStatus();
   } catch (err) {
@@ -1940,6 +2003,7 @@ async function importData() {
       });
       const file = await handle.getFile();
       await loadDataFile(file, handle);
+      if (canPersistDefaultJsonFile()) showToast(`Default JSON saved: ${handle.name}. Future launches will try to load it automatically.`, 7000);
     } catch (err) {
       if (err?.name !== 'AbortError') alert('Could not open JSON file. Verify the file format and try again.');
     }
@@ -1970,11 +2034,14 @@ async function loadDataFile(file, handle) {
   else {
     localBackupFileHandle = null;
     activeFileName = file.name || '';
+    updateDefaultJsonStatus();
   }
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
   persistSettings();
   markFileSaved();
+  applyTheme();
+  applyAppName();
   try {
     await saveState(true);
   } catch (recoveryError) {
@@ -2073,6 +2140,8 @@ let lastSyncTime = null;
 let baseSnapshot = null;
 let remoteUpdatePollTimer = null;
 let remoteUpdateCheckInFlight = false;
+let pendingRemoteRefreshData = null;
+let pendingRemoteRefreshSavedAt = null;
 const REMOTE_UPDATE_POLL_MS = 25000;
 
 function updateUndoButton() {
@@ -2142,6 +2211,8 @@ function loadFromData(data) {
   const rawGridPreferences = normalized.gridPreferences && typeof normalized.gridPreferences === 'object' && !Array.isArray(normalized.gridPreferences)
     ? normalized.gridPreferences
     : null;
+  pendingRemoteRefreshData = null;
+  pendingRemoteRefreshSavedAt = null;
   lastSyncTime = normalized.savedAt || new Date().toISOString();
   undoStack = [];
   updateUndoButton();
@@ -2358,6 +2429,8 @@ function persistFileMeta() {
 
 function markFileSaved() {
   hasUnsavedChanges = false;
+  pendingRemoteRefreshData = null;
+  pendingRemoteRefreshSavedAt = null;
   persistFileMeta();
   updateSaveButton();
   updateSbStatus();
@@ -6012,24 +6085,41 @@ async function bootApp() {
   loadSettings();
   loadGridPreferences();
   localBackupFileHandle = await loadStoredLocalBackupHandle();
-  if (localBackupFileHandle) startRemoteUpdatePolling();
   try {
     const fileMeta = JSON.parse(lsGet(LOCAL_FILE_META_KEY) || '{}');
     hasUnsavedChanges = fileMeta.dirty === true;
     activeFileName = typeof fileMeta.fileName === 'string' ? fileMeta.fileName : '';
   } catch (err) { }
+  let parsedLocalState = null;
   try {
     const rawLocalState = lsGet(LOCAL_STATE_KEY);
     if (rawLocalState) {
-      const parsedLocalState = JSON.parse(rawLocalState);
-      if (parsedLocalState && typeof parsedLocalState === 'object') loadFromData(parsedLocalState);
+      parsedLocalState = JSON.parse(rawLocalState);
+      if (!parsedLocalState || typeof parsedLocalState !== 'object') parsedLocalState = null;
     }
   } catch (err) {
     console.warn('Could not load local JSON data.');
   }
+  const shouldPreserveRecoveredState = hasUnsavedChanges && parsedLocalState;
+  let autoLoadedDefault = false;
+  if (localBackupFileHandle && !shouldPreserveRecoveredState) {
+    try {
+      const file = await localBackupFileHandle.getFile();
+      await loadDataFile(file, localBackupFileHandle);
+      autoLoadedDefault = true;
+      showToast(`Auto-loaded default JSON: ${localBackupFileHandle.name || file.name}.`, 7000);
+    } catch (err) {
+      const failedName = localBackupFileHandle?.name || activeFileName || 'the saved default JSON file';
+      await clearStoredLocalBackupHandle();
+      showToast(`Could not auto-load ${failedName}. Please reselect the JSON file.`, 9000);
+    }
+  }
+  if (!autoLoadedDefault && parsedLocalState) loadFromData(parsedLocalState);
+  if (localBackupFileHandle) startRemoteUpdatePolling();
 
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
+  updateDefaultJsonStatus();
   applyTheme(); applyAppName(); updateSaveButton(); updateAutoSaveButton(); updateUndoButton();
   document.getElementById('af-start').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-end').addEventListener('change', updateActivityWeekLabels);
