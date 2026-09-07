@@ -1959,6 +1959,7 @@ function validatePlannerData(data) {
   };
   const employeeIds = uniqueIds(employeeList, 'employee');
   const activityIds = uniqueIds(activityList, 'activity');
+  const activityById = Object.fromEntries(activityList.map(activity => [Number(activity?.id), activity]));
   const workCodeIds = workCodeReferenceSetFor(data);
   activityList.forEach(activity => {
     const participants = Array.isArray(activity.participants) ? activity.participants : (activity.employeeIds || []).map(id => ({ id }));
@@ -1986,7 +1987,7 @@ function validatePlannerData(data) {
   if (data.activityShiftsMap != null && (typeof data.activityShiftsMap !== 'object' || Array.isArray(data.activityShiftsMap))) throw new Error('Invalid activity assignments');
   const activityAssignmentIssues = [];
   Object.keys(data.activityShiftsMap || {}).forEach(key => {
-    const issue = activityAssignmentIssueForKey(key, (data.activityShiftsMap || {})[key], { employeeIds, activityIds, activityList, workCodeIds });
+    const issue = activityAssignmentIssueForKey(key, (data.activityShiftsMap || {})[key], { employeeIds, activityIds, activityList, activityById, workCodeIds });
     if (issue) activityAssignmentIssues.push(issue);
   });
   if (activityAssignmentIssues.length) throw new Error(formatActivityAssignmentIssueMessage(activityAssignmentIssues));
@@ -2029,11 +2030,10 @@ function activityAssignmentIssueForKey(key, value, context) {
   if (!Number.isFinite(employeeId) || !Number.isFinite(activityId) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { key, kind: 'malformed' };
   if (!context.employeeIds.has(employeeId)) return { key, kind: 'employee', employeeId, activityId, date };
   if (!context.activityIds.has(activityId)) return { key, kind: 'activity', employeeId, activityId, date };
-  const activity = context.activityList.find(item => Number(item?.id) === activityId);
+  const activity = context.activityById?.[activityId] || context.activityList.find(item => Number(item?.id) === activityId);
   if (!activity) return { key, kind: 'activity', employeeId, activityId, date };
-  if (activity.startDate && activity.endDate && (date < activity.startDate || date > activity.endDate)) {
-    return { key, kind: 'date', employeeId, activityId, date };
-  }
+  if (activity.startDate && date < activity.startDate) return { key, kind: 'date', employeeId, activityId, date };
+  if (activity.endDate && date > activity.endDate) return { key, kind: 'date', employeeId, activityId, date };
   const participantSource = Array.isArray(activity.participants) && activity.participants.length
     ? activity.participants
     : (activity.employeeIds || []).map(id => ({ id }));
@@ -2113,6 +2113,7 @@ function repairPlannerRelations(state) {
     activity.participants = nextParticipants.map(participant => ({ id: Number(participant.id) }));
   });
   const activityIds = new Set(activityList.map(activity => Number(activity?.id)).filter(Number.isFinite));
+  const activityById = Object.fromEntries(activityList.map(activity => [Number(activity?.id), activity]));
   const workCodeIds = workCodeReferenceSetFor(state);
   Object.keys(state.entriesMap || {}).forEach(key => {
     const separator = key.indexOf('_');
@@ -2132,7 +2133,7 @@ function repairPlannerRelations(state) {
     }
   });
   Object.keys(state.activityShiftsMap || {}).forEach(key => {
-    const issue = activityAssignmentIssueForKey(key, state.activityShiftsMap[key], { employeeIds, activityIds, activityList, workCodeIds });
+    const issue = activityAssignmentIssueForKey(key, state.activityShiftsMap[key], { employeeIds, activityIds, activityList, activityById, workCodeIds });
     if (!issue) return;
     if (issue.kind === 'workCode') {
       state.activityShiftsMap[key] = { ...normalizedActivityAssignmentValue(state.activityShiftsMap[key]), workCodeId: null };
