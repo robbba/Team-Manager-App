@@ -2066,10 +2066,10 @@ function formatPlannerRepairMessage(summary, context = 'save') {
   if (summary.clearedAssignmentWorkCodes) parts.push(`cleared ${pluralize(summary.clearedAssignmentWorkCodes, 'deleted work code reference')} from activity assignments`);
   if (!parts.length) return '';
   const prefix = context === 'open'
-    ? 'The app cleaned up the planner while opening it and'
+    ? 'While opening the planner, the app'
     : context === 'merge'
-      ? 'The app merged your data and'
-      : 'The app cleaned up the planner and';
+      ? 'While merging your data, the app'
+      : 'While saving the planner, the app';
   const suffix = context === 'open' ? ' Save the JSON file to keep the cleanup.' : '';
   return `${prefix} ${parts.join('; ')}.${suffix}`;
 }
