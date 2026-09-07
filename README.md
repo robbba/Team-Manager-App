@@ -1,16 +1,36 @@
 # Team Manager
 
-The active application is the standalone [`index.html`](index.html). Open it directly in a browser; no installation, login, or web server is required.
+The active application is the standalone [`index.html`](index.html). For the smoothest portable workflow in Edge, keep `index.html`, any `assets/` files, and `data.json` together in one folder and open the app from a simple local static server such as `http://localhost:8080`.
 
 ## Planner files
 
-Use **Open JSON** to open an existing planner and **Save As** to create a new planner file. After a writable file has been opened or created, **Save** writes changes to that file. The sidebar reports **Unsaved** until a file save succeeds.
+Team Manager now auto-loads `./data.json` on startup. This is the normal portable planner source for shared use.
 
-Browser storage provides automatic crash and reload recovery, but it is not a replacement for saving the JSON file. The JSON file is the portable source and contains personnel, activities, assignments, statuses, holidays, settings, courses, requirements, and grid preferences. Store planner files in the approved secure location for your environment.
+Browser storage provides automatic crash and reload recovery, but it is not a replacement for saving the JSON file. The JSON file contains personnel, activities, assignments, statuses, holidays, settings, courses, requirements, and grid preferences. Store portable folders in the approved secure location for your environment.
 
-In browsers that support the File System Access API, the selected JSON file is also remembered as this browser's default planner file. After you open a planner with **Open JSON** or choose a writable file with **Save As**, the app will try to auto-load that same file on the next launch. If the browser no longer has permission, or the file was moved or deleted, the app falls back to the normal manual **Open JSON** flow and asks you to reselect it.
+## Portable Edge workflow
 
-While a writable JSON file stays connected, Team Manager keeps checking for external changes. If the file changes outside the app, you will see a notification with **Refresh** so you can reload the latest data. If you already have unsaved edits, the app keeps the existing merge behavior and warns you to save when ready.
+Recommended folder layout:
+
+```text
+portable-team-manager/
+├── index.html
+├── data.json
+└── assets/   (if present in your build)
+```
+
+Recommended startup:
+
+- Serve the folder locally for reliable `fetch('./data.json')` behavior in Edge.
+- `python -m http.server 8080`
+- `py -m http.server 8080`
+- Then open `http://localhost:8080`
+
+Opening `index.html` directly with `file://` may block or inconsistently allow loading `data.json`, depending on browser policy. If `data.json` is missing, unreadable, or invalid, Team Manager shows a clear message and you can use **Open Different JSON** as the manual fallback.
+
+Use **Open Different JSON** to temporarily work from another planner file and **Save As** to create a writable copy. That override is for exceptions; the next normal launch returns to `data.json`.
+
+While the auto-loaded `data.json` (or a writable override file) stays available, Team Manager keeps checking for external changes. If the planner changes outside the app, you will see a notification with **Refresh** so you can apply the latest data explicitly. If you already have unsaved edits, the app keeps the existing merge behavior and warns you to save when ready.
 
 ## Work time codes
 

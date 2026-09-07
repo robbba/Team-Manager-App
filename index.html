@@ -702,10 +702,10 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     </div>
     <div class="form-row">
       <label>Local data</label>
-      <div class="form-hint">Auto-recovery protects work in this browser. Open or save a JSON file to move and archive all app data.</div>
+      <div class="form-hint">Auto-recovery protects work in this browser. The normal portable startup source is <code>data.json</code> in this app folder; opening a different JSON is the advanced exception path.</div>
       <div class="form-hint" id="default-json-status" style="margin-top:6px"></div>
       <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" type="button" onclick="importData()">Open JSON</button>
+        <button class="btn btn-sm" type="button" onclick="importData()">Open Different JSON</button>
         <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As...</button>
       </div>
       <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
@@ -756,8 +756,12 @@ const LOCAL_FILE_META_KEY = 'team-manager-file-meta';
 const LOCAL_BACKUP_HANDLE_DB = 'team-manager-file-handles';
 const LOCAL_BACKUP_HANDLE_STORE = 'handles';
 const LOCAL_BACKUP_HANDLE_KEY = 'local-backup-json';
+const PORTABLE_DEFAULT_JSON_URL = './data.json';
+const PORTABLE_DEFAULT_JSON_NAME = 'data.json';
 let localBackupFileHandle = null;
 let activeFileName = '';
+let remoteUpdateSource = 'none';
+let portableDefaultLoadIssue = '';
 function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 function svgIcon(name, title = '') {
   const paths = {
@@ -1556,8 +1560,7 @@ function openLocalBackupHandleDb() {
 async function storeLocalBackupHandle(handle) {
   localBackupFileHandle = handle || null;
   activeFileName = handle?.name || activeFileName;
-  if (localBackupFileHandle) startRemoteUpdatePolling(); else stopRemoteUpdatePolling();
-  updateDefaultJsonStatus();
+  setRemoteUpdateSource(localBackupFileHandle ? 'file-handle' : 'none');
   const db = await openLocalBackupHandleDb();
   if (!db) return;
   try {
@@ -1577,8 +1580,7 @@ async function storeLocalBackupHandle(handle) {
 
 async function clearStoredLocalBackupHandle() {
   localBackupFileHandle = null;
-  stopRemoteUpdatePolling();
-  updateDefaultJsonStatus();
+  setRemoteUpdateSource('none');
   const db = await openLocalBackupHandleDb();
   if (!db) return;
   try {
@@ -1664,18 +1666,29 @@ function canPersistDefaultJsonFile() {
   return typeof window.showOpenFilePicker === 'function' && !!window.indexedDB;
 }
 
+function setRemoteUpdateSource(source) {
+  remoteUpdateSource = source || 'none';
+  if (remoteUpdateSource === 'none') stopRemoteUpdatePolling();
+  else startRemoteUpdatePolling();
+  updateDefaultJsonStatus();
+}
+
 function updateDefaultJsonStatus() {
   const el = document.getElementById('default-json-status');
   if (!el) return;
-  if (localBackupFileHandle?.name) {
-    el.textContent = `Default JSON: ${localBackupFileHandle.name}. The app will try to reopen it on startup while this browser still has file access.`;
+  if (remoteUpdateSource === 'file-handle' && localBackupFileHandle?.name) {
+    el.textContent = `Current override JSON: ${localBackupFileHandle.name}. External-change checks stay on for this session, and the next launch returns to data.json.`;
     return;
   }
-  if (canPersistDefaultJsonFile()) {
-    el.textContent = 'No default JSON saved yet. Open a JSON file once in this browser to reuse it automatically next time.';
+  if (portableDefaultLoadIssue) {
+    el.textContent = `${portableDefaultLoadIssue} Use Open Different JSON only when you need an exception.`;
     return;
   }
-  el.textContent = 'This browser can still open JSON files manually, but it may not be able to remember a default file between launches.';
+  if (remoteUpdateSource === 'portable-default') {
+    el.textContent = 'Portable default: data.json loads automatically from the same folder as the app, with refresh prompts when that file changes externally.';
+    return;
+  }
+  el.textContent = 'Portable default: data.json is the normal startup source. Use Open Different JSON only for exceptions.';
 }
 
 function startRemoteUpdatePolling() {
@@ -1688,18 +1701,26 @@ function stopRemoteUpdatePolling() {
 }
 // Detects a colleague's save while this tab is open; prompts to refresh when safe, merges into unsaved edits otherwise
 async function checkForRemoteFileUpdate() {
-  if (!localBackupFileHandle || document.hidden || remoteUpdateCheckInFlight) return;
+  if (remoteUpdateSource === 'none' || document.hidden || remoteUpdateCheckInFlight) return;
   if (document.querySelector('.modal-bg.open')) return;
   remoteUpdateCheckInFlight = true;
   try {
-    if (typeof localBackupFileHandle.queryPermission === 'function') {
-      const permission = await localBackupFileHandle.queryPermission({ mode: 'read' });
-      if (permission !== 'granted') return;
+    let parsedDiskData = null;
+    if (remoteUpdateSource === 'file-handle') {
+      if (!localBackupFileHandle) return;
+      if (typeof localBackupFileHandle.queryPermission === 'function') {
+        const permission = await localBackupFileHandle.queryPermission({ mode: 'read' });
+        if (permission !== 'granted') return;
+      }
+      const diskFile = await localBackupFileHandle.getFile();
+      const diskText = await diskFile.text();
+      if (!diskText || !diskText.trim()) return;
+      parsedDiskData = JSON.parse(diskText);
+    } else if (remoteUpdateSource === 'portable-default') {
+      parsedDiskData = await fetchPortableDefaultPlannerData();
+    } else {
+      return;
     }
-    const diskFile = await localBackupFileHandle.getFile();
-    const diskText = await diskFile.text();
-    if (!diskText || !diskText.trim()) return;
-    const parsedDiskData = JSON.parse(diskText);
     if (!parsedDiskData.savedAt || !lastSyncTime || !(parsedDiskData.savedAt > lastSyncTime)) return;
     validatePlannerData(parsedDiskData);
     if (pendingRemoteRefreshSavedAt && pendingRemoteRefreshSavedAt === parsedDiskData.savedAt) return;
@@ -1921,7 +1942,7 @@ async function saveLocalBackupFile(forcePrompt = false) {
   }
   let handle = null;
   if (!forcePrompt) {
-    handle = localBackupFileHandle || await loadStoredLocalBackupHandle();
+    handle = localBackupFileHandle;
     if (handle) {
       try {
         const hasPermission = await ensureLocalBackupPermission(handle);
@@ -1945,11 +1966,13 @@ async function saveLocalBackupFile(forcePrompt = false) {
     try {
       const hasPermission = await ensureLocalBackupPermission(handle);
       if (!hasPermission) {
-        await clearStoredLocalBackupHandle();
+        localBackupFileHandle = null;
+        if (remoteUpdateSource === 'file-handle') setRemoteUpdateSource('none');
         throw new Error('Permission denied. Please select a different JSON file.');
       }
     } catch (err) {
-      await clearStoredLocalBackupHandle();
+      localBackupFileHandle = null;
+      if (remoteUpdateSource === 'file-handle') setRemoteUpdateSource('none');
       throw err;
     }
   }
@@ -1960,7 +1983,8 @@ async function saveLocalBackupFile(forcePrompt = false) {
   } catch (err) {
     const shouldRePrompt = !forcePrompt && (err?.name === 'NotAllowedError' || err?.name === 'NotFoundError' || err?.name === 'SecurityError');
     if (shouldRePrompt) {
-      await clearStoredLocalBackupHandle();
+      localBackupFileHandle = null;
+      if (remoteUpdateSource === 'file-handle') setRemoteUpdateSource('none');
       await saveLocalBackupFile(true);
       return;
     }
@@ -1982,7 +2006,7 @@ async function saveDataAs() {
     }
     await saveLocalBackupFile(true);
     markFileSaved();
-    if (localBackupFileHandle?.name) showToast(`Default JSON saved: ${localBackupFileHandle.name}. Future launches will try to load it automatically.`, 7000);
+    if (localBackupFileHandle?.name) showToast(`Using override JSON: ${localBackupFileHandle.name}. Reload the app to return to data.json.`, 7000);
     updateSaveButton();
     updateSbStatus();
   } catch (err) {
@@ -2003,7 +2027,7 @@ async function importData() {
       });
       const file = await handle.getFile();
       await loadDataFile(file, handle);
-      if (canPersistDefaultJsonFile()) showToast(`Default JSON saved: ${handle.name}. Future launches will try to load it automatically.`, 7000);
+      showToast(`Opened override JSON: ${handle.name}. Reload the app to return to data.json.`, 7000);
     } catch (err) {
       if (err?.name !== 'AbortError') alert('Could not open JSON file. Verify the file format and try again.');
     }
@@ -2019,6 +2043,7 @@ async function handleImportDataFile(event) {
   if (!file) return;
   try {
     await loadDataFile(file, null);
+    showToast(`Opened JSON: ${file.name}. Reload the app to return to data.json.`, 7000);
   } catch (err) {
     alert('Could not open JSON planner. Verify the file format and try again.');
   } finally {
@@ -2026,15 +2051,19 @@ async function handleImportDataFile(event) {
   }
 }
 
-async function loadDataFile(file, handle) {
-  const parsed = JSON.parse(await file.text());
-  validatePlannerData(parsed);
+async function applyLoadedPlannerData(parsed, options = {}) {
+  const handle = options.handle || null;
+  const fileName = options.fileName || '';
+  const source = options.remoteUpdateSource || 'none';
+  const shouldCloseSettings = options.closeSettings !== false;
   loadFromData(parsed);
-  if (handle) await storeLocalBackupHandle(handle);
-  else {
+  portableDefaultLoadIssue = '';
+  if (handle) {
+    await storeLocalBackupHandle(handle);
+  } else {
     localBackupFileHandle = null;
-    activeFileName = file.name || '';
-    updateDefaultJsonStatus();
+    activeFileName = fileName || activeFileName;
+    setRemoteUpdateSource(source);
   }
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
@@ -2047,8 +2076,18 @@ async function loadDataFile(file, handle) {
   } catch (recoveryError) {
     alert('The planner is open, but browser recovery could not be updated. Save the JSON file after changes.');
   }
-  closeModal('settings-modal');
+  if (shouldCloseSettings) closeModal('settings-modal');
   renderPage();
+}
+
+async function loadDataFile(file, handle) {
+  const parsed = JSON.parse(await file.text());
+  validatePlannerData(parsed);
+  await applyLoadedPlannerData(parsed, {
+    handle,
+    fileName: file.name || '',
+    remoteUpdateSource: handle ? 'file-handle' : 'none',
+  });
 }
 
 function validatePlannerData(data) {
@@ -2388,7 +2427,7 @@ async function saveState(force = false) {
 
 async function saveData() {
   if (canUseFileSystemSave()) {
-    const existingHandle = localBackupFileHandle || await loadStoredLocalBackupHandle();
+    const existingHandle = localBackupFileHandle;
     if (!existingHandle) {
       await saveDataAs();
       return;
@@ -2424,7 +2463,39 @@ async function saveData() {
 }
 
 function persistFileMeta() {
-  lsSet(LOCAL_FILE_META_KEY, JSON.stringify({ dirty: hasUnsavedChanges, fileName: activeFileName }));
+  lsSet(LOCAL_FILE_META_KEY, JSON.stringify({
+    dirty: hasUnsavedChanges,
+    fileName: activeFileName,
+    source: remoteUpdateSource,
+  }));
+}
+
+function formatPortableDefaultLoadIssue(err) {
+  if (err?.name === 'SyntaxError') return 'Could not load data.json because it is not valid JSON.';
+  if (typeof err?.message === 'string') {
+    if (err.message.includes('404')) return 'Could not find data.json next to the app files.';
+    if (err.message.includes('empty')) return 'Could not load data.json because the file is empty.';
+  }
+  return 'Could not load data.json automatically. In Edge, serve the folder on localhost or open a different JSON file.';
+}
+
+async function fetchPortableDefaultPlannerData() {
+  const response = await fetch(PORTABLE_DEFAULT_JSON_URL, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Could not load portable default JSON (${response.status}).`);
+  const text = await response.text();
+  if (!text || !text.trim()) throw new Error('Portable default JSON is empty.');
+  const parsed = JSON.parse(text);
+  validatePlannerData(parsed);
+  return parsed;
+}
+
+async function loadPortableDefaultPlannerData(options = {}) {
+  const parsed = await fetchPortableDefaultPlannerData();
+  await applyLoadedPlannerData(parsed, {
+    fileName: PORTABLE_DEFAULT_JSON_NAME,
+    remoteUpdateSource: 'portable-default',
+    closeSettings: options.closeSettings,
+  });
 }
 
 function markFileSaved() {
@@ -6084,11 +6155,12 @@ document.addEventListener('keydown', e => {
 async function bootApp() {
   loadSettings();
   loadGridPreferences();
-  localBackupFileHandle = await loadStoredLocalBackupHandle();
+  let storedRemoteSource = 'none';
   try {
     const fileMeta = JSON.parse(lsGet(LOCAL_FILE_META_KEY) || '{}');
     hasUnsavedChanges = fileMeta.dirty === true;
     activeFileName = typeof fileMeta.fileName === 'string' ? fileMeta.fileName : '';
+    storedRemoteSource = ['portable-default', 'file-handle'].includes(fileMeta.source) ? fileMeta.source : 'none';
   } catch (err) { }
   let parsedLocalState = null;
   try {
@@ -6102,20 +6174,25 @@ async function bootApp() {
   }
   const shouldPreserveRecoveredState = hasUnsavedChanges && parsedLocalState;
   let autoLoadedDefault = false;
-  if (localBackupFileHandle && !shouldPreserveRecoveredState) {
+  if (!shouldPreserveRecoveredState) {
     try {
-      const file = await localBackupFileHandle.getFile();
-      await loadDataFile(file, localBackupFileHandle);
+      await loadPortableDefaultPlannerData({ closeSettings: false });
       autoLoadedDefault = true;
-      showToast(`Auto-loaded default JSON: ${localBackupFileHandle.name || file.name}.`, 7000);
+      showToast('Auto-loaded data.json from the app folder.', 7000);
     } catch (err) {
-      const failedName = localBackupFileHandle?.name || activeFileName || 'the saved default JSON file';
-      await clearStoredLocalBackupHandle();
-      showToast(`Could not auto-load ${failedName}. Please reselect the JSON file.`, 9000);
+      portableDefaultLoadIssue = formatPortableDefaultLoadIssue(err);
+      showToast(portableDefaultLoadIssue, 12000, { label: 'Open Different JSON', onClick: importData });
     }
   }
-  if (!autoLoadedDefault && parsedLocalState) loadFromData(parsedLocalState);
-  if (localBackupFileHandle) startRemoteUpdatePolling();
+  if (!autoLoadedDefault && parsedLocalState) {
+    loadFromData(parsedLocalState);
+    if (shouldPreserveRecoveredState && storedRemoteSource === 'portable-default') {
+      activeFileName = activeFileName || PORTABLE_DEFAULT_JSON_NAME;
+      setRemoteUpdateSource('portable-default');
+    } else {
+      setRemoteUpdateSource('none');
+    }
+  }
 
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
