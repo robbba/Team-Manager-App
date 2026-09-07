@@ -3110,7 +3110,7 @@ function renderGridBody(days, today) {
     for (const emp of group.emps) {
       const isHighlighted = highlightedEmployeeId === emp.id;
       html += `<tr><td class="gempl sticky-left${isHighlighted ? ' emp-highlight-label' : ''}" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-right:2px solid ${colors.accent} !important">
-        <div class="flex items-center justify-between gap-2"><button type="button" class="emp-name-btn emp-name${isHighlighted ? ' active' : ''}" onclick="toggleEmployeeHighlight(${emp.id})" aria-pressed="${isHighlighted ? 'true' : 'false'}" aria-labelledby="emp-name-${emp.id} emp-action-${emp.id}" title="${isHighlighted ? 'Clear highlight' : 'Highlight this employee'}"><span id="emp-name-${emp.id}">${esc(emp.name)}</span><span id="emp-action-${emp.id}" class="sr-only">${isHighlighted ? ' clear highlight for employee row' : ' highlight employee row'}</span></button></div>
+        <div class="flex items-center justify-between gap-2"><button type="button" class="emp-name-btn emp-name${isHighlighted ? ' active' : ''}" onclick="toggleEmployeeHighlight(${emp.id})" aria-pressed="${isHighlighted ? 'true' : 'false'}" aria-label="${esc(isHighlighted ? `Clear highlight for ${emp.name}` : `Highlight ${emp.name}`)}" title="${isHighlighted ? 'Clear highlight' : 'Highlight this employee'}"><span aria-hidden="true">${esc(emp.name)}</span></button></div>
         <div class="emp-sub">${esc(emp.role)}</div>
       </td>`;
       for (const d of days) {
