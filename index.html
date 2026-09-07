@@ -2135,6 +2135,8 @@ function loadFromData(data) {
     ? normalized.gridPreferences
     : null;
   hiddenEmployees = new Set();
+  gridViewMode = 'all';
+  collapsedGridSections = { activities: false, holidays: false, employees: false };
   if (rawGridPreferences) {
     const prefYear = Number(rawGridPreferences.year);
     if (Number.isInteger(prefYear)) gridYear = prefYear;
