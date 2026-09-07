@@ -2125,14 +2125,21 @@ function repairPlannerRelations(state) {
   return summary;
 }
 function repairCurrentPlannerRelations() {
-  return repairPlannerRelations({
+  const state = {
     employees,
     activities,
     entriesMap,
     overtimeMap,
     activityShiftsMap,
     workCodes: appSettings.workCodes || [],
-  });
+  };
+  const summary = repairPlannerRelations(state);
+  employees = state.employees || [];
+  activities = state.activities || [];
+  entriesMap = state.entriesMap || {};
+  overtimeMap = state.overtimeMap || {};
+  activityShiftsMap = state.activityShiftsMap || {};
+  return summary;
 }
 
 // ═══ DATA STATE ══════════════════════════════════════════════════════════════
