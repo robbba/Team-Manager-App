@@ -53,7 +53,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sa
 .page-sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
 
 /* ── Grid layout ─────────────────────────────────────────────── */
-#grid-wrap { display: flex; flex-direction: column; height: 100%; }
+#grid-wrap { display: flex; flex-direction: column; height: 100%; --grid-day-width: 36px; }
 .grid-topbar { padding: 16px 24px 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-shrink: 0; flex-wrap: wrap; }
 #grid-scroll { flex: 1; overflow: auto; border-top: 1px solid var(--border); }
 .gtable { border-collapse: separate; border-spacing: 0; table-layout: fixed; }
@@ -63,7 +63,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sa
 .gh-month.period-alt { background: color-mix(in srgb, var(--text) 10%, var(--surface)); color: var(--text); }
 .gh-week { background: color-mix(in srgb, var(--text) 2%, var(--surface)); color: var(--muted); border-bottom: 1px solid color-mix(in srgb, var(--text) 10%, var(--border)) !important; font-size: 9px; font-weight: 700; text-align: center; padding: 2px 0; }
 .gh-week.period-alt { background: color-mix(in srgb, var(--text) 7%, var(--surface)); color: var(--text); }
-.gh-day { background: var(--surface); font-size: 10px; color: var(--muted); text-align: center; height: 34px; padding: 0; }
+.gh-day { background: var(--surface); font-size: 10px; color: var(--muted); text-align: center; height: 34px; padding: 0; width: var(--grid-day-width); min-width: var(--grid-day-width); }
 .gh-day .dow { font-size: 8.5px; opacity: .75; display: block; }
 .gh-day.weekend { color: #b6bec9; }
 .gh-day.today-col { background: color-mix(in srgb, var(--accent-blue) 18%, var(--surface)) !important; color: var(--accent-blue) !important; font-weight: 800; box-shadow: inset 2px 0 color-mix(in srgb, var(--text) 45%, var(--border)), inset -2px 0 color-mix(in srgb, var(--text) 45%, var(--border)); }
@@ -80,7 +80,7 @@ body.dark .gh-day.holiday-col { background: #451a1a !important; color: #fca5a5; 
 .gempl { padding: 4px 12px; border-right: 2px solid var(--border) !important; box-shadow: 4px 0 8px -8px rgba(15,23,42,.35); }
 .emp-name { font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .emp-sub { font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gday { width: 36px; min-width: 36px; height: 34px; text-align: center; font-size: 10px; font-weight: 700; padding: 0; position: relative; overflow: hidden; }
+.gday { width: var(--grid-day-width); min-width: var(--grid-day-width); height: 34px; text-align: center; font-size: 10px; font-weight: 700; padding: 0; position: relative; overflow: hidden; }
 .gday.weekend { background: color-mix(in srgb, var(--muted-bg) 55%, transparent); }
 .gday.today-col { background: color-mix(in srgb, var(--accent-blue) 10%, transparent); box-shadow: inset 2px 0 color-mix(in srgb, var(--text) 45%, var(--border)), inset -2px 0 color-mix(in srgb, var(--text) 45%, var(--border)); z-index: 2; }
 .gday.status-cell { cursor: pointer; user-select: none; -webkit-user-select: none; }
@@ -127,6 +127,14 @@ tr:hover .act-cell-actions { opacity: 1; }
 .act-lifecycle.cancelled { color: #b91c1c; background: #fee2e2; border: 1px solid #ef4444; }
 .act-bar.cancelled-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 3px; background: var(--destructive); box-shadow: 0 0 0 1px var(--surface); transform: translateY(-50%); pointer-events: none; }
 .grid-span-status.cancelled { color: #b91c1c; background: #fee2e2; border: 1px solid #ef4444; font-size: 9.5px; font-weight: 800; padding: 0 3px; border-radius: 3px; margin-left: 4px; white-space: nowrap; }
+.planning-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; }
+.planning-control-group { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.planning-control-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.emp-name-btn { border: none; background: none; padding: 0; display: block; font: inherit; color: inherit; text-align: left; cursor: pointer; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.emp-name-btn:hover { color: var(--text); }
+.emp-name-btn.active { color: var(--accent-blue); font-weight: 700; }
+.emp-highlight-label { background: color-mix(in srgb, var(--accent-blue) 10%, var(--surface)) !important; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent-blue) 34%, transparent), 4px 0 8px -8px rgba(15,23,42,.35); }
+.emp-highlight-cell { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--accent-blue) 55%, transparent), inset 0 -2px 0 color-mix(in srgb, var(--accent-blue) 55%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--accent-blue) 30%, transparent); z-index: 3; }
 
 /* ── Popover picker ──────────────────────────────────────────── */
 #picker { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.16); z-index: 200; display: none; flex-direction: column; gap: 4px; width: 300px; max-height: min(70vh, 460px); overflow: auto; }
@@ -1055,6 +1063,20 @@ function persistSettings() {
 }
 const GRID_YEAR_KEY = 'teamManagerGridYear';
 const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
+const GRID_VIEW_MODE_KEY = 'teamManagerGridViewMode';
+const GRID_ZOOM_KEY = 'teamManagerGridZoom';
+const GRID_VIEW_MODES = new Set(['all', 'employees', 'activities']);
+const GRID_ZOOM_PRESETS = {
+  week: { label: 'Week', dayWidth: 52 },
+  fortnight: { label: '2 weeks', dayWidth: 36 },
+  month: { label: 'Month', dayWidth: 24 },
+};
+function normalizeGridViewMode(value) {
+  return GRID_VIEW_MODES.has(value) ? value : 'all';
+}
+function normalizeGridZoom(value) {
+  return Object.prototype.hasOwnProperty.call(GRID_ZOOM_PRESETS, value) ? value : 'fortnight';
+}
 function loadGridPreferences() {
   const savedYear = parseInt(lsGet(GRID_YEAR_KEY), 10);
   if (Number.isInteger(savedYear)) gridYear = savedYear;
@@ -1062,10 +1084,14 @@ function loadGridPreferences() {
     const savedHidden = JSON.parse(lsGet(GRID_HIDDEN_EMPLOYEES_KEY) || '[]');
     hiddenEmployees = new Set(Array.isArray(savedHidden) ? savedHidden.map(Number).filter(Number.isFinite) : []);
   } catch (err) { hiddenEmployees = new Set(); }
+  gridViewMode = normalizeGridViewMode(lsGet(GRID_VIEW_MODE_KEY));
+  gridZoom = normalizeGridZoom(lsGet(GRID_ZOOM_KEY));
 }
 function saveGridPreferences() {
   lsSet(GRID_YEAR_KEY, String(gridYear));
   lsSet(GRID_HIDDEN_EMPLOYEES_KEY, JSON.stringify([...hiddenEmployees]));
+  lsSet(GRID_VIEW_MODE_KEY, gridViewMode);
+  lsSet(GRID_ZOOM_KEY, gridZoom);
 }
 function applyTheme() {
   document.body.classList.toggle('dark', appSettings.darkMode);
@@ -1995,6 +2021,9 @@ let hiddenEmployeesDraft = null;
 let pastActivitiesExpanded = false;
 let activityPageOffset = 0;
 let activityPageSize = activityPageCapacity();
+let gridViewMode = 'all';
+let gridZoom = 'fortnight';
+let highlightedEmployeeId = null;
 
 let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, requirements = [], requirementRecords = {};
 let entriesMap = {}, activityShiftsMap = {}, overtimeMap = {};
@@ -2755,13 +2784,38 @@ function planningHorizonStyle(date) {
     ? `border-right:2px dashed ${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;`
     : '';
 }
+function gridDayWidth() {
+  return GRID_ZOOM_PRESETS[normalizeGridZoom(gridZoom)].dayWidth;
+}
+function gridShowsActivities() { return gridViewMode !== 'employees'; }
+function gridShowsEmployees() { return gridViewMode !== 'activities'; }
+function setGridViewMode(mode) {
+  const nextMode = normalizeGridViewMode(mode);
+  if (gridViewMode === nextMode) return;
+  gridViewMode = nextMode;
+  if (nextMode === 'activities') highlightedEmployeeId = null;
+  saveGridPreferences();
+  renderPage();
+}
+function setGridZoom(zoom) {
+  const nextZoom = normalizeGridZoom(zoom);
+  if (gridZoom === nextZoom) return;
+  gridZoom = nextZoom;
+  saveGridPreferences();
+  renderPage();
+}
+function toggleEmployeeHighlight(empId) {
+  highlightedEmployeeId = highlightedEmployeeId === empId ? null : empId;
+  if (currentPage === 'grid' && document.getElementById('gtbody')) renderGridBody(daysOfYear(gridYear), todayStr());
+}
 function gridSpanLabelWidth(startIndex, endIndex) {
   const spanColumns = startIndex >= 0 && endIndex >= startIndex ? endIndex - startIndex + 1 : 1;
-  return Math.min(420, Math.max(68, spanColumns * 36 - 8));
+  return Math.min(420, Math.max(68, spanColumns * gridDayWidth() - 8));
 }
 function renderGrid() {
   const days = daysOfYear(gridYear);
   const today = todayStr();
+  const dayWidth = gridDayWidth();
 
   let monthCells = '', weekCells = '', dayCells = '';
   let mLabel = '', mCount = 0, mIndex = 0;
@@ -2778,19 +2832,31 @@ function renderGrid() {
     const ds = fmt(d);
     const holiday = displayedHolidayFor(ds);
     const holidayStyle = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
-    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
+    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonStyle(ds)}top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
 
   document.getElementById('content').innerHTML = `
-    <div id="grid-wrap">
+    <div id="grid-wrap" style="--grid-day-width:${dayWidth}px">
       <div class="grid-topbar">
         <div>
           <div class="page-title">${esc(appSettings.appName)}</div>
           <div class="page-sub">Daily status for the whole year with week numbers and activity timeline.</div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="planning-toolbar">
           <button class="btn btn-sm" onclick="openStatusManager()">Manage Planning Options</button>
+          <div class="planning-control-group" role="group" aria-label="Planning board view mode">
+            <span class="planning-control-label">Show</span>
+            <button type="button" class="filter-chip${gridViewMode === 'all' ? ' active' : ''}" onclick="setGridViewMode('all')">All</button>
+            <button type="button" class="filter-chip${gridViewMode === 'employees' ? ' active' : ''}" onclick="setGridViewMode('employees')">Employees</button>
+            <button type="button" class="filter-chip${gridViewMode === 'activities' ? ' active' : ''}" onclick="setGridViewMode('activities')">Activities</button>
+          </div>
+          <div class="planning-control-group" role="group" aria-label="Timeline zoom">
+            <span class="planning-control-label">Zoom</span>
+            <button type="button" class="filter-chip${gridZoom === 'week' ? ' active' : ''}" onclick="setGridZoom('week')">Week</button>
+            <button type="button" class="filter-chip${gridZoom === 'fortnight' ? ' active' : ''}" onclick="setGridZoom('fortnight')">2 weeks</button>
+            <button type="button" class="filter-chip${gridZoom === 'month' ? ' active' : ''}" onclick="setGridZoom('month')">Month</button>
+          </div>
           <button class="btn btn-sm" onclick="openTeamScheduleReport()">Team Work Schedule</button>
           <button class="btn btn-sm" onclick="goToday()">Today</button>
           <div class="year-nav" aria-label="Calendar year">
@@ -2899,6 +2965,8 @@ function renderGridBody(days, today) {
   const tbody = document.getElementById('gtbody');
   if (!tbody) return;
   let html = '';
+  const showActivities = gridShowsActivities();
+  const showEmployees = gridShowsEmployees();
   const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
   const filteredYearActs = appSettings.showOnlyConfirmedActivities
     ? yearActs.filter(a => activityStatus(a) === 'confirmed')
@@ -2906,20 +2974,20 @@ function renderGridBody(days, today) {
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
   const visibleActivities = pastActivitiesExpanded ? [...currentActs, ...pastActs] : currentActs;
-  const pageSize = activityPageCapacity();
+  const pageSize = gridViewMode === 'activities' ? Math.max(visibleActivities.length, 1) : activityPageCapacity();
   activityPageSize = pageSize;
   const maxOffset = Math.max(0, Math.floor((visibleActivities.length - 1) / pageSize) * pageSize);
-  activityPageOffset = Math.min(activityPageOffset, maxOffset);
+  activityPageOffset = gridViewMode === 'activities' ? 0 : Math.min(activityPageOffset, maxOffset);
   const activityPage = visibleActivities.slice(activityPageOffset, activityPageOffset + pageSize);
   const pageStart = visibleActivities.length ? activityPageOffset + 1 : 0;
   const pageEnd = Math.min(activityPageOffset + pageSize, visibleActivities.length);
 
   // ── Activities section ────────────────────────────────────────
-  html += `<tr class="sect-row"><td class="sticky-left" style="z-index:60">
+  if (showActivities) html += `<tr class="sect-row"><td class="sticky-left" style="z-index:60">
       <span class="flex items-center justify-between">
         <span>Activities (${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''})</span>
         <span class="flex items-center" style="gap:6px">
-          ${visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
+          ${gridViewMode !== 'activities' && visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
           <button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
           <button class="icon-btn" title="Next activities" aria-label="Next activities" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
           <button type="button" class="filter-chip${appSettings.showOnlyConfirmedActivities ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" title="Show only confirmed activities in Grid View" onclick="toggleShowOnlyConfirmedActivities(!appSettings.showOnlyConfirmedActivities)">Confirmed only</button>
@@ -2929,7 +2997,7 @@ function renderGridBody(days, today) {
       </span>
     </td><td colspan="${days.length}"></td></tr>`;
 
-  if (!currentActs.length && !pastActs.length) {
+  if (showActivities && !currentActs.length && !pastActs.length) {
     html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">${appSettings.showOnlyConfirmedActivities ? 'No confirmed activities to show. Turn off the filter in Settings to show planned or cancelled activities.' : 'No activities yet. Use the add activity button to create one.'}</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
   }
   const renderActRow = (act, dim) => {
@@ -2976,8 +3044,8 @@ function renderGridBody(days, today) {
     }
     return row + '</tr>';
   };
-  activityPage.forEach(act => { html += renderActRow(act, act.endDate < today); });
-  if (pastActs.length) {
+  if (showActivities) activityPage.forEach(act => { html += renderActRow(act, act.endDate < today); });
+  if (showActivities && pastActs.length) {
     html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)">
       <button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" onclick="togglePastActivities()">
         ${svgIcon(pastActivitiesExpanded ? 'chevronLeft' : 'chevronRight')} Past activities (${pastActs.length})
@@ -3021,21 +3089,22 @@ function renderGridBody(days, today) {
   }
 
   // ── Employee section ──────────────────────────────────────────
-  html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">Employee</td><td colspan="${days.length}"></td></tr>`;
-  if (!employees.length) {
+  if (showEmployees) html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">Employee</td><td colspan="${days.length}"></td></tr>`;
+  if (showEmployees && !employees.length) {
     html += `<tr><td colspan="${days.length + 1}" style="padding:40px;text-align:center;color:var(--muted)">
       No employees yet. <button class="btn btn-sm btn-primary" onclick="nav('employees')" style="margin-left:8px">Add personnel</button></td></tr>`;
   }
   const colorMap = deptColorMap();
-  for (const group of deptGroups()) {
+  for (const group of showEmployees ? deptGroups() : []) {
     const colors = colorMap[group.dept] || { bg: 'transparent', accent: 'var(--border)' };
     html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-bottom:2px solid ${colors.accent};border-right:2px solid ${colors.accent} !important;z-index:21;padding:2px 7px">
         <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">${esc(group.dept)}</span>
         <span style="font-size:10px;color:var(--muted);opacity:.7"> · ${group.emps.length} ${group.emps.length === 1 ? 'person' : 'people'}</span>
       </td><td colspan="${days.length}" style="background:${colors.bg};opacity:.45;border-bottom:2px solid ${colors.accent}"></td></tr>`;
     for (const emp of group.emps) {
-      html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-right:2px solid ${colors.accent} !important">
-        <div class="flex items-center justify-between gap-2"><div class="emp-name">${esc(emp.name)}</div></div>
+      const isHighlighted = highlightedEmployeeId === emp.id;
+      html += `<tr><td class="gempl sticky-left${isHighlighted ? ' emp-highlight-label' : ''}" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-right:2px solid ${colors.accent} !important">
+        <div class="flex items-center justify-between gap-2"><button type="button" class="emp-name-btn emp-name${isHighlighted ? ' active' : ''}" onclick="toggleEmployeeHighlight(${emp.id})" aria-pressed="${isHighlighted ? 'true' : 'false'}" title="${isHighlighted ? 'Clear highlight' : 'Highlight this employee'}">${esc(emp.name)}</button></div>
         <div class="emp-sub">${esc(emp.role)}</div>
       </td>`;
       for (const d of days) {
@@ -3185,8 +3254,9 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const activityClass = primaryActivity ? ' has-activity' : '';
   const plannedClass = primaryActivity && activityStatus(primaryActivity) === 'tentative' ? ' planned-activity-cell' : '';
   const activityColor = activeWorkCode?.color || primaryActivity?.color || 'transparent';
+  const highlightClass = highlightedEmployeeId === emp.id ? ' emp-highlight-cell' : '';
 
-  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}"
+  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}${highlightClass}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"

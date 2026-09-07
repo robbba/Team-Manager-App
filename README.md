@@ -23,3 +23,9 @@ Planned assignments remain visible with diagonal hatching, but only Confirmed ac
 Dragging across dates creates a visible selection. **Remove from [activity]** removes only that activity from the selected dates; daily statuses and other activities remain. **Clear all selected cells** is the separate action for clearing everything in the selection. Both actions participate in Undo and browser recovery.
 
 In Grid View, use **Import .ics holidays** in the Holidays section. Standard all-day `VEVENT` entries are shown for review before import. Only events in the active planner year are offered.
+
+## Planning board controls
+
+In Grid View, the controls next to **Manage Planning Options** let you switch between **Show All**, **Show Employees**, and **Show Activities**. The selected mode and timeline zoom preset (**Week**, **2 weeks**, or **Month**) are saved in browser storage and restored on reload.
+
+Use **Confirmed only** and the existing past-activities toggle in any mode. Clicking an employee name highlights that employee’s row without replacing the existing status or activity colors.
