@@ -2988,7 +2988,7 @@ function renderGridBody(days, today) {
   if (showTimelineSections) {
     html += `<tr class="sect-row"><td class="sticky-left" style="z-index:60">
         <span class="flex items-center justify-between">
-          <span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.activities ? 'Expand activities' : 'Collapse activities'}" onclick="toggleGridSection('activities')">${svgIcon(collapsedGridSections.activities ? 'chevronRight' : 'chevronDown')}</button>Activities (${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''})</span>
+          <span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.activities ? 'Expand activities' : 'Collapse activities'}" aria-label="${collapsedGridSections.activities ? 'Expand activities section' : 'Collapse activities section'}" aria-expanded="${collapsedGridSections.activities ? 'false' : 'true'}" onclick="toggleGridSection('activities')">${svgIcon(collapsedGridSections.activities ? 'chevronRight' : 'chevronDown')}</button>Activities (${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''})</span>
           <span class="flex items-center" style="gap:6px">
             ${visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
             <button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
@@ -3067,8 +3067,8 @@ function renderGridBody(days, today) {
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   if (showTimelineSections) {
     html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
-        <span class="flex items-center justify-between"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.holidays ? 'Expand holidays' : 'Collapse holidays'}" onclick="toggleGridSection('holidays')">${svgIcon(collapsedGridSections.holidays ? 'chevronRight' : 'chevronDown')}</button>Holidays (${currentHolidays.length})</span>
-          <span class="flex items-center" style="gap:6px"><button type="button" class="filter-chip${showHolidays ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" onclick="showHolidays=!showHolidays;renderPage()">Show holidays</button><span class="icon-btn" style="visibility:hidden" aria-hidden="true">${svgIcon('report')}</span><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
+        <span class="flex items-center justify-between"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.holidays ? 'Expand holidays' : 'Collapse holidays'}" aria-label="${collapsedGridSections.holidays ? 'Expand holidays section' : 'Collapse holidays section'}" aria-expanded="${collapsedGridSections.holidays ? 'false' : 'true'}" onclick="toggleGridSection('holidays')">${svgIcon(collapsedGridSections.holidays ? 'chevronRight' : 'chevronDown')}</button>Holidays (${currentHolidays.length})</span>
+          <span class="flex items-center" style="gap:6px"><button type="button" class="filter-chip${showHolidays ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" onclick="showHolidays=!showHolidays;renderPage()">Show holidays</button><span class="icon-btn" style="visibility:hidden" aria-hidden="true">${svgIcon('report')}</span><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" aria-label="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
           </span>
         </span></td><td colspan="${days.length}"></td></tr>`;
   }
@@ -3104,7 +3104,7 @@ function renderGridBody(days, today) {
 
   // ── Employee section ──────────────────────────────────────────
   if (showEmployeeSection) {
-    html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.employees ? 'Expand employees' : 'Collapse employees'}" onclick="toggleGridSection('employees')">${svgIcon(collapsedGridSections.employees ? 'chevronRight' : 'chevronDown')}</button>Employee</span></td><td colspan="${days.length}"></td></tr>`;
+    html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.employees ? 'Expand employees' : 'Collapse employees'}" aria-label="${collapsedGridSections.employees ? 'Expand employees section' : 'Collapse employees section'}" aria-expanded="${collapsedGridSections.employees ? 'false' : 'true'}" onclick="toggleGridSection('employees')">${svgIcon(collapsedGridSections.employees ? 'chevronRight' : 'chevronDown')}</button>Employee</span></td><td colspan="${days.length}"></td></tr>`;
     if (collapsedGridSections.employees) {
       html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Employees collapsed.</td><td colspan="${days.length}"></td></tr>`;
     } else {
