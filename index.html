@@ -1517,6 +1517,10 @@ function setAllGridSectionsCollapsed(collapsed) {
   saveGridPreferences();
   renderGridBody(daysOfYear(gridYear), todayStr());
 }
+function toggleAllGridSectionsCollapsed() {
+  const allCollapsed = Object.values(collapsedGridSections).every(Boolean);
+  setAllGridSectionsCollapsed(!allCollapsed);
+}
 
 function downloadDataFile() {
   const payload = JSON.stringify(snapshotData(), null, 2);
@@ -2838,6 +2842,7 @@ function renderGrid() {
     dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
+  const allSectionsCollapsed = Object.values(collapsedGridSections).every(Boolean);
 
   document.getElementById('content').innerHTML = `
     <div id="grid-wrap">
@@ -2855,8 +2860,7 @@ function renderGrid() {
             <option value="timeline" ${gridViewMode === 'timeline' ? 'selected' : ''}>Timeline only</option>
             <option value="employees" ${gridViewMode === 'employees' ? 'selected' : ''}>Employees only</option>
           </select>
-          <button class="btn btn-sm" onclick="setAllGridSectionsCollapsed(false)">Expand sections</button>
-          <button class="btn btn-sm" onclick="setAllGridSectionsCollapsed(true)">Collapse sections</button>
+          <button class="btn btn-sm" onclick="toggleAllGridSectionsCollapsed()">${allSectionsCollapsed ? 'Expand sections' : 'Collapse sections'}</button>
           <div class="year-nav" aria-label="Calendar year">
             <button class="btn btn-icon" onclick="changeGridYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
             <span class="year-label">${gridYear}</span>
@@ -2972,23 +2976,26 @@ function renderGridBody(days, today) {
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
   const visibleActivities = pastActivitiesExpanded ? [...currentActs, ...pastActs] : currentActs;
-  const pageSize = activityPageCapacity();
+  const paginateActivities = gridViewMode !== 'timeline';
+  const pageSize = paginateActivities ? activityPageCapacity() : Math.max(1, visibleActivities.length);
   activityPageSize = pageSize;
-  const maxOffset = Math.max(0, Math.floor((visibleActivities.length - 1) / pageSize) * pageSize);
-  activityPageOffset = Math.min(activityPageOffset, maxOffset);
-  const activityPage = visibleActivities.slice(activityPageOffset, activityPageOffset + pageSize);
+  const maxOffset = paginateActivities ? Math.max(0, Math.floor((visibleActivities.length - 1) / pageSize) * pageSize) : 0;
+  activityPageOffset = paginateActivities ? Math.min(activityPageOffset, maxOffset) : 0;
+  const activityPage = paginateActivities ? visibleActivities.slice(activityPageOffset, activityPageOffset + pageSize) : visibleActivities;
   const pageStart = visibleActivities.length ? activityPageOffset + 1 : 0;
-  const pageEnd = Math.min(activityPageOffset + pageSize, visibleActivities.length);
+  const pageEnd = paginateActivities ? Math.min(activityPageOffset + pageSize, visibleActivities.length) : visibleActivities.length;
+  const activityHeadingText = paginateActivities && visibleActivities.length > pageSize
+    ? `${pageStart}–${pageEnd} of ${visibleActivities.length}`
+    : `${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''}`;
   const hasAnyActivities = (currentActs.length + pastActs.length) > 0;
 
   // ── Activities section ────────────────────────────────────────
   if (showTimelineSections) {
     html += `<tr class="sect-row"><td class="sticky-left" style="z-index:60">
         <span class="flex items-center justify-between">
-          <span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.activities ? 'Expand activities' : 'Collapse activities'}" aria-label="${collapsedGridSections.activities ? 'Expand activities section' : 'Collapse activities section'}" aria-expanded="${collapsedGridSections.activities ? 'false' : 'true'}" onclick="toggleGridSection('activities')">${svgIcon(collapsedGridSections.activities ? 'chevronRight' : 'chevronDown')}</button>Activities (${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''})</span>
+          <span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.activities ? 'Expand activities' : 'Collapse activities'}" aria-label="${collapsedGridSections.activities ? 'Expand activities section' : 'Collapse activities section'}" aria-expanded="${collapsedGridSections.activities ? 'false' : 'true'}" onclick="toggleGridSection('activities')">${svgIcon(collapsedGridSections.activities ? 'chevronRight' : 'chevronDown')}</button>Activities (${activityHeadingText})</span>
           <span class="flex items-center" style="gap:6px">
-            ${visibleActivities.length > pageSize ? `<span style="font-size:9px;font-weight:500;text-transform:none;white-space:nowrap">${pageStart}–${pageEnd} of ${visibleActivities.length}</span>
-            <button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
+            ${paginateActivities && visibleActivities.length > pageSize ? `<button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
             <button class="icon-btn" title="Next activities" aria-label="Next activities" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
             <button type="button" class="filter-chip${appSettings.showOnlyConfirmedActivities ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" title="Show only confirmed activities in Grid View" onclick="toggleShowOnlyConfirmedActivities(!appSettings.showOnlyConfirmedActivities)">Confirmed only</button>
             <button class="icon-btn" title="Activity Schedule" aria-label="Activity Schedule" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
@@ -5521,12 +5528,10 @@ function renderDashboard() {
         <div class="card-title mb-4" style="font-size:15px">Upcoming Absences</div>
         ${upcoming.length
           ? `<div style="max-height:300px;overflow:auto;padding-right:6px">${[...upcomingByDate.entries()].slice(0, 30).map(([date, items]) => `
-              <div style="padding:6px 0 4px;font-size:12px;font-weight:700;color:var(--text)">${fmtMed(date)}</div>
-              ${items.map(u => `
-                <div class="absence-row" style="padding:8px 0 8px 10px">
-                  <div style="font-size:13.5px;font-weight:500">${esc(u.emp.name)}</div>
-                  ${statusBadge(u.entry.status)}
-                </div>`).join('')}`).join('')}</div>`
+              <div class="absence-row" style="align-items:flex-start;justify-content:flex-start;flex-wrap:wrap;padding:8px 0;">
+                <div style="font-size:12px;font-weight:700;color:var(--text);flex:0 0 auto">${fmtMed(date)}:</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.4;flex:1 1 260px;min-width:0">${items.map(u => esc(u.emp.name)).join(', ')}</div>
+              </div>`).join('')}</div>`
           : '<div class="empty-note" style="height:250px;display:flex;align-items:center;justify-content:center">No upcoming absences scheduled.</div>'}
       </div>
       <div class="card">
