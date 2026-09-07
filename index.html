@@ -2160,7 +2160,7 @@ function loadFromData(data) {
     appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || 7.5;
     appSettings.holidays = Array.isArray(appSettings.holidays) ? appSettings.holidays : [];
   }
-  applyGridPreferences(rawGridPreferences || {}, { resetMissing: true });
+  if (rawGridPreferences) applyGridPreferences(rawGridPreferences, { resetMissing: true });
   appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
     ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
     : {};
