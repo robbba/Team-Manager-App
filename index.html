@@ -2029,7 +2029,9 @@ function activityAssignmentIssueForKey(key, value, context) {
   if (!context.activityIds.has(activityId)) return { key, kind: 'activity', employeeId, activityId, date };
   const activity = context.activityList.find(item => Number(item?.id) === activityId);
   if (!activity) return { key, kind: 'activity', employeeId, activityId, date };
-  if (date < activity.startDate || date > activity.endDate) return { key, kind: 'date', employeeId, activityId, date };
+  if (activity.startDate && activity.endDate && (date < activity.startDate || date > activity.endDate)) {
+    return { key, kind: 'date', employeeId, activityId, date };
+  }
   const participantSource = Array.isArray(activity.participants) && activity.participants.length
     ? activity.participants
     : (activity.employeeIds || []).map(id => ({ id }));
