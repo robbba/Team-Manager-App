@@ -1457,6 +1457,7 @@ function toggleShowOnlyConfirmedActivities(checked) {
 }
 
 function downloadDataFile() {
+  const repairSummary = repairCurrentPlannerRelations();
   const payload = JSON.stringify(snapshotData(), null, 2);
   validatePlannerData(JSON.parse(payload));
   const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
@@ -1470,6 +1471,8 @@ function downloadDataFile() {
   link.remove();
   URL.revokeObjectURL(url);
   activeFileName = fileName;
+  if (hasPlannerRepairs(repairSummary)) renderPage();
+  if (hasPlannerRepairs(repairSummary)) setTimeout(() => alert(formatPlannerRepairMessage(repairSummary, 'save')), 0);
   return fileName;
 }
 
@@ -1631,12 +1634,14 @@ async function checkForRemoteFileUpdate() {
     activities = activityMerge.merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
     nextEmpId = Math.max(nextEmpId, ...employees.map(e => e.id || 0)) + 1;
     nextActId = Math.max(nextActId, ...activities.map(a => a.id || 0)) + 1;
+    const repairSummary = repairCurrentPlannerRelations();
     lastSyncTime = parsedDiskData.savedAt;
     baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
     renderPage();
     const conflicts = [...employeeMerge.conflicts, ...activityMerge.conflicts];
     const conflictNote = conflicts.length ? ` ${conflicts.length} record(s) had conflicting edits — yours were kept.` : '';
-    showToast(`Colleague updates were merged into your unsaved work.${conflictNote} Save when ready.`, 8000);
+    const repairNote = hasPlannerRepairs(repairSummary) ? ` ${formatPlannerRepairMessage(repairSummary, 'merge')}` : '';
+    showToast(`Colleague updates were merged into your unsaved work.${conflictNote} Save when ready.${repairNote}`, 10000);
   } catch (err) {
     if (!['NotFoundError', 'AbortError'].includes(err?.name)) console.warn('Remote update check failed:', err?.message);
   } finally {
@@ -1770,6 +1775,7 @@ async function writeLocalBackupFile(handle) {
   for (const key of Object.keys(entriesMap)) if (entriesMap[key] === null) delete entriesMap[key];
   for (const key of Object.keys(overtimeMap)) if (overtimeMap[key] === null) delete overtimeMap[key];
   for (const key of Object.keys(activityShiftsMap)) if (activityShiftsMap[key] === null) delete activityShiftsMap[key];
+  const repairSummary = repairCurrentPlannerRelations();
 
   lastSyncTime = new Date().toISOString();
   localSnapshot.savedAt = lastSyncTime;
@@ -1792,7 +1798,10 @@ async function writeLocalBackupFile(handle) {
       const conflictNote = entityConflicts.length
         ? `\n\n${entityConflicts.length} record(s) had conflicting changes and were kept as follows:\n${entityConflicts.map(c => `- ${c.label}: ${c.detail}`).join('\n')}`
         : '';
-      setTimeout(() => alert(`Your changes were saved along with new updates from your colleagues.${conflictNote}`), 0);
+      const repairNote = hasPlannerRepairs(repairSummary) ? `\n\n${formatPlannerRepairMessage(repairSummary, 'merge')}` : '';
+      setTimeout(() => alert(`Your changes were saved along with new updates from your colleagues.${conflictNote}${repairNote}`), 0);
+    } else if (hasPlannerRepairs(repairSummary)) {
+      setTimeout(() => alert(formatPlannerRepairMessage(repairSummary, 'save')), 0);
     }
   } catch (err) {
     try { await writable.abort(); } catch (abortErr) { }
@@ -1911,6 +1920,7 @@ async function handleImportDataFile(event) {
 
 async function loadDataFile(file, handle) {
   const parsed = JSON.parse(await file.text());
+  const repairSummary = repairPlannerRelations(parsed);
   validatePlannerData(parsed);
   loadFromData(parsed);
   if (handle) await storeLocalBackupHandle(handle);
@@ -1921,7 +1931,8 @@ async function loadDataFile(file, handle) {
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
   persistSettings();
-  markFileSaved();
+  if (hasPlannerRepairs(repairSummary)) markUnsaved();
+  else markFileSaved();
   try {
     await saveState(true);
   } catch (recoveryError) {
@@ -1929,6 +1940,7 @@ async function loadDataFile(file, handle) {
   }
   closeModal('settings-modal');
   renderPage();
+  if (hasPlannerRepairs(repairSummary)) showToast(formatPlannerRepairMessage(repairSummary, 'open'), 9000);
 }
 
 function validatePlannerData(data) {
@@ -1946,10 +1958,11 @@ function validatePlannerData(data) {
   };
   const employeeIds = uniqueIds(employeeList, 'employee');
   const activityIds = uniqueIds(activityList, 'activity');
+  const workCodeIds = new Set((data.workCodes || data.appSettings?.workCodes || []).map(code => String(code?.id || '')).filter(Boolean));
   activityList.forEach(activity => {
     const participants = Array.isArray(activity.participants) ? activity.participants : (activity.employeeIds || []).map(id => ({ id }));
     if (!Array.isArray(participants) || participants.some(participant => !employeeIds.has(Number(participant?.id)))) {
-      throw new Error('Activity contains an unknown employee');
+      throw new Error('One or more activities still list a deleted employee as a participant. Remove the stale participant and try saving again.');
     }
   });
   if (data.entriesMap != null && (typeof data.entriesMap !== 'object' || Array.isArray(data.entriesMap))) throw new Error('Invalid daily entries');
@@ -1968,11 +1981,144 @@ function validatePlannerData(data) {
     }
   });
   if (data.activityShiftsMap != null && (typeof data.activityShiftsMap !== 'object' || Array.isArray(data.activityShiftsMap))) throw new Error('Invalid activity assignments');
+  const activityAssignmentIssues = [];
   Object.keys(data.activityShiftsMap || {}).forEach(key => {
-    const parts = key.split('_');
-    if (parts.length !== 3 || !employeeIds.has(Number(parts[0])) || !activityIds.has(Number(parts[2])) || !/^\d{4}-\d{2}-\d{2}$/.test(parts[1])) {
-      throw new Error('Activity assignment contains an invalid relation');
+    const issue = activityAssignmentIssueForKey(key, (data.activityShiftsMap || {})[key], { employeeIds, activityIds, activityList, workCodeIds });
+    if (issue && issue.kind !== 'workCode') activityAssignmentIssues.push(issue);
+  });
+  if (activityAssignmentIssues.length) throw new Error(formatActivityAssignmentIssueMessage(activityAssignmentIssues));
+}
+
+function normalizedActivityAssignmentValue(value) {
+  if (!value) return { shift: '', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: false, excluded: false };
+  return typeof value === 'string'
+    ? { shift: value, workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false }
+    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: value.workCodeId || null, administrativeTime: String(value.administrativeTime || ''), staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
+}
+function pluralize(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+function activityAssignmentReasonLabel(kind) {
+  return {
+    malformed: 'malformed records',
+    employee: 'deleted employees',
+    activity: 'deleted activities',
+    participant: 'removed participants',
+    date: 'dates outside the activity period',
+    workCode: 'deleted work codes',
+  }[kind] || 'invalid references';
+}
+function activityAssignmentIssueForKey(key, value, context) {
+  const parts = String(key || '').split('_');
+  if (parts.length !== 3) return { key, kind: 'malformed' };
+  const [employeeIdText, date, activityIdText] = parts;
+  const employeeId = Number(employeeIdText);
+  const activityId = Number(activityIdText);
+  if (!Number.isFinite(employeeId) || !Number.isFinite(activityId) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { key, kind: 'malformed' };
+  if (!context.employeeIds.has(employeeId)) return { key, kind: 'employee', employeeId, activityId, date };
+  if (!context.activityIds.has(activityId)) return { key, kind: 'activity', employeeId, activityId, date };
+  const activity = context.activityList.find(item => Number(item?.id) === activityId);
+  if (!activity) return { key, kind: 'activity', employeeId, activityId, date };
+  if (date < activity.startDate || date > activity.endDate) return { key, kind: 'date', employeeId, activityId, date };
+  const participantIds = new Set((activity.participants || []).map(participant => Number(participant?.id)).filter(Number.isFinite));
+  if (!participantIds.has(employeeId)) return { key, kind: 'participant', employeeId, activityId, date };
+  const assignment = normalizedActivityAssignmentValue(value);
+  if (assignment.workCodeId && context.workCodeIds && !context.workCodeIds.has(String(assignment.workCodeId))) {
+    return { key, kind: 'workCode', employeeId, activityId, date };
+  }
+  return null;
+}
+function formatActivityAssignmentIssueMessage(issues) {
+  const counts = issues.reduce((acc, issue) => {
+    acc[issue.kind] = (acc[issue.kind] || 0) + 1;
+    return acc;
+  }, {});
+  const details = Object.entries(counts).map(([kind, count]) => `${pluralize(count, 'assignment')} referencing ${activityAssignmentReasonLabel(kind)}`);
+  return `${pluralize(issues.length, 'activity assignment')} can no longer be saved because ${details.join(', ')}. Review recent employee or activity removals, then try saving again.`;
+}
+function hasPlannerRepairs(summary) {
+  return Boolean(summary.removedParticipants || summary.removedDailyEntries || summary.removedOvertimeEntries || summary.removedActivityAssignments || summary.clearedAssignmentWorkCodes);
+}
+function formatPlannerRepairMessage(summary, context = 'save') {
+  const parts = [];
+  if (summary.removedParticipants) parts.push(`removed ${pluralize(summary.removedParticipants, 'stale participant reference')} from activities`);
+  if (summary.removedDailyEntries) parts.push(`dropped ${pluralize(summary.removedDailyEntries, 'daily status entry')} for deleted employees`);
+  if (summary.removedOvertimeEntries) parts.push(`dropped ${pluralize(summary.removedOvertimeEntries, 'overtime entry')} for deleted employees`);
+  if (summary.removedActivityAssignments) {
+    const reasonDetails = Object.entries(summary.activityAssignmentReasons)
+      .filter(([, count]) => count > 0)
+      .map(([kind, count]) => `${pluralize(count, 'assignment')} referencing ${activityAssignmentReasonLabel(kind)}`);
+    parts.push(`removed ${pluralize(summary.removedActivityAssignments, 'stale activity assignment')}${reasonDetails.length ? ` (${reasonDetails.join(', ')})` : ''}`);
+  }
+  if (summary.clearedAssignmentWorkCodes) parts.push(`cleared ${pluralize(summary.clearedAssignmentWorkCodes, 'deleted work code reference')} from activity assignments`);
+  if (!parts.length) return '';
+  const prefix = context === 'open'
+    ? 'The app cleaned up the planner while opening it and'
+    : context === 'merge'
+      ? 'The app merged your data and'
+      : 'The app cleaned up the planner and';
+  const suffix = context === 'open' ? ' Save the JSON file to keep the cleanup.' : '';
+  return `${prefix} ${parts.join('; ')}.${suffix}`;
+}
+function repairPlannerRelations(state) {
+  const summary = {
+    removedParticipants: 0,
+    removedDailyEntries: 0,
+    removedOvertimeEntries: 0,
+    removedActivityAssignments: 0,
+    clearedAssignmentWorkCodes: 0,
+    activityAssignmentReasons: { malformed: 0, employee: 0, activity: 0, participant: 0, date: 0 },
+  };
+  if (!state || typeof state !== 'object') return summary;
+  const employeeIds = new Set((state.employees || []).map(employee => Number(employee?.id)).filter(Number.isFinite));
+  const activityList = state.activities || state.projects || [];
+  activityList.forEach(activity => {
+    const participantList = Array.isArray(activity.participants) ? activity.participants : (activity.employeeIds || []).map(id => ({ id }));
+    const nextParticipants = participantList.filter(participant => employeeIds.has(Number(participant?.id)));
+    summary.removedParticipants += participantList.length - nextParticipants.length;
+    activity.participants = nextParticipants.map(participant => ({ id: Number(participant.id) }));
+  });
+  const activityIds = new Set(activityList.map(activity => Number(activity?.id)).filter(Number.isFinite));
+  const workCodeIds = new Set((state.workCodes || state.appSettings?.workCodes || []).map(code => String(code?.id || '')).filter(Boolean));
+  Object.keys(state.entriesMap || {}).forEach(key => {
+    const separator = key.indexOf('_');
+    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(key.slice(separator + 1))) {
+      delete state.entriesMap[key];
+      summary.removedDailyEntries += 1;
     }
+  });
+  Object.keys(state.overtimeMap || {}).forEach(key => {
+    const separator = key.indexOf('_');
+    const date = key.slice(separator + 1);
+    const value = state.overtimeMap[key];
+    const hours = Number(value?.hours);
+    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(hours) || hours < 0 || hours > 24) {
+      delete state.overtimeMap[key];
+      summary.removedOvertimeEntries += 1;
+    }
+  });
+  Object.keys(state.activityShiftsMap || {}).forEach(key => {
+    const issue = activityAssignmentIssueForKey(key, state.activityShiftsMap[key], { employeeIds, activityIds, activityList, workCodeIds });
+    if (!issue) return;
+    if (issue.kind === 'workCode') {
+      state.activityShiftsMap[key] = { ...normalizedActivityAssignmentValue(state.activityShiftsMap[key]), workCodeId: null };
+      summary.clearedAssignmentWorkCodes += 1;
+      return;
+    }
+    delete state.activityShiftsMap[key];
+    summary.removedActivityAssignments += 1;
+    summary.activityAssignmentReasons[issue.kind] = (summary.activityAssignmentReasons[issue.kind] || 0) + 1;
+  });
+  return summary;
+}
+function repairCurrentPlannerRelations() {
+  return repairPlannerRelations({
+    employees,
+    activities,
+    entriesMap,
+    overtimeMap,
+    activityShiftsMap,
+    workCodes: appSettings.workCodes || [],
   });
 }
 
@@ -2044,11 +2190,13 @@ async function undoLastChange() {
     const merged = { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } };
     Object.assign(appSettings, merged);
   }
+  const repairSummary = repairCurrentPlannerRelations();
   markUnsaved();
   await saveState();
   updateUndoButton();
   updateSbStatus();
   renderPage();
+  if (hasPlannerRepairs(repairSummary)) showToast(formatPlannerRepairMessage(repairSummary, 'merge'), 9000);
 }
 
 function updateSaveButton() {
@@ -2367,6 +2515,11 @@ function friendlyStatusLabel(key) {
 }
 function actParticipantIds(act) { return (act.participants || []).map(p => p.id); }
 function participantFor(act, empId) { return (act.participants || []).find(p => p.id === empId) || null; }
+function workCodeById(id) { return (appSettings.workCodes || []).find(code => code.id === id) || null; }
+function canAssignActivityToEmployee(act, empId, date = '') {
+  if (!act || !empById(empId) || !actParticipantIds(act).includes(empId)) return false;
+  return !date || (date >= act.startDate && date <= act.endDate);
+}
 function timeRangeHours(str) {
   const m = String(str || '').trim().match(/^(\d{1,2}):?(\d{2})\s*[-–]\s*(\d{1,2}):?(\d{2})$/);
   if (!m) return null;
@@ -2481,11 +2634,7 @@ function activityTypeMeta(act) {
   return type ? { ...type, label: type.name, abbr: type.abbreviation } : (siFor(typeKey) || null);
 }
 function activityAssignment(key) {
-  const value = activityShiftsMap[key];
-  if (!value) return { shift: '', workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: false };
-  return typeof value === 'string'
-    ? { shift: value, workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false }
-    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: value.workCodeId || null, administrativeTime: String(value.administrativeTime || ''), staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
+  return normalizedActivityAssignmentValue(activityShiftsMap[key]);
 }
 function activityAssignmentShift(key) {
   return activityAssignment(key).shift;
@@ -3543,13 +3692,14 @@ function removeConflictingActivityAssignments(empId, date, actId) {
 async function saveActivityAssignment(empId, actId) {
   const activity = activities.find(item => item.id === actId);
   const workCodeId = document.getElementById(`pk-code-${actId}`)?.value || '';
-  const workCode = (appSettings.workCodes || []).find(code => code.id === workCodeId);
+  const workCode = workCodeById(workCodeId);
   const administrativeTime = document.getElementById(`pk-admin-time-${actId}`)?.value.trim() || '';
   const customShift = document.getElementById(`pk-custom-shift-${actId}`)?.value.trim() || '';
   const selectedShift = document.getElementById(`pk-shifts-${actId}`)?.dataset.shift || '';
   const isNormalWorkingHours = !customShift && selectedShift === 'normal';
   const shift = customShift || selectedShift;
   if (!activity) { alert('Select a Shift Type.'); return; }
+  if (!canAssignActivityToEmployee(activity, empId)) { alert('This employee is no longer participating in that activity. Reopen the activity and add them again before assigning work.'); return; }
   const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
   if (!shift) {
     const hasAssignment = dates.some(date => {
@@ -3560,6 +3710,7 @@ async function saveActivityAssignment(empId, actId) {
     alert('Select a Shift Type.');
     return;
   }
+  if (workCodeId && !workCode) { alert('The selected work code was removed. Choose a current work code and try again.'); return; }
   if (!isNormalWorkingHours && !workCodeId) { alert('Select a Work Code, or use Normal Working Hours.'); return; }
   if (workCode?.aggregationMode === 'hours' && workCode.durationMode !== 'fixed' && !timeRangeHours(administrativeTime)) { alert('Enter a valid administrative time range, e.g. 1800-2200.'); return; }
   if (!confirmActivityReplacement(empId, dates, actId)) return;
@@ -3692,6 +3843,8 @@ async function clearStatus() {
   closePicker();
 }
 async function saveShift(empId, date, actId, shift) {
+  const activity = activities.find(item => item.id === actId);
+  if (!canAssignActivityToEmployee(activity, empId)) { alert('This employee is no longer participating in that activity. Reopen the activity and add them again before assigning work.'); return; }
   const dates = pickerEmpId === empId && pickerDates.length ? pickerDates : [date];
   recordUndo();
   for (const selectedDate of dates) {
@@ -3710,6 +3863,9 @@ async function saveShift(empId, date, actId, shift) {
   closePicker();
 }
 async function setAssignmentWorkCode(empId, date, actId, workCodeId) {
+  const activity = activities.find(item => item.id === actId);
+  if (!canAssignActivityToEmployee(activity, empId)) { alert('This employee is no longer participating in that activity. Reopen the activity and add them again before assigning work.'); return; }
+  if (workCodeId && !workCodeById(workCodeId)) { alert('The selected work code was removed. Choose a current work code and try again.'); return; }
   const dates = pickerEmpId === empId && pickerDates.length ? pickerDates : [date];
   if (workCodeId && !confirmActivityReplacement(empId, dates, actId)) return;
   recordUndo();
@@ -5927,7 +6083,14 @@ async function bootApp() {
     const rawLocalState = lsGet(LOCAL_STATE_KEY);
     if (rawLocalState) {
       const parsedLocalState = JSON.parse(rawLocalState);
-      if (parsedLocalState && typeof parsedLocalState === 'object') loadFromData(parsedLocalState);
+      if (parsedLocalState && typeof parsedLocalState === 'object') {
+        const repairSummary = repairPlannerRelations(parsedLocalState);
+        loadFromData(parsedLocalState);
+        if (hasPlannerRepairs(repairSummary)) {
+          markUnsaved();
+          setTimeout(() => showToast(formatPlannerRepairMessage(repairSummary, 'open'), 9000), 0);
+        }
+      }
     }
   } catch (err) {
     console.warn('Could not load local JSON data.');
