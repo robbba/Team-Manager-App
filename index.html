@@ -2154,7 +2154,7 @@ function loadFromData(data) {
   const rawGridPreferences = normalized.gridPreferences && typeof normalized.gridPreferences === 'object' && !Array.isArray(normalized.gridPreferences)
     ? normalized.gridPreferences
     : null;
-  if (rawGridPreferences) applyGridPreferences(rawGridPreferences);
+  if (rawGridPreferences) applyGridPreferences(rawGridPreferences, { resetMissing: true });
   if (normalized.appSettings) {
     appSettings = { ...appSettings, ...normalized.appSettings };
     appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(appSettings.coreWorkdayRange, '0730-1500');
