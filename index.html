@@ -2839,11 +2839,11 @@ function renderGrid() {
             </div>
           </div>
 
-          <!-- Activity schedule report modal (beta) -->
+          <!-- Activity schedule report modal -->
           <div class="modal-bg" id="activity-schedule-modal">
             <div class="modal" style="width:min(1100px, calc(100vw - 32px));max-height:92vh;display:flex;flex-direction:column">
               <div class="flex items-center justify-between" style="gap:12px">
-                <h3 style="margin:0">Activity Schedule <span class="muted text-sm" style="font-weight:400">(beta)</span></h3>
+                <h3 style="margin:0">Activity Schedule</h3>
                 <button class="icon-btn" title="Close" onclick="closeModal('activity-schedule-modal')">&times;</button>
               </div>
               <div class="form-row-2" style="margin-top:14px">
@@ -2923,7 +2923,7 @@ function renderGridBody(days, today) {
           <button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
           <button class="icon-btn" title="Next activities" aria-label="Next activities" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
           <button type="button" class="filter-chip${appSettings.showOnlyConfirmedActivities ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" title="Show only confirmed activities in Grid View" onclick="toggleShowOnlyConfirmedActivities(!appSettings.showOnlyConfirmedActivities)">Confirmed only</button>
-          <button class="icon-btn" title="Activity Schedule (beta)" aria-label="Activity Schedule (beta)" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
+          <button class="icon-btn" title="Activity Schedule" aria-label="Activity Schedule" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
           <button class="icon-btn" title="Add activity" aria-label="Add activity" onclick="openActModal()">${svgIcon('plus')}</button>
         </span>
       </span>
@@ -4419,7 +4419,7 @@ function printTeamScheduleReport() {
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
 
-// ═══ ACTIVITY SCHEDULE REPORT (beta) ══════════════════════════════════════
+// ═══ ACTIVITY SCHEDULE REPORT ══════════════════════════════════════
 function activityScheduleStatuses() {
   return ['tentative', 'confirmed', 'cancelled'].filter(status => document.getElementById(`as-filter-${status}`)?.checked);
 }
@@ -4528,7 +4528,7 @@ function printActivityScheduleReport() {
   for (let i = 0; i < dates.length; i += 14) {
     const chunkDates = dates.slice(i, i + 14);
     sections.push(`<section class="report-section">
-      <h1>Activity Schedule (beta)</h1>
+      <h1>Activity Schedule</h1>
       <div class="period">Period: ${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])}</div>
       <table><thead><tr><th class="employee-column" rowspan="3">Activity</th></tr>${activityScheduleDateHeaders(chunkDates)}</thead>
       <tbody>${filtered.map(act => activityScheduleBarRow(act, chunkDates)).join('')}</tbody></table>
