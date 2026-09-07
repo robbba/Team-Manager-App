@@ -2445,7 +2445,7 @@ function activityDefaultShift(shiftType, act = null) {
   return shiftType === 'night' ? (act?.nightShift || '0000-0730') : (act?.dayShift || '0730-2400');
 }
 function activityShiftHours(act, empId, date) {
-  if (activityStatus(act) !== 'confirmed') return 0;
+  if (activityStatus(act) !== 'confirmed' || !activityIncludesDateForLoad(act, date)) return 0;
   const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
   if (!assignment.assigned || assignment.excluded || !assignment.shift) return 0;
   const shiftStr = assignment.shift || 'normal';
@@ -2482,6 +2482,11 @@ function assignmentShiftType(shift, participant = null) {
 }
 function activityCountsTowardLoad(act) {
   return act?.countsTowardLoad !== false;
+}
+function activityIncludesDateForLoad(act, dateString) {
+  if (!act || !dateString) return false;
+  if (dateString < act.startDate || dateString > act.endDate) return false;
+  return act.includeWeekends === true || !isWknd(new Date(`${dateString}T00:00:00`));
 }
 function effectiveStaffingImpact(assignment) {
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment?.workCodeId);
@@ -2535,9 +2540,7 @@ function activityHasScheduledShift(act, empId, start, end) {
   return Object.keys(activityShiftsMap).some(key => {
     if (!key.startsWith(prefix) || !key.endsWith(suffix)) return false;
     const [, date] = key.split('_', 3);
-    if (date < start || date > end) return false;
-    // Respect includeWeekends flag: if activity is weekday-only, skip weekend shifts
-    if (!act.includeWeekends && isWknd(new Date(`${date}T00:00:00`))) return false;
+    if (date < start || date > end || !activityIncludesDateForLoad(act, date)) return false;
     return Boolean(activityAssignment(key).workCodeId);
   });
 }
@@ -5130,14 +5133,18 @@ function isNormalWorkDate(dateString) {
   const holiday = holidayFor(dateString);
   return !isWknd(date) && (!holiday || holiday.nonWorking !== true);
 }
-function statusLoadMeasure(entry) {
-  if (!entry || entry.status === 'at_work') return { units: 0, hours: 0 };
+function statusCountsTowardLoad(dateString) {
+  if (!dateString) return false;
+  return !isWknd(new Date(`${dateString}T00:00:00`));
+}
+function statusLoadMeasure(entry, dateString = '') {
+  if (!entry || entry.status === 'at_work' || !statusCountsTowardLoad(dateString)) return { units: 0, hours: 0 };
   if (entry.durationType === '24hours') return { units: 0, hours: 24 };
   if (entry.durationType === 'time') return { units: 0, hours: timeRangeHours(entry.time) ?? 0 };
   return { units: 1, hours: 0 };
 }
 function activityAdministrativeMeasure(activity, empId, date) {
-  if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return { units: 0, hours: 0 };
+  if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity) || !activityIncludesDateForLoad(activity, date)) return { units: 0, hours: 0 };
   const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
   if (!assignment.assigned || assignment.excluded) return { units: 0, hours: 0 };
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
@@ -5149,7 +5156,7 @@ function activityAdministrativeMeasure(activity, empId, date) {
   return { units: 0, hours: timeRangeHours(assignment.administrativeTime || legacyInterval) || 0 };
 }
 function activityLoadMeasure(activity, empId, date) {
-  if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return { units: 0, hours: 0 };
+  if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity) || !activityIncludesDateForLoad(activity, date)) return { units: 0, hours: 0 };
   const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
   if (!assignment.assigned || assignment.excluded) return { units: 0, hours: 0 };
   return { units: 0, hours: activityShiftHours(activity, empId, date) };
@@ -5186,7 +5193,7 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
     const entry = getEntryObj(`${emp.id}_${ds}`);
     if (entry) {
       const st = siFor(entry.status);
-      const measure = statusLoadMeasure(entry);
+      const measure = statusLoadMeasure(entry, ds);
       statusUnits += measure.units;
       timedStatusHours += measure.hours;
       if (st?.isAbsence) { absenceUnits += measure.units; timedAbsenceHours += measure.hours; }
@@ -5309,8 +5316,10 @@ function renderDashboard() {
   const unavailableTodayPeople = [];
   for (const emp of employees) {
     const entry = getEntryObj(`${emp.id}_${today}`);
-    if (entry && counts[entry.status] !== undefined) counts[entry.status]++;
-    const status = entry ? siFor(entry.status) : null;
+    const statusMeasure = statusLoadMeasure(entry, today);
+    const statusCounts = (statusMeasure.units || statusMeasure.hours) > 0;
+    if (entry && statusCounts && counts[entry.status] !== undefined) counts[entry.status]++;
+    const status = entry && statusCounts ? siFor(entry.status) : null;
     const unavailableActivity = unavailableActivityFor(emp.id, today);
     const statusUnavailable = status && (status.isAbsence || status.isOutOfOffice);
     if (!statusUnavailable && !unavailableActivity) {
@@ -5339,8 +5348,10 @@ function renderDashboard() {
     statuses.forEach(s => { dayCounts[s.key] = 0; });
     for (const emp of employees) {
       const entry = getEntryObj(`${emp.id}_${ds}`);
-      if (entry && dayCounts[entry.status] !== undefined) dayCounts[entry.status]++;
-      const status = entry ? siFor(entry.status) : null;
+      const statusMeasure = statusLoadMeasure(entry, ds);
+      const statusCounts = (statusMeasure.units || statusMeasure.hours) > 0;
+      if (entry && statusCounts && dayCounts[entry.status] !== undefined) dayCounts[entry.status]++;
+      const status = entry && statusCounts ? siFor(entry.status) : null;
       if ((!status || (!status.isAbsence && !status.isOutOfOffice)) && unavailableActivityFor(emp.id, ds)) assignmentUnavailable++;
     }
     const unavailableStatusKeys = statuses.filter(s => s.isAbsence || s.isOutOfOffice).map(s => s.key);
@@ -5683,8 +5694,10 @@ function computeSummaryRows(startDate, endDate) {
     if (!row) continue;
     const entry = getEntryObj(key);
     if (!entry) continue;
+    const measure = statusLoadMeasure(entry, date);
+    if (!measure.units && !measure.hours) continue;
     row.counts[entry.status] = (row.counts[entry.status] || 0) + 1;
-    row.statusMeasures[entry.status] = addLoadMeasure(row.statusMeasures[entry.status], statusLoadMeasure(entry));
+    row.statusMeasures[entry.status] = addLoadMeasure(row.statusMeasures[entry.status], measure);
   }
 
   for (const [key, shift] of Object.entries(activityShiftsMap)) {
