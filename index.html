@@ -5382,6 +5382,11 @@ function renderDashboard() {
     upcoming.push({ emp, date, entry });
   }
   upcoming.sort((a, b) => a.date.localeCompare(b.date) || a.emp.name.localeCompare(b.emp.name));
+  const upcomingByDate = upcoming.reduce((map, item) => {
+    if (!map.has(item.date)) map.set(item.date, []);
+    map.get(item.date).push(item);
+    return map;
+  }, new Map());
 
   const rosterGroups = deptGroups();
   const statusBadge = key => {
@@ -5515,14 +5520,13 @@ function renderDashboard() {
       <div class="card">
         <div class="card-title mb-4" style="font-size:15px">Upcoming Absences</div>
         ${upcoming.length
-          ? `<div style="max-height:300px;overflow:auto;padding-right:6px">${upcoming.slice(0, 30).map(u => `
-              <div class="absence-row">
-                <div>
+          ? `<div style="max-height:300px;overflow:auto;padding-right:6px">${[...upcomingByDate.entries()].slice(0, 30).map(([date, items]) => `
+              <div style="padding:6px 0 4px;font-size:12px;font-weight:700;color:var(--text)">${fmtMed(date)}</div>
+              ${items.map(u => `
+                <div class="absence-row" style="padding:8px 0 8px 10px">
                   <div style="font-size:13.5px;font-weight:500">${esc(u.emp.name)}</div>
-                  <div class="muted text-sm">${fmtMed(u.date)}</div>
-                </div>
-                ${statusBadge(u.entry.status)}
-              </div>`).join('')}</div>`
+                  ${statusBadge(u.entry.status)}
+                </div>`).join('')}`).join('')}</div>`
           : '<div class="empty-note" style="height:250px;display:flex;align-items:center;justify-content:center">No upcoming absences scheduled.</div>'}
       </div>
       <div class="card">
