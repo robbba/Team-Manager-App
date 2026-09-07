@@ -2134,15 +2134,12 @@ function loadFromData(data) {
   const rawGridPreferences = normalized.gridPreferences && typeof normalized.gridPreferences === 'object' && !Array.isArray(normalized.gridPreferences)
     ? normalized.gridPreferences
     : null;
-  hiddenEmployees = new Set();
-  gridViewMode = 'all';
-  collapsedGridSections = { activities: false, holidays: false, employees: false };
   if (rawGridPreferences) {
     const prefYear = Number(rawGridPreferences.year);
     if (Number.isInteger(prefYear)) gridYear = prefYear;
-    if (Array.isArray(rawGridPreferences.hiddenEmployeeIds)) {
-      hiddenEmployees = new Set(rawGridPreferences.hiddenEmployeeIds.map(Number).filter(Number.isFinite));
-    }
+    hiddenEmployees = Array.isArray(rawGridPreferences.hiddenEmployeeIds)
+      ? new Set(rawGridPreferences.hiddenEmployeeIds.map(Number).filter(Number.isFinite))
+      : new Set();
     gridViewMode = normalizeGridViewMode(rawGridPreferences.viewMode);
     collapsedGridSections = normalizeGridCollapsedSections(rawGridPreferences.collapsedSections);
   }
@@ -3107,7 +3104,7 @@ function renderGridBody(days, today) {
 
   // ── Employee section ──────────────────────────────────────────
   if (showEmployeeSection) {
-    html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.employees ? 'Expand employees' : 'Collapse employees'}" aria-label="${collapsedGridSections.employees ? 'Expand employees section' : 'Collapse employees section'}" aria-expanded="${collapsedGridSections.employees ? 'false' : 'true'}" onclick="toggleGridSection('employees')">${svgIcon(collapsedGridSections.employees ? 'chevronRight' : 'chevronDown')}</button>Employee</span></td><td colspan="${days.length}"></td></tr>`;
+    html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.employees ? 'Expand employees' : 'Collapse employees'}" aria-label="${collapsedGridSections.employees ? 'Expand employees section' : 'Collapse employees section'}" aria-expanded="${collapsedGridSections.employees ? 'false' : 'true'}" onclick="toggleGridSection('employees')">${svgIcon(collapsedGridSections.employees ? 'chevronRight' : 'chevronDown')}</button>Employees</span></td><td colspan="${days.length}"></td></tr>`;
     if (collapsedGridSections.employees) {
       html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Employees collapsed.</td><td colspan="${days.length}"></td></tr>`;
     } else {
