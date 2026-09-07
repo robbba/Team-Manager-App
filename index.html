@@ -2070,7 +2070,7 @@ function repairPlannerRelations(state) {
     removedOvertimeEntries: 0,
     removedActivityAssignments: 0,
     clearedAssignmentWorkCodes: 0,
-    activityAssignmentReasons: { malformed: 0, employee: 0, activity: 0, participant: 0, date: 0 },
+    activityAssignmentReasons: { malformed: 0, employee: 0, activity: 0, participant: 0, date: 0, workCode: 0 },
   };
   if (!state || typeof state !== 'object') return summary;
   const employeeIds = new Set((state.employees || []).map(employee => Number(employee?.id)).filter(Number.isFinite));
