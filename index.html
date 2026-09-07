@@ -1967,17 +1967,19 @@ function validatePlannerData(data) {
     }
   });
   if (data.entriesMap != null && (typeof data.entriesMap !== 'object' || Array.isArray(data.entriesMap))) throw new Error('Invalid daily entries');
-  Object.keys(data.entriesMap || {}).forEach(key => {
+  Object.entries(data.entriesMap || {}).forEach(([key, value]) => {
     const separator = key.indexOf('_');
-    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator)))) throw new Error('Daily entry contains an unknown employee');
+    const date = key.slice(separator + 1);
+    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !isValidDailyEntryValue(value)) {
+      throw new Error('Daily entry contains invalid data');
+    }
   });
   if (data.overtimeMap != null && (typeof data.overtimeMap !== 'object' || Array.isArray(data.overtimeMap))) throw new Error('Invalid overtime entries');
   Object.entries(data.overtimeMap || {}).forEach(([key, value]) => {
     if (value === null) return;
     const separator = key.indexOf('_');
     const date = key.slice(separator + 1);
-    const hours = Number(value?.hours);
-    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(hours) || hours < 0 || hours > 24) {
+    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !isValidOvertimeValue(value)) {
       throw new Error('Overtime entry contains invalid data');
     }
   });
@@ -2052,7 +2054,24 @@ function formatActivityAssignmentIssueMessage(issues) {
   return `${pluralize(issues.length, 'activity assignment')} can no longer be saved because ${details.join(', ')}. Review recent employee or activity removals, then try saving again.`;
 }
 function hasPlannerRepairs(summary) {
+  if (!summary) return false;
   return Boolean(summary.removedParticipants || summary.removedDailyEntries || summary.removedOvertimeEntries || summary.removedActivityAssignments || summary.clearedAssignmentWorkCodes);
+}
+function isValidDailyEntryValue(value) {
+  if (typeof value === 'string') return true;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const durationType = value.durationType || (String(value.time || '').trim() ? 'time' : 'fullday');
+  if (!['fullday', 'time'].includes(durationType)) return false;
+  if (value.time != null && String(value.time).trim() && !timeRangeHours(String(value.time).trim())) return false;
+  return typeof value.status === 'string' && value.status.trim().length > 0;
+}
+function isValidOvertimeValue(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const hours = Number(value?.hours);
+  if (!Number.isFinite(hours) || hours < 0 || hours > 24) return false;
+  if (value.compTime != null && typeof value.compTime !== 'boolean') return false;
+  if (value.managerApproved != null && typeof value.managerApproved !== 'boolean') return false;
+  return true;
 }
 function formatPlannerRepairMessage(summary, context = 'save') {
   const parts = [];
@@ -2097,7 +2116,8 @@ function repairPlannerRelations(state) {
   const workCodeIds = workCodeReferenceSetFor(state);
   Object.keys(state.entriesMap || {}).forEach(key => {
     const separator = key.indexOf('_');
-    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(key.slice(separator + 1))) {
+    const date = key.slice(separator + 1);
+    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !isValidDailyEntryValue(state.entriesMap[key])) {
       delete state.entriesMap[key];
       summary.removedDailyEntries += 1;
     }
@@ -2106,8 +2126,7 @@ function repairPlannerRelations(state) {
     const separator = key.indexOf('_');
     const date = key.slice(separator + 1);
     const value = state.overtimeMap[key];
-    const hours = Number(value?.hours);
-    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(hours) || hours < 0 || hours > 24) {
+    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !isValidOvertimeValue(value)) {
       delete state.overtimeMap[key];
       summary.removedOvertimeEntries += 1;
     }
