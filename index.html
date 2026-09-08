@@ -747,6 +747,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 
 <script>
 'use strict';
+
 // ═══ CONSTANTS ═══════════════════════════════════════════════════════════════
 const PALETTE = [
   '#2563eb','#3b82f6','#4f46e5','#6366f1','#7c3aed','#8b5cf6',
@@ -1956,6 +1957,7 @@ function openJsonFilePicker() {
   return window.showOpenFilePicker({
     id: 'team-manager-json-file',
     multiple: false,
+    mode: 'readwrite',
     types: [{ description: 'Team Manager JSON', accept: { 'application/json': ['.json'] } }],
   });
 }
@@ -1972,22 +1974,31 @@ function openJsonFileInput(options = {}) {
 }
 
 async function importDataWithPicker(options = {}) {
+  let handles;
   try {
-    const handles = await openJsonFilePicker();
-    const handle = Array.isArray(handles) ? handles[0] : null;
-    if (!handle) return false;
-    preferBrowserJsonFileInput = false;
-    const file = await handle.getFile();
-    await loadDataFile(file, handle);
-    if (options.required && startupFileSelectionRequired) completeStartupFileSelection();
-    if (!options.required) showToast(`Opened JSON: ${handle.name}.`, 5000);
-    return true;
+    handles = await openJsonFilePicker();
   } catch (err) {
     if (err?.name === 'AbortError') return false;
     const firstFallback = !preferBrowserJsonFileInput;
     preferBrowserJsonFileInput = true;
     console.error('Native JSON picker failed:', err);
     if (firstFallback) showToast('Could not open the native JSON picker. Using the browser file chooser instead.', 7000);
+    return openJsonFileInput(options);
+  }
+  const handle = Array.isArray(handles) ? handles[0] : null;
+  if (!handle) return false;
+  preferBrowserJsonFileInput = false;
+  try {
+    const file = await handle.getFile();
+    await loadDataFile(file, handle);
+    if (options.required && startupFileSelectionRequired) completeStartupFileSelection();
+    document.querySelectorAll('.modal-bg.open').forEach(modal => closeModal(modal.id));
+    if (!options.required) showToast(`Opened JSON: ${handle.name}.`, 5000);
+    return true;
+  } catch (err) {
+    if (err?.name === 'AbortError') return false;
+    preferBrowserJsonFileInput = true;
+    showToast('That file handle is no longer available. Choose the JSON file again.', 7000);
     return openJsonFileInput(options);
   }
 }
@@ -2167,11 +2178,18 @@ async function saveLocalBackupFile(forcePrompt = false) {
       if (!hasPermission) {
         localBackupFileHandle = null;
         if (remoteUpdateSource === 'file-handle') setRemoteUpdateSource('none');
-        throw new Error('Permission denied. Please select a different JSON file.');
+        const downloadedFileName = downloadDataFile();
+        showToast(`Write permission was unavailable. Downloaded ${downloadedFileName} instead.`, 7000);
+        return downloadedFileName;
       }
     } catch (err) {
       localBackupFileHandle = null;
       if (remoteUpdateSource === 'file-handle') setRemoteUpdateSource('none');
+      if (['NotAllowedError', 'NoModificationAllowedError', 'SecurityError'].includes(err?.name)) {
+        const downloadedFileName = downloadDataFile();
+        showToast(`Write permission was unavailable. Downloaded ${downloadedFileName} instead.`, 7000);
+        return downloadedFileName;
+      }
       throw err;
     }
   }
@@ -2186,6 +2204,13 @@ async function saveLocalBackupFile(forcePrompt = false) {
       if (remoteUpdateSource === 'file-handle') setRemoteUpdateSource('none');
       await saveLocalBackupFile(true);
       return;
+    }
+    if (['NotAllowedError', 'NoModificationAllowedError', 'SecurityError'].includes(err?.name)) {
+      localBackupFileHandle = null;
+      if (remoteUpdateSource === 'file-handle') setRemoteUpdateSource('none');
+      const downloadedFileName = downloadDataFile();
+      showToast(`Write permission was unavailable. Downloaded ${downloadedFileName} instead.`, 7000);
+      return downloadedFileName;
     }
     throw err;
   }
@@ -2218,6 +2243,7 @@ async function saveDataAs() {
 }
 
 function importData(options = {}) {
+  document.querySelectorAll('.modal-bg.open').forEach(modal => closeModal(modal.id));
   if (!preferBrowserJsonFileInput && typeof window.showOpenFilePicker === 'function') {
     void importDataWithPicker(options);
     return false;
@@ -2234,8 +2260,9 @@ async function handleImportDataFile(event) {
     await loadDataFile(file, null);
     if (!requiredOpen) showToast(`Opened JSON: ${file.name}.`, 5000);
     if (startupFileSelectionRequired) completeStartupFileSelection();
+    document.querySelectorAll('.modal-bg.open').forEach(modal => closeModal(modal.id));
   } catch (err) {
-    alert('Could not open JSON planner. Verify the file format and try again.');
+    alert(`Could not open JSON planner: ${err?.message || 'Verify the file format and try again.'}`);
   } finally {
     delete event.target.dataset.requiredOpen;
     event.target.value = '';
@@ -2272,7 +2299,8 @@ async function applyLoadedPlannerData(parsed, options = {}) {
 }
 
 async function loadDataFile(file, handle, options = {}) {
-  const parsed = JSON.parse(await file.text());
+  const text = await file.text();
+  const parsed = text.trim() ? JSON.parse(text) : { employees: [], activities: [], statuses: [] };
   validatePlannerData(parsed);
   await applyLoadedPlannerData(parsed, {
     handle,
@@ -2280,8 +2308,7 @@ async function loadDataFile(file, handle, options = {}) {
     remoteUpdateSource: handle ? 'file-handle' : 'none',
   });
   if (handle) {
-    if (options.captureDirectory !== false) await capturePlannerDirectoryHandle(handle);
-    await createBackupIfNeeded();
+    await createBackupIfNeeded({ notifyOnly: true });
   }
 }
 
@@ -2686,12 +2713,12 @@ async function saveData() {
   try {
     if (btn) btn.innerHTML = 'Saving...';
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+    await saveLocalBackupFile(false);
     try {
       await saveState(true);
     } catch (recoveryError) {
       console.warn('Browser recovery error:', recoveryError);
     }
-    await saveLocalBackupFile(false);
     markFileSaved();
     updateSaveButton();
     updateSbStatus();
@@ -2760,12 +2787,22 @@ async function loadPortableDefaultPlannerData(options = {}) {
   });
 }
 
-async function createBackupIfNeeded() {
+async function createBackupIfNeeded(options = {}) {
   if (remoteUpdateSource !== 'file-handle' || !localBackupFileHandle) return false;
-  const directoryHandle = await loadStoredPlannerDirectoryHandle();
-  if (!directoryHandle || typeof directoryHandle.getDirectoryHandle !== 'function') return false;
+  const notifyOnly = options.notifyOnly === true;
+  const lastBackupTimestamp = lsGet(LAST_BACKUP_TIMESTAMP_KEY);
+  const lastBackupMs = lastBackupTimestamp ? new Date(lastBackupTimestamp).getTime() : 0;
+
+  let directoryHandle = await loadStoredPlannerDirectoryHandle();
+  if (!directoryHandle && !notifyOnly) {
+    directoryHandle = await capturePlannerDirectoryHandle(localBackupFileHandle);
+  }
+  if (!directoryHandle || typeof directoryHandle.getDirectoryHandle !== 'function') {
+    if (notifyOnly) return false;
+    return false;
+  }
   if (typeof directoryHandle.queryPermission === 'function') {
-    const permission = await directoryHandle.queryPermission({ mode: 'readwrite' });
+    const permission = await directoryHandle.queryPermission({ mode: notifyOnly ? 'read' : 'readwrite' });
     if (permission !== 'granted') return false;
   }
   if (typeof directoryHandle.resolve === 'function') {
@@ -2777,10 +2814,31 @@ async function createBackupIfNeeded() {
       return false;
     }
   }
-  const lastBackupTimestamp = lsGet(LAST_BACKUP_TIMESTAMP_KEY);
-  const lastBackupMs = lastBackupTimestamp ? new Date(lastBackupTimestamp).getTime() : 0;
-  if (Number.isFinite(lastBackupMs) && lastBackupMs > 0 && (Date.now() - lastBackupMs) < AUTO_BACKUP_INTERVAL_MS) return false;
-
+  let newestBackupMs = 0;
+  try {
+    const backupsDirectoryHandle = await directoryHandle.getDirectoryHandle('backups', { create: false });
+    if (backupsDirectoryHandle?.values) {
+      for await (const entry of backupsDirectoryHandle.values()) {
+        if (entry.kind !== 'file') continue;
+        const match = /^backup-(\d{4}-\d{2}-\d{2})\.json$/.exec(entry.name);
+        if (!match) continue;
+        const timestamp = new Date(`${match[1]}T23:59:59`).getTime();
+        if (Number.isFinite(timestamp)) newestBackupMs = Math.max(newestBackupMs, timestamp);
+      }
+    }
+  } catch (err) {
+    if (err?.name !== 'NotFoundError') console.warn('Could not inspect weekly backups:', err?.message || err);
+  }
+  const effectiveLastBackupMs = Math.max(newestBackupMs, Number.isFinite(lastBackupMs) ? lastBackupMs : 0);
+  const backupDue = !effectiveLastBackupMs || (Date.now() - effectiveLastBackupMs) >= AUTO_BACKUP_INTERVAL_MS;
+  if (!backupDue) return false;
+  if (notifyOnly) {
+    showToast('Your weekly backup is more than 7 days old.', 12000, {
+      label: 'Create backup',
+      onClick: () => createBackupIfNeeded(),
+    });
+    return false;
+  }
   const payloadData = snapshotData();
   payloadData.savedAt = new Date().toISOString();
   validatePlannerData(payloadData);
@@ -3240,7 +3298,7 @@ function closeEmployeePicker() {
 function setStartupFileSelectionRequired(required) {
   startupFileSelectionRequired = required === true;
   if (startupFileSelectionRequired) {
-    document.querySelectorAll('.nav-btn, #save-btn, #sync-btn, #auto-sync-btn, #undo-btn').forEach(button => {
+    document.querySelectorAll('#save-btn, #sync-btn, #auto-sync-btn, #undo-btn').forEach(button => {
       if (button) button.disabled = true;
     });
   } else {
@@ -3259,6 +3317,7 @@ function setStartupFileSelectionRequired(required) {
           <p class="muted" style="line-height:1.5">A JSON data file is required before you can use Team Manager.</p>
           <div style="margin-top:14px">
             <button class="btn btn-primary" type="button" onclick="beginStartupFileSelection()">Choose JSON file</button>
+            <button class="btn" type="button" onclick="createBlankPlanner()" style="margin-left:8px">Create blank planner</button>
           </div>
         </div>`;
     }
@@ -3272,8 +3331,18 @@ function completeStartupFileSelection() {
 function beginStartupFileSelection() {
   importData({ required: true });
 }
+async function createBlankPlanner() {
+  try {
+    const fileName = await saveLocalBackupFile(true);
+    if (!fileName) return;
+    markFileSaved();
+    completeStartupFileSelection();
+    showToast(`Created blank planner: ${fileName}.`, 5000);
+  } catch (err) {
+    if (err?.name !== 'AbortError') alert(`Could not create planner: ${err?.message || 'Unknown error occurred.'}`);
+  }
+}
 function nav(page) {
-  if (startupFileSelectionRequired) return;
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
   closePicker();
@@ -3308,18 +3377,13 @@ function planningHorizonHeaderStyle(date) {
   if (!horizonDate) return '';
   if (date === horizonDate) return `color:${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;font-weight:800;`;
   if (date === dateBeforeIso(horizonDate)) return 'color:var(--text) !important;font-weight:800;';
+  return '';
+}
 function dateBeforeIso(isoDate) {
   if (!isoDate) return '';
   const date = new Date(`${isoDate}T00:00:00`);
   date.setDate(date.getDate() - 1);
   return fmt(date);
-}
-function planningHorizonHeaderStyle(date) {
-  const horizon = planningHorizonDate();
-  if (!horizon) return '';
-  if (date === horizon) return `${planningHorizonStyle(date)}color:var(--text) !important;font-weight:700;`;
-  if (date === dateBeforeIso(horizon)) return 'color:var(--text) !important;font-weight:700;';
-  return '';
 }
 function gridSpanLabelWidth(startIndex, endIndex) {
   const spanColumns = startIndex >= 0 && endIndex >= startIndex ? endIndex - startIndex + 1 : 1;
@@ -3345,7 +3409,6 @@ function renderGrid() {
     const holiday = displayedHolidayFor(ds);
     const holidayStyle = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
     dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonStyle(ds)}${planningHorizonHeaderStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
-    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonHeaderStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
   document.getElementById('content').innerHTML = `
@@ -3853,12 +3916,14 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const activityClass = primaryActivity ? ' has-activity' : '';
   const plannedClass = primaryActivity && activityStatus(primaryActivity) === 'tentative' ? ' planned-activity-cell' : '';
   const activityColor = activeWorkCode?.color || primaryActivity?.color || 'transparent';
+  const activityTextStyle = primaryActivity ? `color:${activityColor};` : '';
+  const cancelledTextStyle = isCancelledActivity ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : '';
 
   return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"
-    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner"${isCancelledActivity ? ' style="text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;"' : ''}>${esc(cellText)}${birthdayBadge}</div></td>`;
+    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner" style="${activityTextStyle}${cancelledTextStyle}">${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
@@ -6297,7 +6362,6 @@ function computeSummaryRows(startDate, endDate) {
     const status = siFor(entry.status);
     if (!statusCountsTowardLoadOnDate(status, date)) continue;
     row.counts[entry.status] = (row.counts[entry.status] || 0) + 1;
-    const status = siFor(entry.status);
     if (statusCountsTowardLoadOnDate(status, date)) {
       row.statusMeasures[entry.status] = addLoadMeasure(row.statusMeasures[entry.status], statusLoadMeasure(entry));
     }
@@ -6641,6 +6705,8 @@ async function bootApp() {
       }
     } catch (err) {
       console.warn('Could not restore the configured JSON file:', err?.message || err);
+      await clearStoredLocalBackupHandle();
+      activeFileName = '';
     }
   }
   if (!configuredFileLoaded && parsedLocalState) {
@@ -6666,7 +6732,7 @@ async function bootApp() {
     return;
   }
   await loadStoredPlannerDirectoryHandle();
-  await createBackupIfNeeded();
+  await createBackupIfNeeded({ notifyOnly: true });
   setSyncStatusState('updated');
   nav('grid');
 }
