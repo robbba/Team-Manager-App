@@ -6,14 +6,14 @@
 <title>Team Manager</title>
 <style>
 :root {
-  --bg: #fbfaf8; --surface: #ffffff; --muted-bg: #eef0f3; --border: #e3e6ea;
-  --text: #2a3342; --muted: #6b7280; --primary: #3f4b5f; --primary-fg: #ffffff;
+  --bg: #f4f6fb; --surface: #ffffff; --muted-bg: #e4e9f1; --border: #cfd8e3;
+  --text: #1f2937; --muted: #4b5563; --primary: #334155; --primary-fg: #ffffff;
   --accent-blue: #3b82f6; --destructive: #dc2626;
   --sw: 256px; --radius: 8px;
 }
 body.dark {
-  --bg: #14181f; --surface: #191e27; --muted-bg: #222834; --border: #2a303c;
-  --text: #dfe3e8; --muted: #98a1ad; --primary: #b6c2d4; --primary-fg: #14181f;
+  --bg: #0f1724; --surface: #141d2a; --muted-bg: #1f2937; --border: #334155;
+  --text: #f1f5f9; --muted: #cbd5e1; --primary: #d2def1; --primary-fg: #0f1724;
   --accent-blue: #7fb0f7; --destructive: #ef4444;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -70,7 +70,7 @@ body.dark .sb-link.unsaved-action:hover { background: #4a3815; color: #fcd34d; }
 .gh-week.period-alt { background: color-mix(in srgb, var(--text) 7%, var(--surface)); color: var(--text); }
 .gh-day { background: var(--surface); font-size: 10px; color: var(--muted); text-align: center; height: 34px; padding: 0; }
 .gh-day .dow { font-size: 8.5px; opacity: .75; display: block; }
-.gh-day.weekend { color: #b6bec9; }
+.gh-day.weekend { color: color-mix(in srgb, var(--muted) 78%, var(--text)); }
 .gh-day.today-col { background: color-mix(in srgb, var(--accent-blue) 18%, var(--surface)) !important; color: var(--accent-blue) !important; font-weight: 800; box-shadow: inset 2px 0 color-mix(in srgb, var(--text) 45%, var(--border)), inset -2px 0 color-mix(in srgb, var(--text) 45%, var(--border)); }
 .gh-day.holiday-col { background: #fee2e2 !important; color: #b91c1c; }
 body.dark .gh-day.holiday-col { background: #451a1a !important; color: #fca5a5; }
@@ -2318,6 +2318,12 @@ function validatePlannerData(data) {
   if (!Array.isArray(employeeList) || !Array.isArray(activityList) || !Array.isArray(statusList)) {
     throw new Error('Planner JSON is missing employees, activities, or statuses');
   }
+  statusList.forEach(status => {
+    if (!status || typeof status !== 'object' || Array.isArray(status)) throw new Error('Invalid daily status definition');
+    if (typeof status.key !== 'string' || !status.key.trim()) throw new Error('Daily status is missing key');
+    if (status.isAbsence != null && typeof status.isAbsence !== 'boolean') throw new Error('Daily status absence flag is invalid');
+    if (status.isOutOfOffice != null && typeof status.isOutOfOffice !== 'boolean') throw new Error('Daily status out-of-office flag is invalid');
+  });
   const uniqueIds = (items, label) => {
     const ids = items.map(item => Number(item?.id));
     if (ids.some(id => !Number.isFinite(id)) || new Set(ids).size !== ids.length) throw new Error(`Invalid or duplicate ${label} IDs`);
@@ -2636,7 +2642,7 @@ function snapshotData() {
     workCodes: appSettings.workCodes || [],
     shiftTemplates: appSettings.shiftTemplates || [],
     summaryColumns: appSettings.summaryColumns,
-    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap,
+    employees, categories, statuses: statuses.map(status => ({ ...status, isAbsence: status.isAbsence === true, isOutOfOffice: status.isOutOfOffice === true })), activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   };
 }
@@ -3345,6 +3351,19 @@ function planningHorizonStyle(date) {
     ? `border-right:2px dashed ${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;`
     : '';
 }
+function dateBeforeIso(isoDate) {
+  if (!isoDate) return '';
+  const date = new Date(`${isoDate}T00:00:00`);
+  date.setDate(date.getDate() - 1);
+  return fmt(date);
+}
+function planningHorizonHeaderStyle(date) {
+  const horizon = planningHorizonDate();
+  if (!horizon) return '';
+  if (date === horizon) return `${planningHorizonStyle(date)}color:var(--text) !important;font-weight:700;`;
+  if (date === dateBeforeIso(horizon)) return 'color:var(--text) !important;font-weight:700;';
+  return '';
+}
 function gridSpanLabelWidth(startIndex, endIndex) {
   const spanColumns = startIndex >= 0 && endIndex >= startIndex ? endIndex - startIndex + 1 : 1;
   return Math.min(420, Math.max(68, spanColumns * 36 - 8));
@@ -3368,7 +3387,7 @@ function renderGrid() {
     const ds = fmt(d);
     const holiday = displayedHolidayFor(ds);
     const holidayStyle = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
-    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
+    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonHeaderStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
   document.getElementById('content').innerHTML = `
@@ -3682,10 +3701,42 @@ function changeActivityPage(direction) {
   activityPageOffset = Math.min(Math.max(0, activityPageOffset + direction * activityPageSize), maxOffset);
   renderGridBody(daysOfYear(gridYear), todayStr());
 }
+function scrollToActivityCell(rowKey, date) {
+  const scroll = document.getElementById('grid-scroll');
+  if (!scroll) return;
+  const cell = scroll.querySelector(`td.activity-select-cell[data-row-key="${rowKey}"][data-date="${date}"]`)
+    || scroll.querySelector(`td.activity-select-cell[data-row-key="${rowKey}"]`);
+  if (!cell) return;
+  cell.closest('tr')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  scroll.scrollLeft = Math.max(0, cell.offsetLeft - 240 - (scroll.clientWidth - 240) / 2 + 18);
+}
+function jumpToLastPastActivity(pastActivities) {
+  if (!Array.isArray(pastActivities) || !pastActivities.length) return;
+  const lastPast = [...pastActivities].sort((a, b) => a.endDate.localeCompare(b.endDate) || a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name))[pastActivities.length - 1];
+  const visibleDate = lastPast.endDate < `${gridYear}-01-01`
+    ? `${gridYear}-01-01`
+    : (lastPast.endDate > `${gridYear}-12-31` ? `${gridYear}-12-31` : lastPast.endDate);
+  requestAnimationFrame(() => scrollToActivityCell(`act-${lastPast.id}`, visibleDate));
+}
 function togglePastActivities() {
-  pastActivitiesExpanded = !pastActivitiesExpanded;
-  activityPageOffset = 0;
+  const today = todayStr();
+  const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
+  const filteredYearActs = appSettings.showOnlyConfirmedActivities
+    ? yearActs.filter(a => activityStatus(a) === 'confirmed')
+    : yearActs;
+  const currentActs = filteredYearActs.filter(a => a.endDate >= today);
+  const pastActs = filteredYearActs.filter(a => a.endDate < today);
+  const nextExpanded = !pastActivitiesExpanded;
+  pastActivitiesExpanded = nextExpanded;
+  if (nextExpanded) {
+    const visibleActivities = [...currentActs, ...pastActs];
+    const maxOffset = Math.max(0, Math.floor((visibleActivities.length - 1) / activityPageSize) * activityPageSize);
+    activityPageOffset = maxOffset;
+  } else {
+    activityPageOffset = 0;
+  }
   renderGridBody(daysOfYear(gridYear), todayStr());
+  if (nextExpanded) jumpToLastPastActivity(pastActs);
 }
 
 function cellActivities(empId, ds) {
@@ -5668,6 +5719,10 @@ function isNormalWorkDate(dateString) {
   const holiday = holidayFor(dateString);
   return !isWknd(date) && (!holiday || holiday.nonWorking !== true);
 }
+function statusCountsTowardLoadOnDate(status, dateString) {
+  if (!status?.isAbsence) return true;
+  return isNormalWorkDate(dateString);
+}
 function statusLoadMeasure(entry) {
   if (!entry || entry.status === 'at_work') return { units: 0, hours: 0 };
   if (entry.durationType === '24hours') return { units: 0, hours: 24 };
@@ -5731,6 +5786,7 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
     const entry = getEntryObj(`${emp.id}_${ds}`);
     if (entry) {
       const st = siFor(entry.status);
+      if (!statusCountsTowardLoadOnDate(st, ds)) return;
       const measure = statusLoadMeasure(entry);
       statusUnits += measure.units;
       timedStatusHours += measure.hours;
@@ -6235,6 +6291,8 @@ function computeSummaryRows(startDate, endDate) {
     if (!row) continue;
     const entry = getEntryObj(key);
     if (!entry) continue;
+    const status = siFor(entry.status);
+    if (!statusCountsTowardLoadOnDate(status, date)) continue;
     row.counts[entry.status] = (row.counts[entry.status] || 0) + 1;
     row.statusMeasures[entry.status] = addLoadMeasure(row.statusMeasures[entry.status], statusLoadMeasure(entry));
   }
