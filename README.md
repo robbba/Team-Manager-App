@@ -4,7 +4,7 @@ The active application is the standalone [`index.html`](index.html). For the smo
 
 ## Planner files
 
-Team Manager can load planner data from a configured SharePoint JSON URL or from a local JSON file. If no SharePoint URL is configured (or SharePoint loading fails), the app falls back to selecting a planner JSON file before normal use.
+Team Manager loads planner data from a local JSON file. If no active file is configured, the app requires selecting a planner JSON file before normal use.
 
 Browser storage provides automatic crash and reload recovery, but it is not a replacement for saving the JSON file. The JSON file contains personnel, activities, assignments, statuses, holidays, settings, courses, requirements, and grid preferences. Store portable folders in the approved secure location for your environment.
 
@@ -31,11 +31,11 @@ Recommended startup:
 Opening `index.html` directly with `file://` may block or inconsistently allow file workflows, depending on browser policy. If the selected JSON file is missing, unreadable, or invalid, Team Manager shows a clear message so you can choose a valid file.
 
 Startup behavior:
-- If a SharePoint URL is configured, Team Manager tries to load it automatically on startup.
-- If SharePoint loading fails or no URL is configured, Team Manager shows a required **Choose your data file** step before normal interaction.
+- If a previously selected JSON file can be restored, Team Manager reopens it automatically on startup.
+- Otherwise, Team Manager shows a required **Choose your data file** step before normal interaction.
 - Browser recovery state can still be used after a file is selected.
 
-Use **Choose Data File** to open a planner JSON and **Save As** to create a writable copy.
+Use **Choose Data File** to open a planner JSON and **Save As** to create a writable copy. When the browser has native file access to the selected folder, Team Manager can also write silent weekly backups into a `backups/` subfolder.
 
 Team Manager checks for external changes and keeps a visible sync status:
 - **Updated** (green)

@@ -6,12 +6,16 @@
 <title>Team Manager</title>
 <style>
 :root {
+  --bg: #f5f3f0; --surface: #ffffff; --muted-bg: #e8ecf0; --border: #d9dce2;
+  --text: #1f2937; --muted: #4b5563; --primary: #374457; --primary-fg: #ffffff;
   --bg: #f4f6fb; --surface: #ffffff; --muted-bg: #e4e9f1; --border: #cfd8e3;
   --text: #1f2937; --muted: #4b5563; --primary: #334155; --primary-fg: #ffffff;
   --accent-blue: #3b82f6; --destructive: #dc2626;
   --sw: 256px; --radius: 8px;
 }
 body.dark {
+  --bg: #0f1318; --surface: #191e27; --muted-bg: #1a1f2a; --border: #232935;
+  --text: #e5e7eb; --muted: #9ca3af; --primary: #cbd5e1; --primary-fg: #14181f;
   --bg: #0f1724; --surface: #141d2a; --muted-bg: #1f2937; --border: #334155;
   --text: #f1f5f9; --muted: #cbd5e1; --primary: #d2def1; --primary-fg: #0f1724;
   --accent-blue: #7fb0f7; --destructive: #ef4444;
@@ -70,6 +74,7 @@ body.dark .sb-link.unsaved-action:hover { background: #4a3815; color: #fcd34d; }
 .gh-week.period-alt { background: color-mix(in srgb, var(--text) 7%, var(--surface)); color: var(--text); }
 .gh-day { background: var(--surface); font-size: 10px; color: var(--muted); text-align: center; height: 34px; padding: 0; }
 .gh-day .dow { font-size: 8.5px; opacity: .75; display: block; }
+.gh-day.weekend { color: color-mix(in srgb, var(--muted) 88%, var(--text)); }
 .gh-day.weekend { color: color-mix(in srgb, var(--muted) 78%, var(--text)); }
 .gh-day.today-col { background: color-mix(in srgb, var(--accent-blue) 18%, var(--surface)) !important; color: var(--accent-blue) !important; font-weight: 800; box-shadow: inset 2px 0 color-mix(in srgb, var(--text) 45%, var(--border)), inset -2px 0 color-mix(in srgb, var(--text) 45%, var(--border)); }
 .gh-day.holiday-col { background: #fee2e2 !important; color: #b91c1c; }
@@ -92,6 +97,7 @@ body.dark .gh-day.holiday-col { background: #451a1a !important; color: #fca5a5; 
 .gday.status-cell:hover { opacity: .85; }
 .gday.status-cell.dragging-active { cursor: crosshair; }
 .cell-selected { outline: 2px solid var(--primary) !important; outline-offset: -2px; z-index: 10; }
+.activity-jump-focus { outline: 2px solid var(--accent-blue) !important; outline-offset: -2px; z-index: 10; }
 .gday-inner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 1; pointer-events: none; }
 .shift-symbol { position: absolute; left: 3px; top: 2px; z-index: 2; font-size: 10px; line-height: 1; pointer-events: none; }
 .activity-tag { position: absolute; left: 3px; bottom: 2px; z-index: 2; font-size: 8px; line-height: 1; font-weight: 700; padding: 1px 3px; border-radius: 4px; pointer-events: none; background: color-mix(in srgb, var(--muted-bg) 70%, transparent); color: var(--muted); }
@@ -709,15 +715,6 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     <div class="form-row">
       <label>Local data</label>
       <div class="form-hint">Choose your data file to work with planner data in this browser. Auto-recovery only protects local recovery state.</div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
-        <label class="muted text-sm">SharePoint JSON URL</label>
-        <input id="set-sharepoint-url" type="url" placeholder="https://.../data.json">
-        <div class="flex gap-2" style="flex-wrap:wrap">
-          <button class="btn btn-sm" type="button" onclick="testSharePointConnection()">Test connection</button>
-          <button class="btn btn-sm" type="button" onclick="clearSharePointAndUseFilePicker()">Clear URL and use file picker</button>
-        </div>
-        <div class="form-hint" id="sharepoint-source-status"></div>
-      </div>
       <div class="form-hint" id="default-json-status" style="margin-top:6px"></div>
       <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
         <button class="btn btn-sm" type="button" onclick="importData()">Choose Data File</button>
@@ -771,17 +768,17 @@ const LOCAL_FILE_META_KEY = 'team-manager-file-meta';
 const LOCAL_BACKUP_HANDLE_DB = 'team-manager-file-handles';
 const LOCAL_BACKUP_HANDLE_STORE = 'handles';
 const LOCAL_BACKUP_HANDLE_KEY = 'local-backup-json';
-const SHAREPOINT_DATA_URL = 'SHAREPOINT_DATA_URL';
-const SHAREPOINT_FILE_NAME = 'SHAREPOINT_FILE_NAME';
-const SHAREPOINT_FETCH_TIMEOUT_MS = 8000;
+const LOCAL_PLANNER_DIRECTORY_KEY = 'local-planner-directory';
+const LAST_BACKUP_TIMESTAMP_KEY = 'last-backup-timestamp';
 const PORTABLE_DEFAULT_JSON_URL = './data.json';
 const PORTABLE_DEFAULT_JSON_NAME = 'data.json';
 const AUTO_SYNC_INTERVAL_MS = 30000;
+const AUTO_BACKUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 let localBackupFileHandle = null;
+let localPlannerDirectoryHandle = null;
 let activeFileName = '';
 let remoteUpdateSource = 'none';
 let portableDefaultLoadIssue = '';
-let sharePointLoadIssue = '';
 let preferBrowserJsonFileInput = false;
 function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 function svgIcon(name, title = '') {
@@ -818,42 +815,6 @@ function lsSet(key, value) {
     console.warn(`Browser storage write failed for ${key}:`, err);
     return false;
   }
-}
-
-function normalizeSharePointUrl(url) {
-  return String(url || '').trim();
-}
-function deriveFileNameFromUrl(url, fallback = 'data.json') {
-  const value = normalizeSharePointUrl(url);
-  if (!value) return fallback;
-  try {
-    const parsed = new URL(value);
-    const pathname = parsed.pathname || '';
-    const segment = pathname.split('/').filter(Boolean).pop() || '';
-    const decoded = decodeURIComponent(segment);
-    return decoded || fallback;
-  } catch (err) {
-    return fallback;
-  }
-}
-function getSharePointDataUrl() {
-  return normalizeSharePointUrl(lsGet(SHAREPOINT_DATA_URL));
-}
-function hasSharePointDataUrl() {
-  return !!getSharePointDataUrl();
-}
-function clearStoredSharePointConfig() {
-  lsRemove(SHAREPOINT_DATA_URL);
-  lsRemove(SHAREPOINT_FILE_NAME);
-}
-function storeSharePointConfig(url) {
-  const normalizedUrl = normalizeSharePointUrl(url);
-  if (!normalizedUrl) {
-    clearStoredSharePointConfig();
-    return;
-  }
-  lsSet(SHAREPOINT_DATA_URL, normalizedUrl);
-  lsSet(SHAREPOINT_FILE_NAME, deriveFileNameFromUrl(normalizedUrl));
 }
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
@@ -1221,10 +1182,8 @@ function openSettings() {
   document.getElementById('set-high-max').value = String(appSettings.highMax);
   document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
   document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
-  document.getElementById('set-sharepoint-url').value = getSharePointDataUrl();
   renderHolidaySettings();
   updateDefaultJsonStatus();
-  updateSharePointSourceStatus();
   const about = document.getElementById('set-about-version');
   if (about) about.textContent = `Team Manager v${APP_VERSION} · Data format v${DATA_VERSION}`;
   document.getElementById('settings-modal').classList.add('open');
@@ -1544,14 +1503,6 @@ function saveSettings() {
   }
   appSettings.planningHorizonDays = planningHorizonDays;
   appSettings.planningHorizonColor = normalizeHexColor(document.getElementById('set-planning-horizon-color').value, '#ef4444');
-  const sharePointUrlInput = document.getElementById('set-sharepoint-url');
-  const configuredSharePointUrl = normalizeSharePointUrl(sharePointUrlInput?.value || '');
-  if (configuredSharePointUrl) {
-    storeSharePointConfig(configuredSharePointUrl);
-  } else {
-    clearStoredSharePointConfig();
-    if (remoteUpdateSource === 'sharepoint') setRemoteUpdateSource('none');
-  }
   if (!persistSettings() || !lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()))) {
     alert('Browser recovery could not be updated. Your changes remain unsaved; save the planner JSON to protect them.');
     markUnsaved();
@@ -1564,36 +1515,6 @@ function saveSettings() {
   renderPage();
 }
 
-async function testSharePointConnection() {
-  const input = document.getElementById('set-sharepoint-url');
-  const url = normalizeSharePointUrl(input?.value || '');
-  if (!url) {
-    updateSharePointSourceStatus('Enter a SharePoint URL first.');
-    alert('Enter a SharePoint URL first.');
-    return;
-  }
-  updateSharePointSourceStatus('Testing SharePoint connection...');
-  try {
-    await fetchSharePointPlannerData(url);
-    updateSharePointSourceStatus('SharePoint connection test passed.');
-    showToast('SharePoint connection test passed.', 5000);
-  } catch (err) {
-    const issue = formatSharePointLoadIssue(err);
-    updateSharePointSourceStatus(`SharePoint connection failed: ${issue}`);
-    alert(`SharePoint connection failed: ${issue}`);
-  }
-}
-
-function clearSharePointAndUseFilePicker() {
-  clearStoredSharePointConfig();
-  sharePointLoadIssue = '';
-  if (remoteUpdateSource === 'sharepoint') setRemoteUpdateSource('none');
-  const input = document.getElementById('set-sharepoint-url');
-  if (input) input.value = '';
-  updateDefaultJsonStatus();
-  updateSharePointSourceStatus('SharePoint URL cleared. Use Choose Data File.');
-  showToast('SharePoint URL cleared. Choose a local JSON file.', 6000);
-}
 function toggleShowOnlyConfirmedActivities(checked) {
   appSettings.showOnlyConfirmedActivities = checked === true;
   activityPageOffset = 0;
@@ -1671,6 +1592,44 @@ async function storeLocalBackupHandle(handle) {
   }
 }
 
+async function storePlannerDirectoryHandle(handle) {
+  localPlannerDirectoryHandle = handle || null;
+  const db = await openLocalBackupHandleDb();
+  if (!db) return;
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(LOCAL_BACKUP_HANDLE_STORE, 'readwrite');
+      tx.objectStore(LOCAL_BACKUP_HANDLE_STORE).put(handle || null, LOCAL_PLANNER_DIRECTORY_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error('Failed to store planner directory handle'));
+      tx.onabort = () => reject(tx.error || new Error('Failed to store planner directory handle'));
+    });
+  } catch (err) {
+    console.warn('Could not store planner directory handle:', err.message);
+  } finally {
+    db.close();
+  }
+}
+
+async function clearStoredPlannerDirectoryHandle() {
+  localPlannerDirectoryHandle = null;
+  const db = await openLocalBackupHandleDb();
+  if (!db) return;
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(LOCAL_BACKUP_HANDLE_STORE, 'readwrite');
+      tx.objectStore(LOCAL_BACKUP_HANDLE_STORE).delete(LOCAL_PLANNER_DIRECTORY_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error('Failed to clear planner directory handle'));
+      tx.onabort = () => reject(tx.error || new Error('Failed to clear planner directory handle'));
+    });
+  } catch (err) {
+    console.warn('Could not clear planner directory handle:', err.message);
+  } finally {
+    db.close();
+  }
+}
+
 async function clearStoredLocalBackupHandle() {
   localBackupFileHandle = null;
   setRemoteUpdateSource('none');
@@ -1709,6 +1668,24 @@ async function loadStoredLocalBackupHandle() {
   }
 }
 
+async function loadStoredPlannerDirectoryHandle() {
+  if (localPlannerDirectoryHandle) return localPlannerDirectoryHandle;
+  const db = await openLocalBackupHandleDb();
+  if (!db) return null;
+  try {
+    const handle = await new Promise(resolve => {
+      const tx = db.transaction(LOCAL_BACKUP_HANDLE_STORE, 'readonly');
+      const req = tx.objectStore(LOCAL_BACKUP_HANDLE_STORE).get(LOCAL_PLANNER_DIRECTORY_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+    localPlannerDirectoryHandle = handle || null;
+    return localPlannerDirectoryHandle;
+  } finally {
+    db.close();
+  }
+}
+
 async function ensureLocalBackupPermission(handle) {
   if (!handle) return false;
   if (typeof handle.queryPermission !== 'function') return true;
@@ -1717,6 +1694,31 @@ async function ensureLocalBackupPermission(handle) {
     permission = await handle.requestPermission({ mode: 'readwrite' });
   }
   return permission === 'granted';
+}
+
+async function capturePlannerDirectoryHandle(fileHandle) {
+  if (!fileHandle || typeof window.showDirectoryPicker !== 'function') return null;
+  const storedDirectoryHandle = await loadStoredPlannerDirectoryHandle();
+  if (storedDirectoryHandle && typeof storedDirectoryHandle.resolve === 'function') {
+    try {
+      const relativePath = await storedDirectoryHandle.resolve(fileHandle);
+      if (Array.isArray(relativePath) && relativePath.length === 1) return storedDirectoryHandle;
+    } catch (err) {
+      console.warn('Stored planner directory handle no longer matches the selected file:', err?.message || err);
+    }
+  }
+  try {
+    const directoryHandle = await window.showDirectoryPicker({ id: 'team-manager-json-directory', mode: 'readwrite', startIn: fileHandle });
+    if (typeof directoryHandle?.resolve === 'function') {
+      const relativePath = await directoryHandle.resolve(fileHandle);
+      if (!Array.isArray(relativePath) || relativePath.length !== 1) return null;
+    }
+    await storePlannerDirectoryHandle(directoryHandle);
+    return directoryHandle;
+  } catch (err) {
+    if (err?.name !== 'AbortError') console.warn('Could not capture planner directory for backups:', err?.message || err);
+    return null;
+  }
 }
 
 function showToast(message, duration = 5000, action = null) {
@@ -1767,23 +1769,13 @@ function setRemoteUpdateSource(source) {
   else if (syncStatusState !== 'syncing') setSyncStatusState('updated');
   updateDefaultJsonStatus();
   updateSyncButton();
-  updateSharePointSourceStatus();
 }
 
 function updateDefaultJsonStatus() {
   const el = document.getElementById('default-json-status');
   if (!el) return;
-  if (remoteUpdateSource === 'sharepoint' && hasSharePointDataUrl()) {
-    const fileName = lsGet(SHAREPOINT_FILE_NAME) || deriveFileNameFromUrl(getSharePointDataUrl());
-    el.textContent = `Current data source: SharePoint (${fileName}).`;
-    return;
-  }
   if (remoteUpdateSource === 'file-handle' && localBackupFileHandle?.name) {
     el.textContent = `Current data file: ${localBackupFileHandle.name}. External-change checks stay on for this file.`;
-    return;
-  }
-  if (sharePointLoadIssue) {
-    el.textContent = `${sharePointLoadIssue} Choose a JSON file to continue.`;
     return;
   }
   if (portableDefaultLoadIssue) {
@@ -1793,25 +1785,6 @@ function updateDefaultJsonStatus() {
   el.textContent = remoteUpdateSource === 'none'
     ? 'No active data file selected.'
     : 'Data file selected. External changes will sync in this session.';
-}
-
-function updateSharePointSourceStatus(message = '') {
-  const el = document.getElementById('sharepoint-source-status');
-  if (!el) return;
-  if (message) {
-    el.textContent = message;
-    return;
-  }
-  const configuredUrl = getSharePointDataUrl();
-  if (!configuredUrl) {
-    el.textContent = 'SharePoint is not configured. Local file picker will be used.';
-    return;
-  }
-  if (remoteUpdateSource === 'sharepoint') {
-    el.textContent = `Using SharePoint: ${configuredUrl}`;
-    return;
-  }
-  el.textContent = `Configured SharePoint URL: ${configuredUrl}`;
 }
 
 function startRemoteUpdatePolling() {
@@ -1863,8 +1836,6 @@ async function checkForRemoteFileUpdate(options = {}) {
       parsedDiskData = JSON.parse(diskText);
     } else if (remoteUpdateSource === 'portable-default') {
       parsedDiskData = await fetchPortableDefaultPlannerData();
-    } else if (remoteUpdateSource === 'sharepoint') {
-      parsedDiskData = await fetchSharePointPlannerData();
     } else {
       return false;
     }
@@ -2300,7 +2271,7 @@ async function applyLoadedPlannerData(parsed, options = {}) {
   renderPage();
 }
 
-async function loadDataFile(file, handle) {
+async function loadDataFile(file, handle, options = {}) {
   const parsed = JSON.parse(await file.text());
   validatePlannerData(parsed);
   await applyLoadedPlannerData(parsed, {
@@ -2308,6 +2279,10 @@ async function loadDataFile(file, handle) {
     fileName: file.name || '',
     remoteUpdateSource: handle ? 'file-handle' : 'none',
   });
+  if (handle) {
+    if (options.captureDirectory !== false) await capturePlannerDirectoryHandle(handle);
+    await createBackupIfNeeded();
+  }
 }
 
 function validatePlannerData(data) {
@@ -2331,6 +2306,23 @@ function validatePlannerData(data) {
   };
   const employeeIds = uniqueIds(employeeList, 'employee');
   const activityIds = uniqueIds(activityList, 'activity');
+  const statusKeys = new Set();
+  statusList.forEach(status => {
+    if (!status || typeof status !== 'object' || Array.isArray(status)) throw new Error('Daily status contains invalid data');
+    const statusKey = String(status.key || '').trim();
+    const statusLabel = String(status.label || status.name || '').trim();
+    const statusAbbr = String(status.abbr || status.initial || '').trim();
+    const statusColor = String(status.color || '').trim();
+    if (!Number.isFinite(Number(status.id)) || !statusKey || !statusLabel || !statusAbbr) {
+      throw new Error('Daily status is missing required fields');
+    }
+    if (statusKeys.has(statusKey)) throw new Error('Daily status keys must be unique');
+    statusKeys.add(statusKey);
+    if (!/^#[0-9a-fA-F]{3,8}$/.test(statusColor)) throw new Error('Daily status has an invalid color');
+    if (status.isAbsence != null && typeof status.isAbsence !== 'boolean') throw new Error('Daily status has an invalid absence flag');
+    if (status.isOutOfOffice != null && typeof status.isOutOfOffice !== 'boolean') throw new Error('Daily status has an invalid out-of-office flag');
+  });
+  const validEntryStatuses = new Set(['at_work', ...statusKeys]);
   activityList.forEach(activity => {
     const participants = Array.isArray(activity.participants) ? activity.participants : (activity.employeeIds || []).map(id => ({ id }));
     if (!Array.isArray(participants) || participants.some(participant => !employeeIds.has(Number(participant?.id)))) {
@@ -2338,9 +2330,19 @@ function validatePlannerData(data) {
     }
   });
   if (data.entriesMap != null && (typeof data.entriesMap !== 'object' || Array.isArray(data.entriesMap))) throw new Error('Invalid daily entries');
-  Object.keys(data.entriesMap || {}).forEach(key => {
+  Object.entries(data.entriesMap || {}).forEach(([key, value]) => {
     const separator = key.indexOf('_');
     if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator)))) throw new Error('Daily entry contains an unknown employee');
+    if (value === null) return;
+    if (typeof value === 'string') {
+      if (!validEntryStatuses.has(value)) throw new Error('Daily entry contains an unknown status');
+      return;
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Daily entry contains invalid data');
+    const statusKey = String(value.status || 'at_work').trim() || 'at_work';
+    if (!validEntryStatuses.has(statusKey)) throw new Error('Daily entry contains an unknown status');
+    if (value.durationType != null && !['fullday', '24hours', 'time'].includes(value.durationType)) throw new Error('Daily entry contains an invalid duration');
+    if (value.durationType === 'time' && (typeof value.time !== 'string' || !timeRangeHours(value.time))) throw new Error('Daily entry contains an invalid time range');
   });
   if (data.overtimeMap != null && (typeof data.overtimeMap !== 'object' || Array.isArray(data.overtimeMap))) throw new Error('Invalid overtime entries');
   Object.entries(data.overtimeMap || {}).forEach(([key, value]) => {
@@ -2624,6 +2626,11 @@ function renderSbToday() {
 
 // ═══ LOCAL PERSISTENCE ═══════════════════════════════════════════════════════
 function snapshotData() {
+  const snapshotStatuses = statuses.map(status => ({
+    ...status,
+    isAbsence: status.isAbsence === true,
+    isOutOfOffice: status.isOutOfOffice === true,
+  }));
   return {
     appVersion: APP_VERSION,
     dataVersion: DATA_VERSION,
@@ -2642,6 +2649,7 @@ function snapshotData() {
     workCodes: appSettings.workCodes || [],
     shiftTemplates: appSettings.shiftTemplates || [],
     summaryColumns: appSettings.summaryColumns,
+    employees, categories, statuses: snapshotStatuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap,
     employees, categories, statuses: statuses.map(status => ({ ...status, isAbsence: status.isAbsence === true, isOutOfOffice: status.isOutOfOffice === true })), activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   };
@@ -2666,34 +2674,6 @@ async function saveState(force = false) {
 }
 
 async function saveData() {
-  if (remoteUpdateSource === 'sharepoint' || (hasSharePointDataUrl() && remoteUpdateSource !== 'file-handle')) {
-    const btn = document.getElementById('save-btn');
-    const originalText = btn ? btn.innerHTML : '';
-    try {
-      if (btn) btn.innerHTML = 'Saving...';
-      if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
-      try {
-        await saveState(true);
-      } catch (recoveryError) {
-        console.warn('Browser recovery error:', recoveryError);
-      }
-      await writeSharePointPlannerData();
-      setRemoteUpdateSource('sharepoint');
-      markFileSaved();
-      updateSharePointSourceStatus();
-      updateSaveButton();
-      updateSbStatus();
-      return;
-    } catch (err) {
-      let message = err?.message || 'Could not save the SharePoint JSON file.';
-      if (message.includes('403') || message.includes('401')) message += ' Check SharePoint permissions and sign-in state.';
-      alert(message);
-      updateSaveButton();
-      return;
-    } finally {
-      if (btn) btn.innerHTML = originalText;
-    }
-  }
   if (canUseFileSystemSave()) {
     const existingHandle = localBackupFileHandle;
     if (!existingHandle) {
@@ -2747,84 +2727,6 @@ function formatPortableDefaultLoadIssue(err) {
   return 'Could not load the JSON file automatically. In Edge, serve the folder on localhost or choose a different JSON file.';
 }
 
-function formatSharePointLoadIssue(err) {
-  if (err?.name === 'TimeoutError') return 'SharePoint request timed out.';
-  if (err?.name === 'SyntaxError') return 'SharePoint JSON is not valid JSON.';
-  if (typeof err?.message === 'string') {
-    if (err.message.includes('403')) return 'SharePoint access denied (403).';
-    if (err.message.includes('404')) return 'SharePoint JSON file not found (404).';
-    if (err.message.includes('401')) return 'SharePoint authentication required (401).';
-    if (err.message.includes('empty')) return 'SharePoint JSON file is empty.';
-  }
-  return 'Could not load SharePoint JSON.';
-}
-
-async function fetchWithTimeout(url, options = {}, timeoutMs = SHAREPOINT_FETCH_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } catch (err) {
-    if (err?.name === 'AbortError') {
-      const timeoutErr = new Error(`Request timed out after ${timeoutMs}ms.`);
-      timeoutErr.name = 'TimeoutError';
-      throw timeoutErr;
-    }
-    throw err;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function fetchSharePointPlannerData(url = getSharePointDataUrl()) {
-  const dataUrl = normalizeSharePointUrl(url);
-  if (!dataUrl) throw new Error('No SharePoint URL configured.');
-  const response = await fetchWithTimeout(dataUrl, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`Could not load SharePoint JSON (${response.status}).`);
-  const text = await response.text();
-  if (!text || !text.trim()) throw new Error('SharePoint JSON is empty.');
-  const parsed = JSON.parse(text);
-  validatePlannerData(parsed);
-  return parsed;
-}
-
-async function writeSharePointPlannerData(url = getSharePointDataUrl()) {
-  const dataUrl = normalizeSharePointUrl(url);
-  if (!dataUrl) throw new Error('No SharePoint URL configured.');
-  const payloadData = snapshotData();
-  payloadData.savedAt = new Date().toISOString();
-  validatePlannerData(payloadData);
-  const payload = JSON.stringify(payloadData, null, 2);
-  const response = await fetchWithTimeout(dataUrl, {
-    method: 'PUT',
-    cache: 'no-store',
-    headers: { 'Content-Type': 'application/json' },
-    body: payload,
-  });
-  if (!response.ok) throw new Error(`Could not save SharePoint JSON (${response.status}).`);
-  lastSyncTime = payloadData.savedAt;
-  baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
-  activeFileName = deriveFileNameFromUrl(dataUrl, activeFileName || 'data.json');
-  storeSharePointConfig(dataUrl);
-  return activeFileName;
-}
-
-async function loadSharePointPlannerData(options = {}) {
-  const dataUrl = normalizeSharePointUrl(options.url || getSharePointDataUrl());
-  const parsed = await fetchSharePointPlannerData(dataUrl);
-  if (plannerDataHasContent(options.fallbackData) && !plannerDataHasContent(parsed)) {
-    throw new Error('SharePoint JSON is empty compared with recovered local planner data.');
-  }
-  const fileName = lsGet(SHAREPOINT_FILE_NAME) || deriveFileNameFromUrl(dataUrl);
-  await applyLoadedPlannerData(parsed, {
-    fileName,
-    remoteUpdateSource: 'sharepoint',
-    closeSettings: options.closeSettings,
-  });
-  sharePointLoadIssue = '';
-  storeSharePointConfig(dataUrl);
-}
-
 function plannerDataHasContent(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
   const listFields = ['employees', 'activities', 'projects', 'statuses', 'statusTypes', 'categories', 'courses', 'requirements'];
@@ -2858,6 +2760,50 @@ async function loadPortableDefaultPlannerData(options = {}) {
   });
 }
 
+async function createBackupIfNeeded() {
+  if (remoteUpdateSource !== 'file-handle' || !localBackupFileHandle) return false;
+  const directoryHandle = await loadStoredPlannerDirectoryHandle();
+  if (!directoryHandle || typeof directoryHandle.getDirectoryHandle !== 'function') return false;
+  if (typeof directoryHandle.queryPermission === 'function') {
+    const permission = await directoryHandle.queryPermission({ mode: 'readwrite' });
+    if (permission !== 'granted') return false;
+  }
+  if (typeof directoryHandle.resolve === 'function') {
+    try {
+      const relativePath = await directoryHandle.resolve(localBackupFileHandle);
+      if (!Array.isArray(relativePath) || relativePath.length !== 1) return false;
+    } catch (err) {
+      console.warn('Stored planner directory is not available for weekly backups:', err?.message || err);
+      return false;
+    }
+  }
+  const lastBackupTimestamp = lsGet(LAST_BACKUP_TIMESTAMP_KEY);
+  const lastBackupMs = lastBackupTimestamp ? new Date(lastBackupTimestamp).getTime() : 0;
+  if (Number.isFinite(lastBackupMs) && lastBackupMs > 0 && (Date.now() - lastBackupMs) < AUTO_BACKUP_INTERVAL_MS) return false;
+
+  const payloadData = snapshotData();
+  payloadData.savedAt = new Date().toISOString();
+  validatePlannerData(payloadData);
+  const payload = JSON.stringify(payloadData, null, 2);
+  try {
+    const backupsDirectoryHandle = await directoryHandle.getDirectoryHandle('backups', { create: true });
+    const backupFileHandle = await backupsDirectoryHandle.getFileHandle(`backup-${todayStr()}.json`, { create: true });
+    const writable = await backupFileHandle.createWritable();
+    try {
+      await writable.write(payload);
+      await writable.close();
+    } catch (err) {
+      try { await writable.abort(); } catch (abortErr) { }
+      throw err;
+    }
+    lsSet(LAST_BACKUP_TIMESTAMP_KEY, payloadData.savedAt);
+    return true;
+  } catch (err) {
+    console.warn('Weekly backup failed:', err?.message || err);
+    return false;
+  }
+}
+
 function markFileSaved() {
   hasUnsavedChanges = false;
   pendingRemoteRefreshData = null;
@@ -2872,6 +2818,12 @@ function markFileSaved() {
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function fmt(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function todayStr() { return fmt(new Date()); }
+function dateBeforeIso(dateString) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateString || ''))) return '';
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() - 1);
+  return fmt(date);
+}
 function fmtShort(ds) { return new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
 function fmtMed(ds) { return new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 function daysOfYear(y) { const days = [], d = new Date(y, 0, 1); while (d.getFullYear() === y) { days.push(new Date(d)); d.setDate(d.getDate()+1); } return days; }
@@ -3351,6 +3303,11 @@ function planningHorizonStyle(date) {
     ? `border-right:2px dashed ${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;`
     : '';
 }
+function planningHorizonHeaderStyle(date) {
+  const horizonDate = planningHorizonDate();
+  if (!horizonDate) return '';
+  if (date === horizonDate) return `color:${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;font-weight:800;`;
+  if (date === dateBeforeIso(horizonDate)) return 'color:var(--text) !important;font-weight:800;';
 function dateBeforeIso(isoDate) {
   if (!isoDate) return '';
   const date = new Date(`${isoDate}T00:00:00`);
@@ -3387,6 +3344,7 @@ function renderGrid() {
     const ds = fmt(d);
     const holiday = displayedHolidayFor(ds);
     const holidayStyle = holiday ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;` : '';
+    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonStyle(ds)}${planningHorizonHeaderStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
     dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonHeaderStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
@@ -3719,6 +3677,16 @@ function jumpToLastPastActivity(pastActivities) {
   requestAnimationFrame(() => scrollToActivityCell(`act-${lastPast.id}`, visibleDate));
 }
 function togglePastActivities() {
+  if (pastActivitiesExpanded) {
+    pastActivitiesExpanded = false;
+    activityPageOffset = 0;
+    renderGridBody(daysOfYear(gridYear), todayStr());
+    return;
+  }
+  pastActivitiesExpanded = true;
+  jumpToLastPastActivity();
+}
+function jumpToLastPastActivity() {
   const today = todayStr();
   const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
   const filteredYearActs = appSettings.showOnlyConfirmedActivities
@@ -3726,6 +3694,39 @@ function togglePastActivities() {
     : yearActs;
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
+  if (!pastActs.length) {
+    activityPageOffset = 0;
+    renderGridBody(daysOfYear(gridYear), today);
+    return;
+  }
+  const visibleActivities = [...currentActs, ...pastActs];
+  const pageSize = gridViewMode !== 'timeline' ? activityPageCapacity() : Math.max(1, visibleActivities.length);
+  activityPageOffset = gridViewMode !== 'timeline'
+    ? Math.floor((visibleActivities.length - 1) / pageSize) * pageSize
+    : 0;
+  renderGridBody(daysOfYear(gridYear), today);
+  const latestPastActivity = [...pastActs].sort((left, right) =>
+    left.endDate.localeCompare(right.endDate)
+    || left.startDate.localeCompare(right.startDate)
+    || left.name.localeCompare(right.name, 'nb', { sensitivity: 'base' })
+  ).at(-1);
+  if (!latestPastActivity) return;
+  const visibleDate = latestPastActivity.endDate < `${gridYear}-01-01`
+    ? `${gridYear}-01-01`
+    : (latestPastActivity.endDate > `${gridYear}-12-31` ? `${gridYear}-12-31` : latestPastActivity.endDate);
+  requestAnimationFrame(() => scrollToActivityCell(latestPastActivity.id, visibleDate));
+}
+function scrollToActivityCell(activityId, dateString) {
+  if (!activityId || !dateString) return false;
+  const selector = `[data-row-key="act-${activityId}"][data-date="${dateString}"]`;
+  const cell = document.querySelector(selector);
+  if (!cell) return false;
+  document.querySelectorAll('.activity-jump-focus').forEach(selected => selected.classList.remove('activity-jump-focus'));
+  cell.classList.add('activity-jump-focus');
+  cell.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+  clearTimeout(scrollToActivityCell._timer);
+  scrollToActivityCell._timer = setTimeout(() => cell.classList.remove('activity-jump-focus'), 2400);
+  return true;
   const nextExpanded = !pastActivitiesExpanded;
   pastActivitiesExpanded = nextExpanded;
   if (nextExpanded) {
@@ -5788,10 +5789,12 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
       const st = siFor(entry.status);
       if (!statusCountsTowardLoadOnDate(st, ds)) return;
       const measure = statusLoadMeasure(entry);
-      statusUnits += measure.units;
-      timedStatusHours += measure.hours;
-      if (st?.isAbsence) { absenceUnits += measure.units; timedAbsenceHours += measure.hours; }
-      if (st?.isOutOfOffice) { oooUnits += measure.units; oooHours += measure.hours; }
+      if (statusCountsTowardLoadOnDate(st, ds)) {
+        statusUnits += measure.units;
+        timedStatusHours += measure.hours;
+        if (st?.isAbsence) { absenceUnits += measure.units; timedAbsenceHours += measure.hours; }
+        if (st?.isOutOfOffice) { oooUnits += measure.units; oooHours += measure.hours; }
+      }
     }
 
     Object.entries(activityShiftsMap).forEach(([key]) => {
@@ -6294,7 +6297,10 @@ function computeSummaryRows(startDate, endDate) {
     const status = siFor(entry.status);
     if (!statusCountsTowardLoadOnDate(status, date)) continue;
     row.counts[entry.status] = (row.counts[entry.status] || 0) + 1;
-    row.statusMeasures[entry.status] = addLoadMeasure(row.statusMeasures[entry.status], statusLoadMeasure(entry));
+    const status = siFor(entry.status);
+    if (statusCountsTowardLoadOnDate(status, date)) {
+      row.statusMeasures[entry.status] = addLoadMeasure(row.statusMeasures[entry.status], statusLoadMeasure(entry));
+    }
   }
 
   for (const [key, shift] of Object.entries(activityShiftsMap)) {
@@ -6609,7 +6615,7 @@ async function bootApp() {
     const fileMeta = JSON.parse(lsGet(LOCAL_FILE_META_KEY) || '{}');
     hasUnsavedChanges = fileMeta.dirty === true;
     activeFileName = typeof fileMeta.fileName === 'string' ? fileMeta.fileName : '';
-    storedRemoteSource = ['portable-default', 'file-handle', 'sharepoint'].includes(fileMeta.source) ? fileMeta.source : 'none';
+    storedRemoteSource = ['portable-default', 'file-handle'].includes(fileMeta.source) ? fileMeta.source : 'none';
   } catch (err) { }
   let parsedLocalState = null;
   try {
@@ -6622,26 +6628,14 @@ async function bootApp() {
     console.warn('Could not load local JSON data.');
   }
   let configuredFileLoaded = false;
-  const configuredSharePointUrl = getSharePointDataUrl();
-  if (configuredSharePointUrl) {
-    try {
-      await loadSharePointPlannerData({ fallbackData: parsedLocalState, closeSettings: false, url: configuredSharePointUrl });
-      configuredFileLoaded = true;
-    } catch (err) {
-      sharePointLoadIssue = formatSharePointLoadIssue(err);
-      console.warn('Could not restore SharePoint data source:', err?.message || err);
-      clearStoredSharePointConfig();
-      if (storedRemoteSource === 'sharepoint') storedRemoteSource = 'none';
-    }
-  }
-  if (!configuredFileLoaded && storedRemoteSource === 'file-handle') {
+  if (storedRemoteSource === 'file-handle') {
     try {
       const storedHandle = await loadStoredLocalBackupHandle();
       if (storedHandle) {
         const hasPermission = await ensureLocalBackupPermission(storedHandle);
         if (hasPermission) {
           const file = await storedHandle.getFile();
-          await loadDataFile(file, storedHandle);
+          await loadDataFile(file, storedHandle, { captureDirectory: false });
           configuredFileLoaded = true;
         }
       }
@@ -6667,12 +6661,12 @@ async function bootApp() {
   
   updateSbStatus();
   if (remoteUpdateSource === 'none') {
-    updateSharePointSourceStatus();
     setSyncStatusState('out-of-sync');
     setStartupFileSelectionRequired(true);
     return;
   }
-  updateSharePointSourceStatus();
+  await loadStoredPlannerDirectoryHandle();
+  await createBackupIfNeeded();
   setSyncStatusState('updated');
   nav('grid');
 }
