@@ -709,6 +709,15 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     <div class="form-row">
       <label>Local data</label>
       <div class="form-hint">Choose your data file to work with planner data in this browser. Auto-recovery only protects local recovery state.</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+        <label class="muted text-sm">SharePoint JSON URL</label>
+        <input id="set-sharepoint-url" type="url" placeholder="https://.../data.json">
+        <div class="flex gap-2" style="flex-wrap:wrap">
+          <button class="btn btn-sm" type="button" onclick="testSharePointConnection()">Test connection</button>
+          <button class="btn btn-sm" type="button" onclick="clearSharePointAndUseFilePicker()">Clear URL and use file picker</button>
+        </div>
+        <div class="form-hint" id="sharepoint-source-status"></div>
+      </div>
       <div class="form-hint" id="default-json-status" style="margin-top:6px"></div>
       <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
         <button class="btn btn-sm" type="button" onclick="importData()">Choose Data File</button>
@@ -762,6 +771,9 @@ const LOCAL_FILE_META_KEY = 'team-manager-file-meta';
 const LOCAL_BACKUP_HANDLE_DB = 'team-manager-file-handles';
 const LOCAL_BACKUP_HANDLE_STORE = 'handles';
 const LOCAL_BACKUP_HANDLE_KEY = 'local-backup-json';
+const SHAREPOINT_DATA_URL = 'SHAREPOINT_DATA_URL';
+const SHAREPOINT_FILE_NAME = 'SHAREPOINT_FILE_NAME';
+const SHAREPOINT_FETCH_TIMEOUT_MS = 8000;
 const PORTABLE_DEFAULT_JSON_URL = './data.json';
 const PORTABLE_DEFAULT_JSON_NAME = 'data.json';
 const AUTO_SYNC_INTERVAL_MS = 30000;
@@ -769,6 +781,7 @@ let localBackupFileHandle = null;
 let activeFileName = '';
 let remoteUpdateSource = 'none';
 let portableDefaultLoadIssue = '';
+let sharePointLoadIssue = '';
 let preferBrowserJsonFileInput = false;
 function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (err) { } }
 function svgIcon(name, title = '') {
@@ -805,6 +818,42 @@ function lsSet(key, value) {
     console.warn(`Browser storage write failed for ${key}:`, err);
     return false;
   }
+}
+
+function normalizeSharePointUrl(url) {
+  return String(url || '').trim();
+}
+function deriveFileNameFromUrl(url, fallback = 'data.json') {
+  const value = normalizeSharePointUrl(url);
+  if (!value) return fallback;
+  try {
+    const parsed = new URL(value);
+    const pathname = parsed.pathname || '';
+    const segment = pathname.split('/').filter(Boolean).pop() || '';
+    const decoded = decodeURIComponent(segment);
+    return decoded || fallback;
+  } catch (err) {
+    return fallback;
+  }
+}
+function getSharePointDataUrl() {
+  return normalizeSharePointUrl(lsGet(SHAREPOINT_DATA_URL));
+}
+function hasSharePointDataUrl() {
+  return !!getSharePointDataUrl();
+}
+function clearStoredSharePointConfig() {
+  lsRemove(SHAREPOINT_DATA_URL);
+  lsRemove(SHAREPOINT_FILE_NAME);
+}
+function storeSharePointConfig(url) {
+  const normalizedUrl = normalizeSharePointUrl(url);
+  if (!normalizedUrl) {
+    clearStoredSharePointConfig();
+    return;
+  }
+  lsSet(SHAREPOINT_DATA_URL, normalizedUrl);
+  lsSet(SHAREPOINT_FILE_NAME, deriveFileNameFromUrl(normalizedUrl));
 }
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
@@ -1172,8 +1221,10 @@ function openSettings() {
   document.getElementById('set-high-max').value = String(appSettings.highMax);
   document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
   document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
+  document.getElementById('set-sharepoint-url').value = getSharePointDataUrl();
   renderHolidaySettings();
   updateDefaultJsonStatus();
+  updateSharePointSourceStatus();
   const about = document.getElementById('set-about-version');
   if (about) about.textContent = `Team Manager v${APP_VERSION} · Data format v${DATA_VERSION}`;
   document.getElementById('settings-modal').classList.add('open');
@@ -1493,6 +1544,14 @@ function saveSettings() {
   }
   appSettings.planningHorizonDays = planningHorizonDays;
   appSettings.planningHorizonColor = normalizeHexColor(document.getElementById('set-planning-horizon-color').value, '#ef4444');
+  const sharePointUrlInput = document.getElementById('set-sharepoint-url');
+  const configuredSharePointUrl = normalizeSharePointUrl(sharePointUrlInput?.value || '');
+  if (configuredSharePointUrl) {
+    storeSharePointConfig(configuredSharePointUrl);
+  } else {
+    clearStoredSharePointConfig();
+    if (remoteUpdateSource === 'sharepoint') setRemoteUpdateSource('none');
+  }
   if (!persistSettings() || !lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()))) {
     alert('Browser recovery could not be updated. Your changes remain unsaved; save the planner JSON to protect them.');
     markUnsaved();
@@ -1503,6 +1562,37 @@ function saveSettings() {
   updateSbStatus();
   closeModal('settings-modal');
   renderPage();
+}
+
+async function testSharePointConnection() {
+  const input = document.getElementById('set-sharepoint-url');
+  const url = normalizeSharePointUrl(input?.value || '');
+  if (!url) {
+    updateSharePointSourceStatus('Enter a SharePoint URL first.');
+    alert('Enter a SharePoint URL first.');
+    return;
+  }
+  updateSharePointSourceStatus('Testing SharePoint connection...');
+  try {
+    await fetchSharePointPlannerData(url);
+    updateSharePointSourceStatus('SharePoint connection test passed.');
+    showToast('SharePoint connection test passed.', 5000);
+  } catch (err) {
+    const issue = formatSharePointLoadIssue(err);
+    updateSharePointSourceStatus(`SharePoint connection failed: ${issue}`);
+    alert(`SharePoint connection failed: ${issue}`);
+  }
+}
+
+function clearSharePointAndUseFilePicker() {
+  clearStoredSharePointConfig();
+  sharePointLoadIssue = '';
+  if (remoteUpdateSource === 'sharepoint') setRemoteUpdateSource('none');
+  const input = document.getElementById('set-sharepoint-url');
+  if (input) input.value = '';
+  updateDefaultJsonStatus();
+  updateSharePointSourceStatus('SharePoint URL cleared. Use Choose Data File.');
+  showToast('SharePoint URL cleared. Choose a local JSON file.', 6000);
 }
 function toggleShowOnlyConfirmedActivities(checked) {
   appSettings.showOnlyConfirmedActivities = checked === true;
@@ -1677,13 +1767,23 @@ function setRemoteUpdateSource(source) {
   else if (syncStatusState !== 'syncing') setSyncStatusState('updated');
   updateDefaultJsonStatus();
   updateSyncButton();
+  updateSharePointSourceStatus();
 }
 
 function updateDefaultJsonStatus() {
   const el = document.getElementById('default-json-status');
   if (!el) return;
+  if (remoteUpdateSource === 'sharepoint' && hasSharePointDataUrl()) {
+    const fileName = lsGet(SHAREPOINT_FILE_NAME) || deriveFileNameFromUrl(getSharePointDataUrl());
+    el.textContent = `Current data source: SharePoint (${fileName}).`;
+    return;
+  }
   if (remoteUpdateSource === 'file-handle' && localBackupFileHandle?.name) {
     el.textContent = `Current data file: ${localBackupFileHandle.name}. External-change checks stay on for this file.`;
+    return;
+  }
+  if (sharePointLoadIssue) {
+    el.textContent = `${sharePointLoadIssue} Choose a JSON file to continue.`;
     return;
   }
   if (portableDefaultLoadIssue) {
@@ -1693,6 +1793,25 @@ function updateDefaultJsonStatus() {
   el.textContent = remoteUpdateSource === 'none'
     ? 'No active data file selected.'
     : 'Data file selected. External changes will sync in this session.';
+}
+
+function updateSharePointSourceStatus(message = '') {
+  const el = document.getElementById('sharepoint-source-status');
+  if (!el) return;
+  if (message) {
+    el.textContent = message;
+    return;
+  }
+  const configuredUrl = getSharePointDataUrl();
+  if (!configuredUrl) {
+    el.textContent = 'SharePoint is not configured. Local file picker will be used.';
+    return;
+  }
+  if (remoteUpdateSource === 'sharepoint') {
+    el.textContent = `Using SharePoint: ${configuredUrl}`;
+    return;
+  }
+  el.textContent = `Configured SharePoint URL: ${configuredUrl}`;
 }
 
 function startRemoteUpdatePolling() {
@@ -1744,6 +1863,8 @@ async function checkForRemoteFileUpdate(options = {}) {
       parsedDiskData = JSON.parse(diskText);
     } else if (remoteUpdateSource === 'portable-default') {
       parsedDiskData = await fetchPortableDefaultPlannerData();
+    } else if (remoteUpdateSource === 'sharepoint') {
+      parsedDiskData = await fetchSharePointPlannerData();
     } else {
       return false;
     }
@@ -2539,6 +2660,34 @@ async function saveState(force = false) {
 }
 
 async function saveData() {
+  if (remoteUpdateSource === 'sharepoint' || (hasSharePointDataUrl() && remoteUpdateSource !== 'file-handle')) {
+    const btn = document.getElementById('save-btn');
+    const originalText = btn ? btn.innerHTML : '';
+    try {
+      if (btn) btn.innerHTML = 'Saving...';
+      if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+      try {
+        await saveState(true);
+      } catch (recoveryError) {
+        console.warn('Browser recovery error:', recoveryError);
+      }
+      await writeSharePointPlannerData();
+      setRemoteUpdateSource('sharepoint');
+      markFileSaved();
+      updateSharePointSourceStatus();
+      updateSaveButton();
+      updateSbStatus();
+      return;
+    } catch (err) {
+      let message = err?.message || 'Could not save the SharePoint JSON file.';
+      if (message.includes('403') || message.includes('401')) message += ' Check SharePoint permissions and sign-in state.';
+      alert(message);
+      updateSaveButton();
+      return;
+    } finally {
+      if (btn) btn.innerHTML = originalText;
+    }
+  }
   if (canUseFileSystemSave()) {
     const existingHandle = localBackupFileHandle;
     if (!existingHandle) {
@@ -2590,6 +2739,84 @@ function formatPortableDefaultLoadIssue(err) {
     if (err.message.includes('empty')) return 'Could not load the JSON file because it is empty.';
   }
   return 'Could not load the JSON file automatically. In Edge, serve the folder on localhost or choose a different JSON file.';
+}
+
+function formatSharePointLoadIssue(err) {
+  if (err?.name === 'TimeoutError') return 'SharePoint request timed out.';
+  if (err?.name === 'SyntaxError') return 'SharePoint JSON is not valid JSON.';
+  if (typeof err?.message === 'string') {
+    if (err.message.includes('403')) return 'SharePoint access denied (403).';
+    if (err.message.includes('404')) return 'SharePoint JSON file not found (404).';
+    if (err.message.includes('401')) return 'SharePoint authentication required (401).';
+    if (err.message.includes('empty')) return 'SharePoint JSON file is empty.';
+  }
+  return 'Could not load SharePoint JSON.';
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = SHAREPOINT_FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      const timeoutErr = new Error(`Request timed out after ${timeoutMs}ms.`);
+      timeoutErr.name = 'TimeoutError';
+      throw timeoutErr;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchSharePointPlannerData(url = getSharePointDataUrl()) {
+  const dataUrl = normalizeSharePointUrl(url);
+  if (!dataUrl) throw new Error('No SharePoint URL configured.');
+  const response = await fetchWithTimeout(dataUrl, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Could not load SharePoint JSON (${response.status}).`);
+  const text = await response.text();
+  if (!text || !text.trim()) throw new Error('SharePoint JSON is empty.');
+  const parsed = JSON.parse(text);
+  validatePlannerData(parsed);
+  return parsed;
+}
+
+async function writeSharePointPlannerData(url = getSharePointDataUrl()) {
+  const dataUrl = normalizeSharePointUrl(url);
+  if (!dataUrl) throw new Error('No SharePoint URL configured.');
+  const payloadData = snapshotData();
+  payloadData.savedAt = new Date().toISOString();
+  validatePlannerData(payloadData);
+  const payload = JSON.stringify(payloadData, null, 2);
+  const response = await fetchWithTimeout(dataUrl, {
+    method: 'PUT',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+    body: payload,
+  });
+  if (!response.ok) throw new Error(`Could not save SharePoint JSON (${response.status}).`);
+  lastSyncTime = payloadData.savedAt;
+  baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
+  activeFileName = deriveFileNameFromUrl(dataUrl, activeFileName || 'data.json');
+  storeSharePointConfig(dataUrl);
+  return activeFileName;
+}
+
+async function loadSharePointPlannerData(options = {}) {
+  const dataUrl = normalizeSharePointUrl(options.url || getSharePointDataUrl());
+  const parsed = await fetchSharePointPlannerData(dataUrl);
+  if (plannerDataHasContent(options.fallbackData) && !plannerDataHasContent(parsed)) {
+    throw new Error('SharePoint JSON is empty compared with recovered local planner data.');
+  }
+  const fileName = lsGet(SHAREPOINT_FILE_NAME) || deriveFileNameFromUrl(dataUrl);
+  await applyLoadedPlannerData(parsed, {
+    fileName,
+    remoteUpdateSource: 'sharepoint',
+    closeSettings: options.closeSettings,
+  });
+  sharePointLoadIssue = '';
+  storeSharePointConfig(dataUrl);
 }
 
 function plannerDataHasContent(data) {
@@ -6324,7 +6551,7 @@ async function bootApp() {
     const fileMeta = JSON.parse(lsGet(LOCAL_FILE_META_KEY) || '{}');
     hasUnsavedChanges = fileMeta.dirty === true;
     activeFileName = typeof fileMeta.fileName === 'string' ? fileMeta.fileName : '';
-    storedRemoteSource = ['portable-default', 'file-handle'].includes(fileMeta.source) ? fileMeta.source : 'none';
+    storedRemoteSource = ['portable-default', 'file-handle', 'sharepoint'].includes(fileMeta.source) ? fileMeta.source : 'none';
   } catch (err) { }
   let parsedLocalState = null;
   try {
@@ -6337,7 +6564,19 @@ async function bootApp() {
     console.warn('Could not load local JSON data.');
   }
   let configuredFileLoaded = false;
-  if (storedRemoteSource === 'file-handle') {
+  const configuredSharePointUrl = getSharePointDataUrl();
+  if (configuredSharePointUrl) {
+    try {
+      await loadSharePointPlannerData({ fallbackData: parsedLocalState, closeSettings: false, url: configuredSharePointUrl });
+      configuredFileLoaded = true;
+    } catch (err) {
+      sharePointLoadIssue = formatSharePointLoadIssue(err);
+      console.warn('Could not restore SharePoint data source:', err?.message || err);
+      clearStoredSharePointConfig();
+      if (storedRemoteSource === 'sharepoint') storedRemoteSource = 'none';
+    }
+  }
+  if (!configuredFileLoaded && storedRemoteSource === 'file-handle') {
     try {
       const storedHandle = await loadStoredLocalBackupHandle();
       if (storedHandle) {
@@ -6370,10 +6609,12 @@ async function bootApp() {
   
   updateSbStatus();
   if (remoteUpdateSource === 'none') {
+    updateSharePointSourceStatus();
     setSyncStatusState('out-of-sync');
     setStartupFileSelectionRequired(true);
     return;
   }
+  updateSharePointSourceStatus();
   setSyncStatusState('updated');
   nav('grid');
 }
