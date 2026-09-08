@@ -3853,12 +3853,14 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const activityClass = primaryActivity ? ' has-activity' : '';
   const plannedClass = primaryActivity && activityStatus(primaryActivity) === 'tentative' ? ' planned-activity-cell' : '';
   const activityColor = activeWorkCode?.color || primaryActivity?.color || 'transparent';
+  const activityTextStyle = primaryActivity ? `color:${activityColor};` : '';
+  const cancelledTextStyle = isCancelledActivity ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : '';
 
   return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"
-    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner"${isCancelledActivity ? ' style="text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;"' : ''}>${esc(cellText)}${birthdayBadge}</div></td>`;
+    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner" style="${activityTextStyle}${cancelledTextStyle}">${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
