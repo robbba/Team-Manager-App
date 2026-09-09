@@ -3939,7 +3939,14 @@ function scrollToToday() {
   const scroll = document.getElementById('grid-scroll');
   if (!scroll) return;
   const th = scroll.querySelector(`th[data-date="${todayStr()}"]`);
-  if (th) scroll.scrollLeft = Math.max(0, th.offsetLeft - 240 - (scroll.clientWidth - 240) / 2 + 18);
+  if (!th) return;
+  const scrollRect = scroll.getBoundingClientRect();
+  const headerRect = th.getBoundingClientRect();
+  const sticky = scroll.querySelector('th.sticky-left, td.sticky-left');
+  const stickyWidth = sticky ? sticky.getBoundingClientRect().width : 0;
+  const targetLeft = headerRect.left - scrollRect.left + scroll.scrollLeft;
+  const visibleWidth = Math.max(0, scroll.clientWidth - stickyWidth);
+  scroll.scrollLeft = Math.max(0, targetLeft - stickyWidth - Math.max(0, (visibleWidth - headerRect.width) / 2));
 }
 function goToday() {
   const y = new Date().getFullYear();
