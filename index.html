@@ -97,6 +97,7 @@ body.dark .gh-day.holiday-col { background: #451a1a !important; color: #fca5a5; 
 .gday.status-cell:hover { opacity: .85; }
 .gday.status-cell.dragging-active { cursor: crosshair; }
 .cell-selected { outline: 2px solid var(--primary) !important; outline-offset: -2px; z-index: 10; }
+.holiday-range-selected { outline: 2px solid var(--destructive) !important; outline-offset: -2px; z-index: 10; }
 .activity-jump-focus { outline: 2px solid var(--accent-blue) !important; outline-offset: -2px; z-index: 10; }
 .gday-inner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 1; pointer-events: none; }
 .shift-symbol { position: absolute; left: 3px; top: 2px; z-index: 2; font-size: 10px; line-height: 1; pointer-events: none; }
@@ -115,6 +116,8 @@ body.dark .gh-day.holiday-col { background: #451a1a !important; color: #fca5a5; 
 .status-dot { position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; z-index: 3; pointer-events: none; border: 1px solid rgba(255,255,255,.6); }
 .activity-status-badge { position:absolute; right:2px; top:1px; z-index:3; font-size:6px; line-height:1; font-weight:800; pointer-events:none; color:var(--text); background:color-mix(in srgb,var(--surface) 78%,transparent); border-radius:3px; padding:1px 2px; }
 .overtime-badge { position:absolute; left:2px; bottom:1px; z-index:4; max-width:32px; overflow:hidden; white-space:nowrap; font-size:6px; line-height:1.2; font-weight:800; pointer-events:none; color:#c2410c; background:color-mix(in srgb,var(--surface) 84%,transparent); border-radius:3px; padding:1px 2px; }
+.work-schedule-check { position:absolute; right:2px; bottom:1px; z-index:5; width:12px; height:12px; border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:10px; line-height:1; font-weight:900; color:#166534; background:#bbf7d0; box-shadow:0 0 0 1px color-mix(in srgb,#166534 30%,transparent); pointer-events:none; }
+.gday.work-schedule-checked-cell { box-shadow: inset 0 0 0 999px color-mix(in srgb, #64748b 18%, transparent); }
 .birthday-cake { position: absolute; right: 5px; bottom: 4px; font-size: 9px; line-height: 1; z-index: 3; pointer-events: none; filter: drop-shadow(0 0 2px rgba(0,0,0,.2)); }
 .dur-tag { position: absolute; top: 1px; right: 2px; font-size: 5px; font-weight: 900; z-index: 3; pointer-events: none; opacity: .9; }
 .sect-row td { background: color-mix(in srgb, var(--muted-bg) 70%, transparent); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 5px 12px; }
@@ -234,6 +237,12 @@ tr:hover .act-cell-actions { opacity: 1; }
 .participant-option.sel { background: color-mix(in srgb, var(--muted-bg) 55%, transparent); }
 .participant-head { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .participant-head input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--primary); flex-shrink: 0; }
+.modal input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; margin: 0; flex: 0 0 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); cursor: pointer; position: relative; transition: background .12s, border-color .12s, box-shadow .12s; }
+.modal input[type="checkbox"]::after { content: ''; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid var(--primary-fg); border-width: 0 2px 2px 0; transform: rotate(45deg) scale(0); transition: transform .12s ease; }
+.modal input[type="checkbox"]:checked { border-color: var(--primary); background: var(--primary); }
+.modal input[type="checkbox"]:checked::after { transform: rotate(45deg) scale(1); }
+.modal input[type="checkbox"]:hover { border-color: var(--primary); }
+.modal input[type="checkbox"]:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-blue) 25%, transparent); }
 .participant-head small { display: block; color: var(--muted); font-size: 10.5px; }
 .participant-controls { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; margin: 5px 0 0 23px; }
 .participant-controls .pc-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
@@ -256,8 +265,10 @@ tr:hover .act-cell-actions { opacity: 1; }
 .filter-chip.active { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
 
 /* ── Dashboard ───────────────────────────────────────────────── */
-.dash-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.dash-grid-main { display: grid; grid-template-columns: 4fr 3fr; gap: 20px; }
+.dash-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.dash-grid-4 .card { padding: 12px 14px; }
+.dash-grid-4 .card-value { font-size: 22px; }
+.dash-grid-main { display: grid; grid-template-columns: 4fr 3fr; gap: 20px; align-items: start; }
 .dash-grid-roster { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 @media (max-width: 1100px) { .dash-grid-4 { grid-template-columns: repeat(2, 1fr); } .dash-grid-main, .dash-grid-roster { grid-template-columns: 1fr; } }
 .trend-wrap { display: flex; align-items: flex-end; gap: 6px; height: 240px; padding-top: 10px; }
@@ -376,6 +387,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       </div>
     </div>
   </div>
+  <div id="pk-note-section"></div>
   <div id="pk-overtime-section"></div>
   <div id="pk-shift-section"></div>
   <button class="pk-btn" id="pk-add-activity-btn" style="display:none;background:var(--muted-bg);color:var(--text)" onclick="openActivityFromSelection()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add activity for selected dates</button>
@@ -504,7 +516,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
     <p class="modal-desc">Shown as a timeline row and as participation strips on the grid.</p>
     <div class="form-row-2">
       <div class="form-row" style="margin:0"><label>Name *</label><input id="af-name" placeholder="Q2 Planning"></div>
-      <div class="form-row" style="margin:0"><label>Abbreviation <span class="muted" style="font-weight:400">(optional, max 4)</span></label><input id="af-abbr" maxlength="4" placeholder="e.g. APAM" style="text-transform:uppercase"></div>
+      <div class="form-row" style="margin:0"><label>Abbreviation <span class="muted" style="font-weight:400">(optional, max 6)</span></label><input id="af-abbr" maxlength="6" placeholder="e.g. APAM01" style="text-transform:uppercase"></div>
     </div>
     <div class="form-row-3 activity-meta-row">
       <div class="form-row" style="margin:0"><label>Cost Center <span class="muted" style="font-weight:400">(letters/num)</span></label><input id="af-project" placeholder="e.g. PRJ2026A" pattern="[A-Za-z0-9\-]*"></div>
@@ -705,6 +717,23 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <button class="btn" type="button" onclick="closeModal('settings-modal');openStatusManager()">Manage Planning Options</button>
     </div>
     <div class="form-row">
+      <label>Special days</label>
+      <button class="btn" type="button" onclick="openSpecialDaysModal()">Manage Special Days</button>
+      <div class="form-hint">Recurring and one-off dates stay highlighted in the grid without using extra timeline rows.</div>
+    </div>
+    <div class="form-row">
+      <label>Work schedule checks</label>
+      <input id="set-admin-password" type="password" placeholder="Enter password to set or unlock">
+      <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap"><button class="btn btn-sm btn-primary" type="button" onclick="setBossPassword()">Set password</button><button class="btn btn-sm" type="button" onclick="unlockBossSession()">Unlock boss view</button><button class="btn btn-sm" type="button" onclick="lockBossSession()">Lock boss view</button></div>
+      <div class="form-hint" id="boss-session-status" style="margin-top:6px"></div>
+      <div class="form-hint">The boss view is a local UI gate for marking activity codes entered in the separate time system. It is not encryption for the planner file.</div>
+    </div>
+    <div class="form-row">
+      <label>Grid behavior</label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-jump-to-today" type="checkbox"> Jump to today after changing grid settings</label>
+      <div class="form-hint">Controls automatic horizontal repositioning after changing the grid view, section visibility, or activity filter.</div>
+    </div>
+    <div class="form-row">
       <label>Activity discussion deadline</label>
       <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
         <div><label class="muted text-sm">Days from today</label><input id="set-planning-horizon-days" type="number" min="0" max="365" step="1"></div>
@@ -730,6 +759,28 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <button class="btn" onclick="closeModal('settings-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveSettings()">Save</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="special-days-modal">
+  <div class="modal" style="width:520px;max-height:84vh;display:flex;flex-direction:column">
+    <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Special days</h3><button class="icon-btn" title="Close" onclick="closeSpecialDaysModal()">&times;</button></div>
+    <p class="modal-desc">Hard-coded grid highlights for recurring or one-off special days. Non-working days are excluded from normal capacity calculations.</p>
+    <div class="form-row" style="border-bottom:1px solid var(--border);padding-bottom:12px">
+      <label>Add special day</label>
+      <div class="form-row-2" style="margin:0 0 8px">
+        <input id="special-day-name" placeholder="e.g. 4th of July">
+        <select id="special-day-kind" class="plain-select" onchange="toggleSpecialDayFields()"><option value="recurring">Recurring each year</option><option value="oneOff">One-off date</option></select>
+      </div>
+      <div id="special-day-recurring-fields" class="form-row-2" style="margin:0 0 8px"><input id="special-day-month-day" type="text" inputmode="numeric" maxlength="5" placeholder="DD-MM"><span class="form-hint" style="align-self:center">Example: 04-07</span></div>
+      <div id="special-day-oneoff-fields" style="display:none;margin-bottom:8px"><input id="special-day-date" type="date"></div>
+      <label class="muted text-sm" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">Highlight color <input id="special-day-color" type="color" value="#ef4444" style="width:42px;height:28px;padding:2px"></label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="special-day-nonworking" type="checkbox" checked> Non-working day</label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:8px"><input id="special-days-visible" type="checkbox" onchange="setSpecialDaysVisibility(this.checked)"> Show special days in grid</label>
+      <div class="flex gap-2" style="justify-content:flex-end;margin-top:10px"><button class="btn btn-sm" id="special-day-cancel-edit" type="button" onclick="resetSpecialDayForm()" style="display:none">Cancel edit</button><button class="btn btn-sm btn-primary" id="special-day-save" type="button" onclick="addSpecialDay()">Add special day</button></div>
+    </div>
+    <div id="special-days-list" style="overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeSpecialDaysModal()">Done</button></div>
   </div>
 </div>
 
@@ -819,8 +870,8 @@ function lsSet(key, value) {
 }
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
-const APP_VERSION = '0.1.0';
-const DATA_VERSION = 6;
+const APP_VERSION = '0.2.0';
+const DATA_VERSION = 7;
 const DEFAULT_WORK_CODES = [
   { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', staffingImpact: 'available', aggregationMode: 'hours', color: '#3b82f6' },
   { id: 'wc2', name: 'Turnusfri', abbreviation: 'TF', staffingImpact: 'available', aggregationMode: 'hours', color: '#64748b' },
@@ -837,14 +888,19 @@ let appSettings = {
   autoSaveEnabled: true,
   autoSyncEnabled: true,
   showOnlyConfirmedActivities: false,
+  activityStatusFilter: 'all',
+  jumpToTodayOnGridChange: true,
   coreHoursPerDay: 7.5,
   coreWorkdayRange: '0730-1500',
   lightMax: 70,
   normalMax: 100,
-  highMax: 110,
+  highMax: 120,
   planningHorizonDays: 14,
   planningHorizonColor: '#ef4444',
   holidays: [],
+  specialDays: { recurring: [], oneOff: [] },
+  specialDaysVisible: true,
+  adminPasswordHash: '',
   departmentColors: {},
   activityTypes: [],
   workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })),
@@ -894,14 +950,19 @@ function loadSettings() {
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
       appSettings.showOnlyConfirmedActivities = parsed.showOnlyConfirmedActivities === true;
+      appSettings.activityStatusFilter = normalizeActivityStatusFilter(parsed.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
+      appSettings.jumpToTodayOnGridChange = parsed.jumpToTodayOnGridChange !== false;
       appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(parsed.coreWorkdayRange, '0730-1500');
       appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || (typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5);
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
       appSettings.normalMax = typeof parsed.normalMax === 'number' ? parsed.normalMax : 100;
-      appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 110;
+      appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 120;
       appSettings.planningHorizonDays = Number.isFinite(Number(parsed.planningHorizonDays)) ? Math.max(0, Math.min(365, Math.round(Number(parsed.planningHorizonDays)))) : 14;
       appSettings.planningHorizonColor = normalizeHexColor(parsed.planningHorizonColor, '#ef4444');
       appSettings.holidays = Array.isArray(parsed.holidays) ? parsed.holidays : [];
+      appSettings.specialDays = normalizeSpecialDays(parsed.specialDays);
+      appSettings.specialDaysVisible = parsed.specialDaysVisible !== false;
+        appSettings.adminPasswordHash = String(parsed.adminPasswordHash || '');
       appSettings.activityTypes = normalizeActivityTypes(parsed.activityTypes);
       appSettings.workCodes = normalizeWorkCodes(parsed.workCodes);
       appSettings.shiftTemplates = normalizeShiftTemplates(parsed.shiftTemplates);
@@ -1056,14 +1117,19 @@ function loadSettings() {
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
       appSettings.showOnlyConfirmedActivities = parsed.showOnlyConfirmedActivities === true;
+      appSettings.activityStatusFilter = normalizeActivityStatusFilter(parsed.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
+      appSettings.jumpToTodayOnGridChange = parsed.jumpToTodayOnGridChange !== false;
       appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(parsed.coreWorkdayRange, '0730-1500');
       appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || (typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5);
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
       appSettings.normalMax = typeof parsed.normalMax === 'number' ? parsed.normalMax : 100;
-      appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 110;
+      appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 120;
       appSettings.planningHorizonDays = Number.isFinite(Number(parsed.planningHorizonDays)) ? Math.max(0, Math.min(365, Math.round(Number(parsed.planningHorizonDays)))) : 14;
       appSettings.planningHorizonColor = normalizeHexColor(parsed.planningHorizonColor, '#ef4444');
       appSettings.holidays = Array.isArray(parsed.holidays) ? parsed.holidays : [];
+      appSettings.specialDays = normalizeSpecialDays(parsed.specialDays);
+      appSettings.specialDaysVisible = parsed.specialDaysVisible !== false;
+      appSettings.adminPasswordHash = String(parsed.adminPasswordHash || '');
       appSettings.departmentColors = parsed.departmentColors && typeof parsed.departmentColors === 'object'
         ? Object.fromEntries(Object.entries(parsed.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
         : {};
@@ -1082,6 +1148,21 @@ function persistSettings() {
   const saved = lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
   if (saved) lsRemove(LEGACY_SETTINGS_KEY);
   return saved;
+}
+function normalizeSpecialDays(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const recurring = Array.isArray(source.recurring) ? source.recurring : [];
+  const oneOff = Array.isArray(source.oneOff) ? source.oneOff : [];
+  return {
+    recurring: recurring.filter(item => /^(0[1-9]|1[0-2])-([0-2]\d|3[01])$/.test(String(item?.monthDay || ''))).map(item => ({
+      id: String(item.id || `special-recurring-${Date.now()}-${Math.random()}`),
+      monthDay: String(item.monthDay), name: String(item.name || 'Special day'), nonWorking: item.nonWorking !== false, color: normalizeHexColor(item.color, '#ef4444'),
+    })),
+    oneOff: oneOff.filter(item => /^\d{4}-\d{2}-\d{2}$/.test(String(item?.date || ''))).map(item => ({
+      id: String(item.id || `special-oneoff-${Date.now()}-${Math.random()}`),
+      date: String(item.date), name: String(item.name || 'Special day'), nonWorking: item.nonWorking !== false, color: normalizeHexColor(item.color, '#ef4444'),
+    })),
+  };
 }
 const GRID_YEAR_KEY = 'teamManagerGridYear';
 const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
@@ -1181,13 +1262,67 @@ function openSettings() {
   document.getElementById('set-light-max').value = String(appSettings.lightMax);
   document.getElementById('set-normal-max').value = String(appSettings.normalMax);
   document.getElementById('set-high-max').value = String(appSettings.highMax);
+  document.getElementById('set-jump-to-today').checked = appSettings.jumpToTodayOnGridChange !== false;
   document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
   document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
+  document.getElementById('set-admin-password').value = '';
+  document.getElementById('boss-session-status').textContent = bossSessionActive ? 'Boss view is unlocked.' : 'Boss view is locked.';
   renderHolidaySettings();
   updateDefaultJsonStatus();
   const about = document.getElementById('set-about-version');
-  if (about) about.textContent = `Team Manager v${APP_VERSION} · Data format v${DATA_VERSION}`;
+  if (about) about.textContent = `Team Manager v${APP_VERSION} · Data format v${DATA_VERSION} · by rSoft`;
   document.getElementById('settings-modal').classList.add('open');
+}
+async function hashAdminPassword(password) {
+  if (globalThis.crypto?.subtle) {
+    const bytes = new TextEncoder().encode(password);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+  let hash = 2166136261;
+  for (const character of String(password)) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `fallback-${(hash >>> 0).toString(16)}`;
+}
+async function setBossPassword() {
+  const field = document.getElementById('set-admin-password');
+  const password = field?.value || '';
+  if (password.length < 1) { alert('Enter a boss password first.'); return; }
+  try {
+    appSettings.adminPasswordHash = await hashAdminPassword(password);
+    persistSettings();
+    markUnsaved();
+    await saveState(true);
+    field.value = '';
+    document.getElementById('boss-session-status').textContent = 'Password saved. Boss view is locked.';
+    alert('Boss password saved. Use Unlock boss view to activate it.');
+  } catch (error) {
+    console.error('Boss password setup failed:', error);
+    alert('The boss password could not be saved.');
+  }
+}
+async function unlockBossSession() {
+  try {
+    if (!appSettings.adminPasswordHash) { alert('Set a boss password and save Application settings first.'); return; }
+    const field = document.getElementById('set-admin-password');
+    const password = field?.value || '';
+    if (!password) { alert('Enter the boss password in the password field first.'); return; }
+    if (await hashAdminPassword(password) !== appSettings.adminPasswordHash) { alert('Incorrect boss password.'); return; }
+    bossSessionActive = true;
+    field.value = '';
+    closeModal('settings-modal');
+    renderPage();
+  } catch (error) {
+    console.error('Boss view unlock failed:', error);
+    alert('Boss view could not be unlocked. Set the password again and save settings.');
+  }
+}
+function lockBossSession() {
+  bossSessionActive = false;
+  closeModal('settings-modal');
+  renderPage();
 }
 function renderHolidaySettings() {
   const list = document.getElementById('set-holiday-list');
@@ -1210,13 +1345,135 @@ function addHolidaySetting() {
   renderHolidaySettings();
 }
 function removeHolidaySetting(index) { appSettings.holidays.splice(index, 1); renderHolidaySettings(); }
+function openSpecialDaysModal() {
+  appSettings.specialDays = normalizeSpecialDays(appSettings.specialDays);
+  resetSpecialDayForm();
+  toggleSpecialDayFields();
+  document.getElementById('special-days-visible').checked = appSettings.specialDaysVisible !== false;
+  renderSpecialDaysList();
+  document.getElementById('special-days-modal').classList.add('open');
+}
+function closeSpecialDaysModal() { document.getElementById('special-days-modal')?.classList.remove('open'); }
+function resetSpecialDayForm() {
+  editingSpecialDay = null;
+  document.getElementById('special-day-name').value = '';
+  document.getElementById('special-day-kind').value = 'recurring';
+  document.getElementById('special-day-month-day').value = '';
+  document.getElementById('special-day-date').value = '';
+  document.getElementById('special-day-color').value = '#ef4444';
+  document.getElementById('special-day-nonworking').checked = true;
+  document.getElementById('special-day-save').textContent = 'Add special day';
+  document.getElementById('special-day-cancel-edit').style.display = 'none';
+  toggleSpecialDayFields();
+}
+function setSpecialDaysVisibility(visible) {
+  appSettings.specialDaysVisible = visible === true;
+  persistSettings();
+  markUnsaved();
+  renderPage();
+}
+function toggleSpecialDayFields() {
+  const recurring = document.getElementById('special-day-kind')?.value !== 'oneOff';
+  document.getElementById('special-day-recurring-fields').style.display = recurring ? 'grid' : 'none';
+  document.getElementById('special-day-oneoff-fields').style.display = recurring ? 'none' : 'block';
+}
+function renderSpecialDaysList() {
+  const list = document.getElementById('special-days-list');
+  if (!list) return;
+  const specialDays = normalizeSpecialDays(appSettings.specialDays);
+  const rows = [
+    ...specialDays.recurring.map((item, index) => ({ ...item, kind: 'recurring', value: item.monthDay, index })),
+    ...specialDays.oneOff.map((item, index) => ({ ...item, kind: 'oneOff', value: item.date, index })),
+  ];
+  list.innerHTML = rows.length ? rows.map(item => `<div class="flex items-center justify-between" style="padding:7px 9px;background:var(--muted-bg);border-radius:6px;font-size:12px"><span class="flex items-center gap-2"><span style="width:9px;height:9px;border-radius:50%;background:${item.color};flex:0 0 auto"></span><span><b>${esc(item.name)}</b> · ${esc(item.kind === 'recurring' ? specialDayDisplayValue(item.value) : item.value)} <span class="muted">(${item.kind === 'recurring' ? 'recurring' : 'one-off'}${item.nonWorking ? ', non-working' : ', highlight only'})</span></span></span><span class="flex gap-2"><button class="icon-btn" type="button" title="Edit" onclick="startEditSpecialDay('${item.kind}',${item.index})">${svgIcon('edit')}</button><button class="icon-btn danger" type="button" title="Remove" onclick="removeSpecialDay('${item.kind}',${item.index})">&times;</button></span></div>`).join('') : '<div class="muted text-sm">No special days added.</div>';
+}
+function specialDayDisplayValue(monthDay) {
+  const [month, day] = String(monthDay || '').split('-');
+  return day && month ? `${day}-${month}` : String(monthDay || '');
+}
+function startEditSpecialDay(kind, index) {
+  const specialDays = normalizeSpecialDays(appSettings.specialDays);
+  const item = specialDays[kind]?.[index];
+  if (!item) return;
+  editingSpecialDay = { kind, index };
+  document.getElementById('special-day-name').value = item.name;
+  document.getElementById('special-day-kind').value = kind;
+  document.getElementById('special-day-month-day').value = kind === 'recurring' ? specialDayDisplayValue(item.monthDay) : '';
+  document.getElementById('special-day-date').value = kind === 'oneOff' ? item.date : '';
+  document.getElementById('special-day-color').value = item.color;
+  document.getElementById('special-day-nonworking').checked = item.nonWorking;
+  document.getElementById('special-day-save').textContent = 'Save changes';
+  document.getElementById('special-day-cancel-edit').style.display = '';
+  toggleSpecialDayFields();
+}
+async function addSpecialDay() {
+  const name = document.getElementById('special-day-name').value.trim();
+  const kind = document.getElementById('special-day-kind').value;
+  const value = kind === 'oneOff' ? document.getElementById('special-day-date').value : document.getElementById('special-day-month-day').value.trim();
+  const validMonthDay = /^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])$/.test(value);
+  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if (!name || (kind === 'recurring' && !validMonthDay) || (kind === 'oneOff' && !validDate)) { alert(kind === 'recurring' ? 'Enter a name and month-day in DD-MM format.' : 'Enter a name and valid date.'); return; }
+  if (kind === 'recurring') {
+    const [day, month] = value.split('-').map(Number);
+    if (day > new Date(2024, month, 0).getDate()) { alert('That month-day is not valid.'); return; }
+  }
+  const specialDays = normalizeSpecialDays(appSettings.specialDays);
+  const record = { id: `special-${Date.now()}`, name, color: normalizeHexColor(document.getElementById('special-day-color').value, '#ef4444'), nonWorking: document.getElementById('special-day-nonworking').checked };
+  if (kind === 'recurring') { const [day, month] = value.split('-'); record.monthDay = `${month}-${day}`; specialDays.recurring.push(record); }
+  else { record.date = value; specialDays.oneOff.push(record); }
+  if (editingSpecialDay) {
+    const existing = specialDays[editingSpecialDay.kind]?.[editingSpecialDay.index];
+    record.id = existing?.id || record.id;
+    specialDays[editingSpecialDay.kind].splice(editingSpecialDay.index, 1);
+    if (kind === 'recurring') specialDays.recurring.push(record);
+    else specialDays.oneOff.push(record);
+  }
+  recordUndo();
+  appSettings.specialDays = specialDays;
+  persistSettings();
+  markUnsaved();
+  await saveState();
+  document.getElementById('special-day-name').value = '';
+  document.getElementById('special-day-month-day').value = '';
+  document.getElementById('special-day-date').value = '';
+  document.getElementById('special-day-color').value = '#ef4444';
+  resetSpecialDayForm();
+  renderSpecialDaysList();
+  renderPage();
+}
+async function removeSpecialDay(kind, index) {
+  const specialDays = normalizeSpecialDays(appSettings.specialDays);
+  specialDays[kind].splice(index, 1);
+  recordUndo();
+  appSettings.specialDays = specialDays;
+  persistSettings();
+  markUnsaved();
+  await saveState();
+  renderSpecialDaysList();
+  renderPage();
+}
+function specialDayFor(date) {
+  const specialDays = normalizeSpecialDays(appSettings.specialDays);
+  const oneOff = specialDays.oneOff.find(item => item.date === date);
+  if (oneOff) return { ...oneOff, isSpecialDay: true };
+  const recurring = specialDays.recurring.find(item => item.monthDay === date.slice(5));
+  return recurring ? { ...recurring, date, startDate: date, endDate: date, isSpecialDay: true } : null;
+}
+function displayedSpecialDayFor(date) {
+  return appSettings.specialDaysVisible === false ? null : specialDayFor(date);
+}
 function holidayFor(date) {
-  return appSettings.holidays.find(holiday => {
+  const holiday = appSettings.holidays.find(holiday => {
     if (holiday.startDate && holiday.endDate) return date >= holiday.startDate && date <= holiday.endDate;
     return holiday.date === date;
-  }) || null;
+  });
+  return holiday || specialDayFor(date);
 }
-function displayedHolidayFor(date) { return showHolidays ? holidayFor(date) : null; }
+function displayedHolidayFor(date) {
+  if (!showHolidays) return null;
+  const holiday = holidayFor(date);
+  return holiday?.isSpecialDay && appSettings.specialDaysVisible === false ? null : holiday;
+}
 function holidayPeriodsForYear(year) {
   const periods = [];
   const records = appSettings.holidays.map((holiday, index) => ({
@@ -1237,6 +1494,7 @@ function holidayPeriodsForYear(year) {
 }
 let editingHolidayIndex = null;
 let editingHolidayIndexes = [];
+let editingSpecialDay = null;
 let selectedHolidayColor = '#ef4444';
 let pastHolidaysExpanded = false;
 let showHolidays = true;
@@ -1244,11 +1502,13 @@ function openHolidayModal(index = null, indexes = null) {
   editingHolidayIndex = index;
   editingHolidayIndexes = indexes || (index === null ? [] : [index]);
   const holiday = index === null ? null : appSettings.holidays[index];
+  const range = index === null ? pendingHolidayRange : null;
+  pendingHolidayRange = null;
   document.getElementById('holiday-modal-title').textContent = holiday ? 'Edit Holiday' : 'Add Holiday';
   document.getElementById('hf-delete-btn').style.display = holiday ? 'inline-block' : 'none';
   document.getElementById('hf-name').value = holiday?.name || '';
-  document.getElementById('hf-start').value = holiday?.startDate || holiday?.date || `${gridYear}-01-01`;
-  document.getElementById('hf-end').value = holiday?.endDate || holiday?.date || `${gridYear}-01-01`;
+  document.getElementById('hf-start').value = range?.startDate || holiday?.startDate || holiday?.date || `${gridYear}-01-01`;
+  document.getElementById('hf-end').value = range?.endDate || holiday?.endDate || holiday?.date || `${gridYear}-01-01`;
   document.getElementById('hf-nonworking').checked = holiday?.nonWorking === true;
   selectedHolidayColor = holiday?.color || '#ef4444';
   buildSwatchRow('hf-swatches', selectedHolidayColor, color => { selectedHolidayColor = color; markSwatch('hf-swatches', color); });
@@ -1477,7 +1737,7 @@ function confirmHolidayImport() {
   closeHolidayImportModal();
   renderPage();
 }
-function saveSettings() {
+async function saveSettings() {
   const name = document.getElementById('set-app-name').value.trim();
   if (name) appSettings.appName = name;
   const coreTime = normalizeCoreWorkdayRange(document.getElementById('set-core-time').value, '');
@@ -1497,6 +1757,7 @@ function saveSettings() {
   appSettings.lightMax = lightMax;
   appSettings.normalMax = normalMax;
   appSettings.highMax = highMax;
+  appSettings.jumpToTodayOnGridChange = document.getElementById('set-jump-to-today').checked;
   const planningHorizonDays = Number(document.getElementById('set-planning-horizon-days').value);
   if (!Number.isInteger(planningHorizonDays) || planningHorizonDays < 0 || planningHorizonDays > 365) {
     alert('Activity discussion deadline must be a whole number from 0 to 365 days.');
@@ -1504,6 +1765,8 @@ function saveSettings() {
   }
   appSettings.planningHorizonDays = planningHorizonDays;
   appSettings.planningHorizonColor = normalizeHexColor(document.getElementById('set-planning-horizon-color').value, '#ef4444');
+  const adminPassword = document.getElementById('set-admin-password').value;
+  if (adminPassword) appSettings.adminPasswordHash = await hashAdminPassword(adminPassword);
   if (!persistSettings() || !lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()))) {
     alert('Browser recovery could not be updated. Your changes remain unsaved; save the planner JSON to protect them.');
     markUnsaved();
@@ -1516,11 +1779,23 @@ function saveSettings() {
   renderPage();
 }
 
-function toggleShowOnlyConfirmedActivities(checked) {
-  appSettings.showOnlyConfirmedActivities = checked === true;
+function normalizeActivityStatusFilter(value, legacyConfirmedOnly = false) {
+  const filter = String(value || '').toLowerCase();
+  if (filter === 'confirmed' || filter === 'cancelled' || filter === 'tentative' || filter === 'all') return filter;
+  return legacyConfirmedOnly ? 'confirmed' : 'all';
+}
+function setActivityStatusFilter(value) {
+  appSettings.activityStatusFilter = normalizeActivityStatusFilter(value);
+  appSettings.showOnlyConfirmedActivities = appSettings.activityStatusFilter === 'confirmed';
   activityPageOffset = 0;
   persistSettings();
   renderPage();
+  if (appSettings.jumpToTodayOnGridChange !== false && appSettings.activityStatusFilter !== 'all') {
+    setTimeout(jumpToFirstVisibleActivity, 120);
+  }
+}
+function toggleShowOnlyConfirmedActivities(checked) {
+  setActivityStatusFilter(checked === true ? 'confirmed' : 'all');
 }
 function setGridViewMode(mode) {
   gridViewMode = normalizeGridViewMode(mode);
@@ -1532,6 +1807,33 @@ function toggleGridSection(section) {
   collapsedGridSections[section] = !collapsedGridSections[section];
   saveGridPreferences();
   renderGridBody(daysOfYear(gridYear), todayStr());
+  if (appSettings.jumpToTodayOnGridChange !== false) setTimeout(scrollToToday, 60);
+}
+function jumpToFirstVisibleActivity() {
+  const cell = [...document.querySelectorAll('td.activity-select-cell[data-row-key^="act-"][data-date]')]
+    .find(candidate => candidate.querySelector('.act-bar'));
+  if (!cell) {
+    const filter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
+    if (filter === 'all' || pastActivitiesExpanded) return;
+    const today = todayStr();
+    const yearActs = activities.filter(activity => activity.startDate <= `${gridYear}-12-31` && activity.endDate >= `${gridYear}-01-01`);
+    const pastMatches = yearActs
+      .filter(activity => activityStatus(activity) === filter && activity.endDate < today)
+      .sort((left, right) => left.endDate.localeCompare(right.endDate) || left.startDate.localeCompare(right.startDate));
+    const latestPast = pastMatches.at(-1);
+    if (!latestPast) return;
+    pastActivitiesExpanded = true;
+    const pageSize = gridViewMode !== 'timeline' ? activityPageCapacity() : Math.max(1, pastMatches.length);
+    activityPageOffset = gridViewMode !== 'timeline'
+      ? Math.floor((pastMatches.length - 1) / pageSize) * pageSize
+      : 0;
+    renderPage();
+    setTimeout(() => jumpToActivity(latestPast.id), 120);
+    return;
+  }
+  const match = String(cell.dataset.rowKey || '').match(/^act-(\d+)$/);
+  if (!match) return;
+  scrollToActivityCell(Number(match[1]), cell.dataset.date);
 }
 
 function downloadDataFile() {
@@ -2413,7 +2715,7 @@ let activityPageOffset = 0;
 let activityPageSize = activityPageCapacity();
 
 let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, requirements = [], requirementRecords = {};
-let entriesMap = {}, activityShiftsMap = {}, overtimeMap = {};
+let entriesMap = {}, activityShiftsMap = {}, overtimeMap = {}, cellNotesMap = {}, workScheduleChecksMap = {};
 let nextEmpId = 1, nextActId = 1, nextStatusId = 1, nextCatId = 1;
 
 let pickerEmpId = null, pickerDate = null, pickerSelectedStatus = null;
@@ -2422,6 +2724,8 @@ let pendingActivityPreset = null;
 let quickActivityTypeReturn = false;
 let cellSelection = { active: false, empId: null, startDate: null, endDate: null, dates: [] };
 let activityRangeSelection = { active: false, rowKey: null, startDate: null, endDate: null, dates: [] };
+let holidayRangeSelection = { active: false, startDate: null, endDate: null, dates: [] };
+let pendingHolidayRange = null;
 let suppressCellClick = false;
 let suppressActivityCellClick = false;
 let pendingRangeSelection = null;
@@ -2438,6 +2742,7 @@ let pendingRemoteRefreshData = null;
 let pendingRemoteRefreshSavedAt = null;
 let syncStatusState = 'updated';
 let startupFileSelectionRequired = false;
+let bossSessionActive = false;
 
 function updateUndoButton() {
   const button = document.getElementById('undo-btn');
@@ -2448,7 +2753,7 @@ function updateUndoButton() {
 function recordUndo() {
   undoStack.push(JSON.parse(JSON.stringify({
     appSettings: { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } },
-    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap,
+    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap, cellNotesMap, workScheduleChecksMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   })));
   if (undoStack.length > 20) undoStack.shift();
@@ -2457,7 +2762,7 @@ function recordUndo() {
 async function undoLastChange() {
   const previous = undoStack.pop();
   if (!previous) return;
-  ({ appSettings, employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
+  ({ appSettings, employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap, cellNotesMap, workScheduleChecksMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
   overtimeMap ||= {};
   if (appSettings && typeof appSettings === 'object') {
     const merged = { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } };
@@ -2474,7 +2779,7 @@ function updateSaveButton() {
   const button = document.getElementById('save-btn');
   if (!button) return;
   button.style.display = '';
-  button.disabled = startupFileSelectionRequired || !hasUnsavedChanges;
+  button.disabled = startupFileSelectionRequired || (!hasUnsavedChanges && !!activeFileName);
   button.innerHTML = `${svgIcon('save')} ${hasUnsavedChanges ? 'Save Changes' : 'Save'}`;
   button.classList.toggle('unsaved-action', hasUnsavedChanges && !startupFileSelectionRequired);
   updateSyncButton();
@@ -2515,6 +2820,7 @@ function loadFromData(data) {
     appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(appSettings.coreWorkdayRange, '0730-1500');
     appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || 7.5;
     appSettings.holidays = Array.isArray(appSettings.holidays) ? appSettings.holidays : [];
+    appSettings.specialDays = normalizeSpecialDays(appSettings.specialDays);
   }
   applyGridPreferences(rawGridPreferences || {}, { resetMissing: true });
   appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
@@ -2554,7 +2860,7 @@ function loadFromData(data) {
       a.participants = a.employeeIds.map(id => ({ id, shift: '' }));
     }
     a.participants = (a.participants || []).map(p => ({ id: +p.id })).filter(p => Number.isFinite(p.id));
-    a.abbreviation = a.abbreviation || '';
+    a.abbreviation = String(a.abbreviation || '').trim().toUpperCase().slice(0, 6);
     a.project = a.project || '';
     a.order = a.order || '';
     a.billing = a.billing || '';
@@ -2581,6 +2887,12 @@ function loadFromData(data) {
         hours: formatHoursNumber(Number(value?.hours) || 0),
         note: String(value?.note || '').trim(),
       }]).filter(([, value]) => value.hours > 0 && value.hours <= 24))
+    : {};
+  cellNotesMap = normalized.cellNotesMap && typeof normalized.cellNotesMap === 'object' && !Array.isArray(normalized.cellNotesMap)
+    ? Object.fromEntries(Object.entries(normalized.cellNotesMap).map(([key, value]) => [key, String(value || '').trim().slice(0, 240)]).filter(([, value]) => value))
+    : {};
+  workScheduleChecksMap = normalized.workScheduleChecksMap && typeof normalized.workScheduleChecksMap === 'object' && !Array.isArray(normalized.workScheduleChecksMap)
+    ? Object.fromEntries(Object.entries(normalized.workScheduleChecksMap).filter(([, value]) => value === true))
     : {};
   if (normalized.activityShiftsMap && typeof normalized.activityShiftsMap === 'object' && !Array.isArray(normalized.activityShiftsMap)) {
     activityShiftsMap = Object.fromEntries(Object.entries(normalized.activityShiftsMap).map(([key, value]) => [key,
@@ -2676,8 +2988,8 @@ function snapshotData() {
     workCodes: appSettings.workCodes || [],
     shiftTemplates: appSettings.shiftTemplates || [],
     summaryColumns: appSettings.summaryColumns,
-    employees, categories, statuses: snapshotStatuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap,
-    employees, categories, statuses: statuses.map(status => ({ ...status, isAbsence: status.isAbsence === true, isOutOfOffice: status.isOutOfOffice === true })), activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap,
+    employees, categories, statuses: snapshotStatuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap, cellNotesMap, workScheduleChecksMap,
+    employees, categories, statuses: statuses.map(status => ({ ...status, isAbsence: status.isAbsence === true, isOutOfOffice: status.isOutOfOffice === true })), activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap, cellNotesMap, workScheduleChecksMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   };
 }
@@ -3314,8 +3626,8 @@ function setStartupFileSelectionRequired(required) {
       content.innerHTML = `
         <div class="card" style="max-width:520px;padding:20px">
           <h3 style="margin-bottom:8px">Choose your data file</h3>
-          <p class="muted" style="line-height:1.5">A JSON data file is required before you can use Team Manager.</p>
-          <div style="margin-top:14px">
+          <p class="muted" style="line-height:1.5">Open an existing planner JSON or create a blank planner to get started.</p>
+          <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-primary" type="button" onclick="beginStartupFileSelection()">Choose JSON file</button>
             <button class="btn" type="button" onclick="createBlankPlanner()" style="margin-left:8px">Create blank planner</button>
           </div>
@@ -3369,13 +3681,13 @@ function planningHorizonDate() {
 }
 function planningHorizonStyle(date) {
   return date === planningHorizonDate()
-    ? `border-right:2px dashed ${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;`
+    ? `;box-shadow:inset 2px 0 0 ${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;`
     : '';
 }
 function planningHorizonHeaderStyle(date) {
   const horizonDate = planningHorizonDate();
   if (!horizonDate) return '';
-  if (date === horizonDate) return `color:${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;font-weight:800;`;
+  if (date === horizonDate) return `${planningHorizonStyle(date)}color:var(--muted) !important;font-weight:800;`;
   if (date === dateBeforeIso(horizonDate)) return 'color:var(--text) !important;font-weight:800;';
   return '';
 }
@@ -3526,7 +3838,7 @@ function renderGrid() {
       </div>
     </div>`;
   renderGridBody(days, today);
-  setTimeout(scrollToToday, 60);
+  if (appSettings.jumpToTodayOnGridChange !== false) setTimeout(scrollToToday, 60);
 }
 
 function renderGridBody(days, today) {
@@ -3536,12 +3848,13 @@ function renderGridBody(days, today) {
   const showTimelineSections = gridViewMode !== 'employees';
   const showEmployeeSection = gridViewMode !== 'timeline';
   const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
-  const filteredYearActs = appSettings.showOnlyConfirmedActivities
-    ? yearActs.filter(a => activityStatus(a) === 'confirmed')
-    : yearActs;
+  const activityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
+  const filteredYearActs = activityFilter === 'all'
+    ? yearActs
+    : yearActs.filter(a => activityStatus(a) === activityFilter);
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
-  const visibleActivities = pastActivitiesExpanded ? [...currentActs, ...pastActs] : currentActs;
+  const visibleActivities = pastActivitiesExpanded ? [...pastActs, ...currentActs] : currentActs;
   const paginateActivities = gridViewMode !== 'timeline';
   const pageSize = paginateActivities ? activityPageCapacity() : Math.max(1, visibleActivities.length);
   activityPageSize = pageSize;
@@ -3563,7 +3876,7 @@ function renderGridBody(days, today) {
           <span class="flex items-center" style="gap:6px">
             ${paginateActivities && visibleActivities.length > pageSize ? `<button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
             <button class="icon-btn" title="Next activities" aria-label="Next activities" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
-            <button type="button" class="filter-chip${appSettings.showOnlyConfirmedActivities ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" title="Show only confirmed activities in Grid View" onclick="toggleShowOnlyConfirmedActivities(!appSettings.showOnlyConfirmedActivities)">Confirmed only</button>
+            <select id="activity-status-filter" class="plain-select" style="height:25px;padding:2px 6px;font-size:10px;min-width:104px" onchange="setActivityStatusFilter(this.value)"><option value="all" ${activityFilter === 'all' ? 'selected' : ''}>All activities</option><option value="tentative" ${activityFilter === 'tentative' ? 'selected' : ''}>Planned only</option><option value="confirmed" ${activityFilter === 'confirmed' ? 'selected' : ''}>Confirmed only</option><option value="cancelled" ${activityFilter === 'cancelled' ? 'selected' : ''}>Cancelled only</option></select>
             <button class="icon-btn" title="Activity Schedule" aria-label="Activity Schedule" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
             <button class="icon-btn" title="Add activity" aria-label="Add activity" onclick="openActModal()">${svgIcon('plus')}</button>
           </span>
@@ -3573,7 +3886,8 @@ function renderGridBody(days, today) {
     if (collapsedGridSections.activities) {
       html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Activities collapsed.</td><td colspan="${days.length}"></td></tr>`;
     } else if (!hasAnyActivities) {
-      html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">${appSettings.showOnlyConfirmedActivities ? 'No confirmed activities to show. Turn off the filter in Settings to show planned or cancelled activities.' : 'No activities yet. Use the add activity button to create one.'}</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
+      const emptyActivityText = activityFilter === 'tentative' ? 'No planned activities to show.' : (activityFilter === 'confirmed' ? 'No confirmed activities to show.' : (activityFilter === 'cancelled' ? 'No cancelled activities to show.' : 'No activities yet. Use the add activity button to create one.'));
+      html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">${emptyActivityText}</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
     }
   }
   const renderActRow = (act, dim) => {
@@ -3588,7 +3902,7 @@ function renderGridBody(days, today) {
       <div class="act-cell-name">
         <span class="flex items-center gap-2" style="min-width:0">
           <span class="act-dot" style="background:${act.color}"></span>
-          <span class="act-name"${lifecycle.status === 'cancelled' ? ' style="text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;"' : ''}>${esc(act.name)}</span>
+          <span class="act-name" role="button" tabindex="0" title="Jump to ${esc(act.name)}" onclick="event.stopPropagation();jumpToActivity(${act.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();jumpToActivity(${act.id})}"${lifecycle.status === 'cancelled' ? ' style="text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;"' : ''}>${esc(act.name)}</span>
           ${act.abbreviation ? `<span style="font-size:10px;font-weight:700;color:${act.color};flex-shrink:0">[${esc(act.abbreviation)}]</span>` : ''}
           ${lifecycleBadge}
         </span>
@@ -3607,15 +3921,17 @@ function renderGridBody(days, today) {
     const labelWidth = gridSpanLabelWidth(startIdx, endIdx);
     for (const d of days) {
       const ds = fmt(d), inR = ds >= act.startDate && ds <= act.endDate;
+      const specialDay = displayedSpecialDayFor(ds);
+      const specialDayStyle = specialDay ? `background:${specialDay.color || '#ef4444'}18;` : '';
       const isS = ds === visibleStart, isE = ds === visibleEnd;
       if (inR) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
-        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
+        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
           <div class="act-bar${lifecycle.status === 'cancelled' ? ' cancelled-bar' : ''}" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${barOpacity};border-radius:${brl} ${brr}"></div>
           ${isS ? `<span class="grid-span-label" style="color:${act.color};width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
         </td>`;
       } else {
-        row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
+        row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
       }
     }
     return row + '</tr>';
@@ -3625,7 +3941,7 @@ function renderGridBody(days, today) {
     if (pastActs.length) {
       html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)">
         <button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" aria-expanded="${pastActivitiesExpanded ? 'true' : 'false'}" onclick="togglePastActivities()">
-          ${svgIcon(pastActivitiesExpanded ? 'chevronLeft' : 'chevronRight')} Past activities (${pastActs.length})
+          Past activities (${pastActs.length})
         </button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
     }
   }
@@ -3645,7 +3961,7 @@ function renderGridBody(days, today) {
   } else if (showTimelineSections && !showHolidays) {
     html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Holidays hidden.</td><td colspan="${days.length}"></td></tr>`;
   } else if (showTimelineSections && !currentHolidays.length && !pastHolidays.length) {
-    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">No holiday periods added.</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
+    html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">No holiday periods added. Drag across dates to add one.</td>${days.map(d => `<td class="gday holiday-select-cell${isWknd(d) ? ' weekend' : ''}" data-date="${fmt(d)}" style="${planningHorizonStyle(fmt(d))}" onpointerdown="startHolidayRangeSelection(event,'${fmt(d)}')"></td>`).join('')}</tr>`;
   } else if (showTimelineSections) {
     const renderHolidayRow = holiday => {
       const start = holiday.startDate, end = holiday.endDate;
@@ -3659,7 +3975,7 @@ function renderGridBody(days, today) {
       days.forEach(day => {
         const ds = fmt(day), active = ds >= start && ds <= end;
         const isStart = ds === visibleStart;
-        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${active ? ' holiday-col' : ''}${isStart ? ' span-label-cell' : ''}" style="${active ? `--holiday-color:${color};background:${color}28 !important;color:${color};border-color:${color}55;` : ''}${planningHorizonStyle(ds)}" title="${active ? esc(holiday.name || 'Holiday') : ''}">${isStart ? `<span class="grid-span-label" style="width:${labelWidth}px;color:${color}">${esc(holiday.name || 'Holiday')}</span>` : ''}</td>`;
+        html += `<td class="gday holiday-select-cell${isWknd(day) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${active ? ' holiday-col' : ''}${isStart ? ' span-label-cell' : ''}" data-date="${ds}" style="${active ? `--holiday-color:${color};background:${color}28 !important;color:${color};border-color:${color}55;` : ''}${planningHorizonStyle(ds)}" onpointerdown="startHolidayRangeSelection(event,'${ds}')" title="${active ? esc(holiday.name || 'Holiday') : 'Drag to add a holiday period'}">${isStart ? `<span class="grid-span-label" style="width:${labelWidth}px;color:${color}">${esc(holiday.name || 'Holiday')}</span>` : ''}</td>`;
       });
       html += '</tr>';
     };
@@ -3667,6 +3983,15 @@ function renderGridBody(days, today) {
     if (pastHolidays.length) {
       html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)"><button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" onclick="pastHolidaysExpanded=!pastHolidaysExpanded;renderPage()">${svgIcon(pastHolidaysExpanded ? 'chevronLeft' : 'chevronRight')} Past holidays (${pastHolidays.length})</button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
       if (pastHolidaysExpanded) pastHolidays.forEach(renderHolidayRow);
+    }
+    const specialDaysInYear = days.map(day => displayedSpecialDayFor(fmt(day))).filter(Boolean);
+    if (specialDaysInYear.length) {
+      html += `<tr><td class="gempl sticky-left" style="cursor:default"><div class="act-cell-name"><span class="act-name">Special days</span></div><div class="act-dates muted">Hard-coded dates</div></td>`;
+      days.forEach(day => {
+        const ds = fmt(day), specialDay = displayedSpecialDayFor(ds);
+        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${specialDay ? ' holiday-col' : ''}" style="${specialDay ? `background:${specialDay.color || '#ef4444'}28 !important;color:${specialDay.color || '#ef4444'} !important;` : ''}${planningHorizonStyle(ds)}" title="${specialDay ? esc(specialDay.name) : ''}">${specialDay ? '•' : ''}</td>`;
+      });
+      html += '</tr>';
     }
   }
 
@@ -3712,12 +4037,13 @@ function activityPageCapacity() {
 function changeActivityPage(direction) {
   const today = todayStr();
   const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
-  const filteredYearActs = appSettings.showOnlyConfirmedActivities
-    ? yearActs.filter(a => activityStatus(a) === 'confirmed')
-    : yearActs;
+  const activityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
+  const filteredYearActs = activityFilter === 'all'
+    ? yearActs
+    : yearActs.filter(a => activityStatus(a) === activityFilter);
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
-  const visibleActivities = pastActivitiesExpanded ? [...currentActs, ...pastActs] : currentActs;
+  const visibleActivities = pastActivitiesExpanded ? [...pastActs, ...currentActs] : currentActs;
   const maxOffset = Math.max(0, Math.floor((visibleActivities.length - 1) / activityPageSize) * activityPageSize);
   activityPageOffset = Math.min(Math.max(0, activityPageOffset + direction * activityPageSize), maxOffset);
   renderGridBody(daysOfYear(gridYear), todayStr());
@@ -3749,12 +4075,28 @@ function togglePastActivities() {
   pastActivitiesExpanded = true;
   jumpToLastPastActivity();
 }
+function jumpToActivity(activityId) {
+  const activity = activities.find(act => Number(act.id) === Number(activityId));
+  if (!activity) return;
+  const isPast = activity.endDate < todayStr();
+  if (isPast && !pastActivitiesExpanded) {
+    pastActivitiesExpanded = true;
+    activityPageOffset = 0;
+    jumpToLastPastActivity();
+    return;
+  }
+  const visibleDate = activity.endDate < `${gridYear}-01-01`
+    ? `${gridYear}-01-01`
+    : (activity.endDate > `${gridYear}-12-31` ? `${gridYear}-12-31` : activity.endDate);
+  requestAnimationFrame(() => scrollToActivityCell(activity.id, visibleDate));
+}
 function jumpToLastPastActivity() {
   const today = todayStr();
   const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
-  const filteredYearActs = appSettings.showOnlyConfirmedActivities
-    ? yearActs.filter(a => activityStatus(a) === 'confirmed')
-    : yearActs;
+  const activityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
+  const filteredYearActs = activityFilter === 'all'
+    ? yearActs
+    : yearActs.filter(a => activityStatus(a) === activityFilter);
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
   if (!pastActs.length) {
@@ -3762,11 +4104,10 @@ function jumpToLastPastActivity() {
     renderGridBody(daysOfYear(gridYear), today);
     return;
   }
-  const visibleActivities = [...currentActs, ...pastActs];
+  const visibleActivities = [...pastActs, ...currentActs];
   const pageSize = gridViewMode !== 'timeline' ? activityPageCapacity() : Math.max(1, visibleActivities.length);
-  activityPageOffset = gridViewMode !== 'timeline'
-    ? Math.floor((visibleActivities.length - 1) / pageSize) * pageSize
-    : 0;
+  const lastPastIndex = pastActs.length - 1;
+  activityPageOffset = gridViewMode !== 'timeline' ? Math.floor(lastPastIndex / pageSize) * pageSize : 0;
   renderGridBody(daysOfYear(gridYear), today);
   const latestPastActivity = [...pastActs].sort((left, right) =>
     left.endDate.localeCompare(right.endDate)
@@ -3836,12 +4177,14 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const holiday = displayedHolidayFor(ds);
   const entry = getEntryObj(`${emp.id}_${ds}`);
   const overtime = overtimeMap[`${emp.id}_${ds}`] || null;
+  const cellNote = cellNotesMap[`${emp.id}_${ds}`] || '';
   const si = entry ? siFor(entry.status) : null;
   const isPartial = entry?.durationType === 'time';
   const acts = cellActivities(emp.id, ds);
   const birthday = isEmployeeBirthday(emp, ds);
 
   const tipParts = [];
+  if (holiday?.isSpecialDay && !acts.length) tipParts.push(`Special day: ${holiday.name}${holiday.nonWorking ? ' (non-working)' : ''}`);
   acts.forEach(act => {
     const shift = activityShiftMeta(act, act.assignment.shift);
     let detail = `Activity: ${act.name}`;
@@ -3866,16 +4209,19 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     tipParts.push(t);
   }
   if (overtime) tipParts.push(`Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` (${overtime.note})` : ''}`);
+  if (cellNote) tipParts.push(`Note: ${cellNote}`);
   if (birthday) tipParts.push(`Birthday: ${emp.name}`);
   if (!tipParts.length) tipParts.push('Click to set status');
 
   const primaryActivity = acts[0];
+  const checkedActivity = bossSessionActive ? acts.find(act => workScheduleChecksMap[`${emp.id}_${ds}_${act.id}`] === true) : null;
+  const gridActivityAbbreviation = primaryActivity?.abbreviation ? primaryActivity.abbreviation.slice(0, 4) : '';
   const activeWorkCode = primaryActivity?.workCode || null;
   let cellText = '', cellStyleStr = '';
   if (primaryActivity) {
     cellText = !activeWorkCode && primaryActivity.assignment.shift === 'normal'
-      ? (primaryActivity.abbreviation || primaryActivity.name.slice(0, 4).toUpperCase())
-      : (activeWorkCode?.abbreviation || primaryActivity.abbreviation || primaryActivity.name.slice(0, 4).toUpperCase());
+      ? (gridActivityAbbreviation || primaryActivity.name.slice(0, 4).toUpperCase())
+      : (activeWorkCode?.abbreviation || gridActivityAbbreviation || primaryActivity.name.slice(0, 4).toUpperCase());
     const activityColor = activeWorkCode?.color || primaryActivity.color;
     cellStyleStr = activityStatus(primaryActivity) === 'tentative'
       ? `background:repeating-linear-gradient(135deg,color-mix(in srgb,${activityColor} 28%,transparent) 0 5px,color-mix(in srgb,${activityColor} 7%,transparent) 5px 10px);color:${activityColor}`
@@ -3904,6 +4250,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const overtimeBadge = overtime
     ? `<span class="overtime-badge" title="Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` · ${esc(overtime.note)}` : ''}">OT ${formatHoursNumber(overtime.hours)}h</span>`
     : '';
+  const workScheduleCheckBadge = checkedActivity ? `<span class="work-schedule-check" title="Checked in external work system">✓</span>` : '';
 
   const fullDayStatusStyle = !primaryActivity && !isPartial && si
     ? `background:${si.color}20 !important;color:${si.color} !important;`
@@ -3919,11 +4266,11 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const activityTextStyle = primaryActivity ? `color:${activityColor};` : '';
   const cancelledTextStyle = isCancelledActivity ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : '';
 
-  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}"
+  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}${checkedActivity ? ' work-schedule-checked-cell' : ''}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"
-    oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}<div class="gday-inner" style="${activityTextStyle}${cancelledTextStyle}">${esc(cellText)}${birthdayBadge}</div></td>`;
+  oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}${workScheduleCheckBadge}<div class="gday-inner" style="${activityTextStyle}${cancelledTextStyle}">${esc(cellText)}${birthdayBadge}</div></td>`;
 }
 
 function updateCell(empId, ds) {
@@ -4085,6 +4432,54 @@ function startCellSelection(event, empId, date) {
   document.addEventListener('pointerup',     finishCellSelection);
   document.addEventListener('pointercancel', finishCellSelection);
 }
+function paintHolidayRangeSelection() {
+  if (!holidayRangeSelection.startDate || !holidayRangeSelection.endDate) return;
+  const start = holidayRangeSelection.startDate <= holidayRangeSelection.endDate ? holidayRangeSelection.startDate : holidayRangeSelection.endDate;
+  const end = holidayRangeSelection.startDate <= holidayRangeSelection.endDate ? holidayRangeSelection.endDate : holidayRangeSelection.startDate;
+  document.querySelectorAll('td.holiday-select-cell').forEach(cell => {
+    cell.classList.toggle('holiday-range-selected', cell.dataset.date >= start && cell.dataset.date <= end);
+  });
+}
+function clearHolidayRangeSelection() {
+  holidayRangeSelection = { active: false, startDate: null, endDate: null, dates: [] };
+  document.querySelectorAll('.holiday-range-selected').forEach(cell => cell.classList.remove('holiday-range-selected'));
+}
+function onHolidayRangeDragMove(event) {
+  if (!holidayRangeSelection.active) return;
+  const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('td.holiday-select-cell');
+  if (!cell?.dataset.date || cell.dataset.date === holidayRangeSelection.endDate) return;
+  holidayRangeSelection.endDate = cell.dataset.date;
+  holidayRangeSelection.dates = datesBetween(holidayRangeSelection.startDate, cell.dataset.date);
+  paintHolidayRangeSelection();
+}
+function finishHolidayRangeSelection(event) {
+  document.removeEventListener('pointermove', onHolidayRangeDragMove);
+  document.removeEventListener('pointerup', finishHolidayRangeSelection);
+  document.removeEventListener('pointercancel', finishHolidayRangeSelection);
+  if (!holidayRangeSelection.active) return;
+  const dates = [...holidayRangeSelection.dates];
+  const startDate = dates[0];
+  const endDate = dates[dates.length - 1];
+  holidayRangeSelection.active = false;
+  if (event.type === 'pointercancel' || dates.length < 2) {
+    clearHolidayRangeSelection();
+    return;
+  }
+  clearHolidayRangeSelection();
+  pendingHolidayRange = { startDate, endDate };
+  openHolidayModal();
+}
+function startHolidayRangeSelection(event, date) {
+  if (event.button !== 0 || !date) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  holidayRangeSelection = { active: true, startDate: date, endDate: date, dates: [date] };
+  paintHolidayRangeSelection();
+  document.addEventListener('pointermove', onHolidayRangeDragMove);
+  document.addEventListener('pointerup', finishHolidayRangeSelection);
+  document.addEventListener('pointercancel', finishHolidayRangeSelection);
+}
 
 // ═══ STATUS PICKER ═══════════════════════════════════════════════════════════
 function _showPicker(event, empId, dates) {
@@ -4107,6 +4502,9 @@ function _showPicker(event, empId, dates) {
     : '<div style="padding:4px 6px;font-size:11.5px;color:var(--muted)">No daily statuses configured.</div>';
   document.getElementById('pk-duration-section').style.display = 'none';
   document.getElementById('pk-time').value = (entry?.durationType === 'time' && entry.time) ? entry.time : '';
+  const cellNotes = pickerDates.map(date => cellNotesMap[`${empId}_${date}`] || '');
+  const sharedCellNote = cellNotes.length && cellNotes.every(note => note === cellNotes[0]) ? cellNotes[0] : '';
+  document.getElementById('pk-note-section').innerHTML = `<div class="pk-sep"></div><div class="pk-label">Cell note</div><div class="pk-shift-box"><div class="pk-field"><span class="pk-field-label">Note${pickerDates.length > 1 ? ' for selected dates' : ''}</span><textarea class="pk-input" id="pk-cell-note" maxlength="240" rows="2" placeholder="Meeting, absence reason, or other context">${esc(sharedCellNote)}</textarea></div><div class="pk-save-row"><button class="pk-clear" ${cellNotes.some(Boolean) ? '' : 'disabled'} onclick="removeCellNote()">Remove note</button><button class="btn btn-sm btn-primary" onclick="saveCellNote()">Save note</button></div></div>`;
   const overtimeEntries = pickerDates.map(date => overtimeMap[`${empId}_${date}`]).filter(Boolean);
   const sharedOvertimeHours = overtimeEntries.length === pickerDates.length && overtimeEntries.every(item => item.hours === overtimeEntries[0].hours)
     ? overtimeEntries[0].hours
@@ -4124,7 +4522,7 @@ function _showPicker(event, empId, dates) {
       <div class="pk-save-row"><button class="pk-clear" ${overtimeEntries.length ? '' : 'disabled'} onclick="removeOvertime()">Remove OT</button><button class="btn btn-sm btn-primary" onclick="saveOvertime()">Save OT</button></div>
     </div>`;
   const hasCellActivity = activities.some(act => actParticipantIds(act).includes(empId) && pickerDate >= act.startDate && pickerDate <= act.endDate && (() => { const assignment = activityAssignment(`${empId}_${pickerDate}_${act.id}`); return assignment.assigned === true && !assignment.excluded; })());
-  document.getElementById('pk-clear-btn').style.display = (entry || hasCellActivity || overtimeEntries.length) ? 'block' : 'none';
+  document.getElementById('pk-clear-btn').style.display = (entry || hasCellActivity || overtimeEntries.length || cellNotes.some(Boolean)) ? 'block' : 'none';
   document.getElementById('pk-clear-label').textContent = pickerDates.length > 1 ? 'Clear all selected cells' : 'Clear cell';
   document.getElementById('pk-add-activity-btn').style.display = pickerDates.length > 1 ? 'flex' : 'none';
 
@@ -4134,6 +4532,7 @@ function _showPicker(event, empId, dates) {
       const firstDate = pickerDates.find(date => date >= act.startDate && date <= act.endDate) || pickerDate;
       const assignmentKey = `${empId}_${firstDate}_${act.id}`;
       const assignment = activityAssignment(assignmentKey);
+      const checkedInWorkSystem = pickerDates.some(date => workScheduleChecksMap[`${empId}_${date}_${act.id}`] === true);
       const selectedCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
       const rawShift = assignment.shift || '';
       const selectedShift = !assignment.assigned || assignment.excluded
@@ -4159,6 +4558,7 @@ function _showPicker(event, empId, dates) {
           <button class="pk-chip${selectedShift === 'custom' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'custom')">Custom</button>
         </div><div id="pk-custom-shift-wrap-${act.id}" style="display:${selectedShift === 'custom' ? 'block' : 'none'}"><input class="pk-input" id="pk-custom-shift-${act.id}" type="text" placeholder="1500-2000" value="${esc(selectedShift === 'custom' ? assignment.shift : '')}" oninput="document.getElementById('pk-shifts-${act.id}').dataset.shift=this.value.trim()"><div class="form-hint">Expected format: HHMM-HHMM, for example 1500-2000.</div></div></div>
         <div class="pk-save-row">
+          ${bossSessionActive ? `<button class="pk-chip${checkedInWorkSystem ? ' sel' : ''}" onclick="toggleWorkScheduleCheck(${empId},${act.id})">${checkedInWorkSystem ? '✓ Checked' : 'Mark checked'}</button>` : ''}
           <button class="pk-clear" ${assignment.assigned && !assignment.excluded ? '' : 'disabled'} onclick="clearActivityAssignment(${empId},${act.id})">${assignment.assigned && !assignment.excluded ? `Remove from ${esc(act.abbreviation || act.name)}` : 'Not assigned'}</button>
           <button class="btn btn-sm btn-primary" onclick="saveActivityAssignment(${empId},${act.id})">Set</button>
         </div>
@@ -4392,6 +4792,43 @@ function parseOvertimeHours(value) {
   const hours = Number(String(value || '').trim().replace(',', '.'));
   return Number.isFinite(hours) && hours > 0 && hours <= 24 ? formatHoursNumber(hours) : null;
 }
+async function saveCellNote() {
+  if (pickerEmpId == null || !pickerDates.length) return;
+  const note = document.getElementById('pk-cell-note')?.value.trim().slice(0, 240) || '';
+  recordUndo();
+  pickerDates.forEach(date => {
+    const key = `${pickerEmpId}_${date}`;
+    if (note) cellNotesMap[key] = note;
+    else delete cellNotesMap[key];
+  });
+  markUnsaved();
+  await saveState();
+  pickerDates.forEach(date => updateCell(pickerEmpId, date));
+  closePicker();
+}
+async function removeCellNote() {
+  if (pickerEmpId == null || !pickerDates.length) return;
+  recordUndo();
+  pickerDates.forEach(date => { delete cellNotesMap[`${pickerEmpId}_${date}`]; });
+  markUnsaved();
+  await saveState();
+  pickerDates.forEach(date => updateCell(pickerEmpId, date));
+  closePicker();
+}
+async function toggleWorkScheduleCheck(empId, actId) {
+  if (!bossSessionActive || !pickerDates.length) return;
+  const checked = pickerDates.every(date => workScheduleChecksMap[`${empId}_${date}_${actId}`] === true);
+  recordUndo();
+  pickerDates.forEach(date => {
+    const key = `${empId}_${date}_${actId}`;
+    if (checked) delete workScheduleChecksMap[key];
+    else workScheduleChecksMap[key] = true;
+  });
+  markUnsaved();
+  await saveState();
+  pickerDates.forEach(date => updateCell(empId, date));
+  closePicker();
+}
 async function saveOvertime() {
   if (pickerEmpId == null || !pickerDate) return;
   const hours = parseOvertimeHours(document.getElementById('pk-overtime-hours')?.value);
@@ -4422,8 +4859,10 @@ async function clearStatus() {
   dates.forEach(date => {
     entriesMap[`${pickerEmpId}_${date}`] = null;
     overtimeMap[`${pickerEmpId}_${date}`] = null;
+    delete cellNotesMap[`${pickerEmpId}_${date}`];
     activities.filter(act => actParticipantIds(act).includes(pickerEmpId) && date >= act.startDate && date <= act.endDate).forEach(act => {
       excludeActivityAssignment(`${pickerEmpId}_${date}_${act.id}`);
+      delete workScheduleChecksMap[`${pickerEmpId}_${date}_${act.id}`];
     });
   });
   markUnsaved();
@@ -4863,7 +5302,7 @@ async function saveActivity() {
   const nightShift = document.getElementById('af-night-shift').value.trim() || '0000-0730';
   const includeWeekends = document.getElementById('af-include-weekends').checked;
   if (!name) { alert('Activity name is required.'); return; }
-  if (abbr.length > 4) { alert('Activity abbreviation can be at most 4 characters.'); return; }
+  if (abbr.length > 6) { alert('Activity abbreviation can be at most 6 characters.'); return; }
   if (project && !/^[A-Za-z0-9\-]+$/.test(project)) { alert('Cost Center must contain only letters, numbers, and hyphens.'); return; }
   if (order && !/^[A-Za-z0-9]{1,9}$/.test(order)) { alert('Order must contain up to 9 alphanumeric characters.'); return; }
   if (!start || !end) { alert('Enter valid start and end dates using dd.mm.yyyy.'); return; }
@@ -4885,6 +5324,22 @@ async function saveActivity() {
   } else {
     rec.id = nextActId++;
     activities.push(rec);
+    const assignmentDate = new Date(`${rec.startDate}T00:00:00`);
+    const assignmentEnd = new Date(`${rec.endDate}T00:00:00`);
+    while (assignmentDate <= assignmentEnd) {
+      const date = fmt(assignmentDate);
+      rec.participants.forEach(participant => {
+        activityShiftsMap[`${participant.id}_${date}_${rec.id}`] = {
+          shift: 'normal',
+          workCodeId: null,
+          administrativeTime: '',
+          staffingImpactOverride: null,
+          assigned: true,
+          excluded: false,
+        };
+      });
+      assignmentDate.setDate(assignmentDate.getDate() + 1);
+    }
   }
   for (const key of Object.keys(activityShiftsMap)) {
     const parts = key.split('_');
@@ -5895,6 +6350,37 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
     totalHoursActual: timedStatusHours + timedActivityHours + overtimeHours,
   };
 }
+function staffingShiftIntervalsFor(empId, date) {
+  const intervals = [];
+  for (const activity of activities) {
+    if (activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity) || !actParticipantIds(activity).includes(empId)) continue;
+    if (date < activity.startDate || date > activity.endDate || (!activity.includeWeekends && isWknd(new Date(`${date}T00:00:00`)))) continue;
+    const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
+    if (!assignment.assigned || assignment.excluded || !assignment.shift) continue;
+    const shift = ['normal', 'day', 'night'].includes(assignment.shift) ? activityDefaultShift(assignment.shift, activity) : assignment.shift;
+    const interval = timeRangeInterval(shift);
+    if (interval) intervals.push(interval);
+  }
+  return mergeIntervals(intervals);
+}
+function getEmployeeStaffingLoad(emp, dateStrings) {
+  const coreHours = Number(appSettings.coreHoursPerDay) || 0;
+  let capacityHours = 0;
+  let extraHours = 0;
+  let overtimeHours = 0;
+  for (const date of dateStrings) {
+    const normalDay = isNormalWorkDate(date);
+    if (normalDay) capacityHours += coreHours;
+    const intervals = staffingShiftIntervalsFor(emp.id, date);
+    const workedHours = intervals.reduce((sum, interval) => sum + Math.max(0, interval.end - interval.start), 0);
+    extraHours += normalDay ? Math.max(0, workedHours - coreHours) : workedHours;
+    overtimeHours += Number(overtimeMap[`${emp.id}_${date}`]?.hours) || 0;
+  }
+  const percentage = capacityHours > 0 ? ((capacityHours + extraHours + overtimeHours) / capacityHours) * 100 : (extraHours + overtimeHours > 0 ? Infinity : 0);
+  const overloaded = overtimeHours > 0 || percentage > appSettings.highMax;
+  const label = overloaded ? 'Overloaded' : percentage <= appSettings.lightMax ? 'Light' : percentage <= appSettings.normalMax ? 'Normal' : 'High';
+  return { capacityHours, extraHours, overtimeHours, percentage, overloaded, label };
+}
 function datesInRange(startDate, endDate) {
   const dates = [];
   const start = new Date(startDate);
@@ -5974,6 +6460,51 @@ function teamWorkloadForDates(dateStrings) {
 }
 
 // ═══ DASHBOARD ═══════════════════════════════════════════════════════════════
+function staffingLoadForDates(dateStrings) {
+  const total = { capacityHours: 0, extraHours: 0, overtimeHours: 0 };
+  for (const emp of employees) {
+    const load = getEmployeeStaffingLoad(emp, dateStrings);
+    total.capacityHours += load.capacityHours;
+    total.extraHours += load.extraHours;
+    total.overtimeHours += load.overtimeHours;
+  }
+  total.percentage = total.capacityHours > 0
+    ? ((total.capacityHours + total.extraHours + total.overtimeHours) / total.capacityHours) * 100
+    : (total.extraHours + total.overtimeHours > 0 ? Infinity : 0);
+  return total;
+}
+function renderTeamStaffingChart(dateStrings) {
+  if (!dateStrings.length || !employees.length) return '<div class="empty-note" style="padding:24px">No staffing data for this interval.</div>';
+  const bucketSize = dateStrings.length > 93 ? 'month' : (dateStrings.length > 45 ? 'week' : 'day');
+  const buckets = [];
+  for (const date of dateStrings) {
+    const key = bucketSize === 'month' ? date.slice(0, 7) : bucketSize === 'week' ? isoWeekStringFromDate(new Date(`${date}T00:00:00`)) : date;
+    let bucket = buckets.find(item => item.key === key);
+    if (!bucket) { bucket = { key, dates: [] }; buckets.push(bucket); }
+    bucket.dates.push(date);
+  }
+  const points = buckets
+    .map(bucket => ({ ...bucket, load: staffingLoadForDates(bucket.dates) }))
+    .filter(point => point.load.capacityHours > 0 || point.load.extraHours > 0 || point.load.overtimeHours > 0);
+  if (!points.length) return '<div class="empty-note" style="padding:24px">No working days with staffing data for this interval.</div>';
+  const width = 760, height = 210, left = 42, right = 18, top = 18, bottom = 34;
+  const maxValue = Math.max(120, ...points.map(point => Number.isFinite(point.load.percentage) ? point.load.percentage : 140)) + 10;
+  const x = index => left + (points.length === 1 ? (width - left - right) / 2 : index * (width - left - right) / (points.length - 1));
+  const y = value => top + (maxValue - Math.min(maxValue, Math.max(0, value))) * (height - top - bottom) / maxValue;
+  const line = points.map((point, index) => `${x(index)},${y(Number.isFinite(point.load.percentage) ? point.load.percentage : maxValue)}`).join(' ');
+  const gridValue = value => `<line x1="${left}" x2="${width - right}" y1="${y(value)}" y2="${y(value)}" stroke="currentColor" opacity=".12"/><text x="${left - 7}" y="${y(value) + 4}" text-anchor="end" font-size="10" fill="currentColor" opacity=".65">${value}%</text>`;
+  const labels = points.map((point, index) => {
+    const date = new Date(`${point.dates[0]}T00:00:00`);
+    const label = bucketSize === 'month' ? date.toLocaleDateString('en-US', { month: 'short' }) : bucketSize === 'week' ? `W${isoWeek(date)}` : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `<text x="${x(index)}" y="${height - 12}" text-anchor="middle" font-size="9" fill="currentColor" opacity=".7">${esc(label)}</text>`;
+  }).join('');
+  const markers = points.map((point, index) => {
+    const value = Number.isFinite(point.load.percentage) ? point.load.percentage : maxValue;
+    const overtime = point.load.overtimeHours > 0;
+    return `<circle cx="${x(index)}" cy="${y(value)}" r="${overtime ? 4 : 3}" fill="${overtime ? '#c2410c' : 'var(--accent-blue)'}"><title>${esc(point.key)}: ${Number.isFinite(point.load.percentage) ? `${formatHoursNumber(point.load.percentage)}%` : 'Overloaded'}${overtime ? ` · ${formatHoursNumber(point.load.overtimeHours)}h overtime` : ''}</title></circle>`;
+  }).join('');
+  return `<div style="overflow:auto"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Team staffing load over selected interval" style="width:100%;min-width:520px;height:210px;color:var(--muted);display:block"><text x="${left}" y="11" font-size="10" fill="currentColor">Team staffing load</text>${gridValue(100)}${gridValue(appSettings.highMax)}<polyline points="${line}" fill="none" stroke="var(--accent-blue)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${markers}${labels}</svg></div>`;
+}
 function renderDashboard() {
   const today = todayStr();
   const cardStatuses = statuses.filter(s => s.key !== 'at_work').slice(0, 3);
@@ -6067,9 +6598,21 @@ function renderDashboard() {
 
   const wlRange = workloadRange();
   const workloadDates = datesInRange(new Date(`${wlRange.start}T00:00:00`), new Date(`${wlRange.end}T00:00:00`));
-  const workloadRows = employees.map(emp => ({ emp, ...getEmployeeWorkload(emp, workloadDates) }))
+  const workloadRows = employees.map(emp => ({ emp, ...getEmployeeWorkload(emp, workloadDates), staffing: getEmployeeStaffingLoad(emp, workloadDates) }))
     .sort((a, b) => b.totalUnits - a.totalUnits || b.totalHoursActual - a.totalHoursActual || a.emp.name.localeCompare(b.emp.name, 'nb'));
   const workloadTeamTotals = teamWorkloadForDates(workloadDates);
+  const workloadTeamStaffing = employees.reduce((total, emp) => {
+    const load = getEmployeeStaffingLoad(emp, workloadDates);
+    total.capacityHours += load.capacityHours;
+    total.extraHours += load.extraHours;
+    total.overtimeHours += load.overtimeHours;
+    return total;
+  }, { capacityHours: 0, extraHours: 0, overtimeHours: 0 });
+  workloadTeamStaffing.percentage = workloadTeamStaffing.capacityHours > 0
+    ? ((workloadTeamStaffing.capacityHours + workloadTeamStaffing.extraHours + workloadTeamStaffing.overtimeHours) / workloadTeamStaffing.capacityHours) * 100
+    : (workloadTeamStaffing.extraHours + workloadTeamStaffing.overtimeHours > 0 ? Infinity : 0);
+  workloadTeamStaffing.overloaded = workloadTeamStaffing.overtimeHours > 0 || workloadTeamStaffing.percentage > appSettings.highMax;
+  workloadTeamStaffing.label = workloadTeamStaffing.overloaded ? 'Overloaded' : workloadTeamStaffing.percentage <= appSettings.lightMax ? 'Light' : workloadTeamStaffing.percentage <= appSettings.normalMax ? 'Normal' : 'High';
 
   const yearlyWorkload = [];
   for (let month = 0; month < 12; month++) {
@@ -6101,12 +6644,13 @@ function renderDashboard() {
             <div style="min-width:0;flex:1;margin-right:12px;">
               <div style="display:flex;align-items:center;justify-content:space-between;">
                 <div style="font-size:13.5px;font-weight:500">${esc(row.emp.name)}</div>
-                <div style="font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums">${formatLoadMeasure(row.totalUnits, row.totalHoursActual)}</div>
+                <div style="font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums">${Number.isFinite(row.staffing.percentage) ? `${formatHoursNumber(row.staffing.percentage)}%` : 'Overloaded'} · ${row.staffing.label}</div>
               </div>
               <div class="muted text-sm">${esc(row.emp.role)} · ${esc(row.emp.department)}</div>
               <div class="muted text-sm" style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap">
                 <span>Status: ${formatLoadMeasure(row.statusUnits, row.statusHoursActual)}</span>
                 <span>Activities: ${formatLoadMeasure(row.activityUnits, row.activityHoursActual)}</span>
+                <span>Extra shift hours: ${formatHoursNumber(row.staffing.extraHours)} h</span>
                 <span>Overtime: ${formatHoursNumber(row.overtimeHours)} h</span>
                 <span>Absence: ${formatLoadMeasure(row.absenceUnits, row.absenceHoursActual)}</span>
               </div>
@@ -6189,12 +6733,12 @@ function renderDashboard() {
       <div class="card">
         <div class="card-title mb-4" style="font-size:15px">Upcoming Absences</div>
         ${upcoming.length
-          ? `<div style="max-height:300px;overflow:auto;padding-right:6px">${[...upcomingByDate.entries()].slice(0, 30).map(([date, items]) => `
+          ? `<div style="max-height:220px;overflow:auto;padding-right:6px">${[...upcomingByDate.entries()].slice(0, 30).map(([date, items]) => `
               <div class="absence-row" style="align-items:flex-start;justify-content:flex-start;flex-wrap:wrap;padding:8px 0;">
                 <div style="font-size:12px;font-weight:700;color:var(--text);flex:0 0 auto">${fmtMed(date)}:</div>
                 <div style="font-size:13.5px;font-weight:500;line-height:1.4;flex:1 1 260px;min-width:0">${items.map(upcomingInlineName).join(', ')}</div>
               </div>`).join('')}</div>`
-          : '<div class="empty-note" style="height:250px;display:flex;align-items:center;justify-content:center">No upcoming absences scheduled.</div>'}
+          : '<div class="empty-note" style="height:120px;display:flex;align-items:center;justify-content:center">No upcoming absences scheduled.</div>'}
       </div>
       <div class="card">
         <div class="flex items-center justify-between" style="gap:8px;flex-wrap:wrap">
@@ -6218,7 +6762,9 @@ function renderDashboard() {
           <span><b style="color:var(--text)">${formatHoursNumber(workloadTeamTotals.totalHours)} h</b> timed work</span>
           <span>Overtime: <b style="color:#c2410c">${formatHoursNumber(workloadTeamTotals.overtimeHours)} h</b></span>
           <span>Absence: ${formatLoadMeasure(workloadTeamTotals.absenceUnits, workloadTeamTotals.absenceHours)}</span>
+          <span>Staffing load: <b style="color:var(--text)">${Number.isFinite(workloadTeamStaffing.percentage) ? `${formatHoursNumber(workloadTeamStaffing.percentage)}%` : 'Overloaded'}</b> · ${workloadTeamStaffing.label}</span>
         </div>
+        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:8px">${renderTeamStaffingChart(workloadDates)}</div>
         <div style="display:flex;flex-direction:column;gap:0;margin-top:12px;max-height:300px;overflow:auto;padding-right:6px">${workloadOverview}</div>
         <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
           <div class="flex items-center justify-between" style="gap:8px;flex-wrap:wrap">
@@ -6719,7 +7265,15 @@ async function bootApp() {
   if (!configuredFileLoaded && parsedLocalState) {
     loadFromData(parsedLocalState);
     setRemoteUpdateSource('none');
-  } else if (!configuredFileLoaded) {
+  } else if (!configuredFileLoaded && storedRemoteSource === 'portable-default') {
+    try {
+      await loadPortableDefaultPlannerData({ closeSettings: false });
+      configuredFileLoaded = true;
+    } catch (e) {
+      console.warn('Portable default load failed:', e?.message || e);
+    }
+  }
+  if (!configuredFileLoaded) {
     setRemoteUpdateSource('none');
   }
 
@@ -6735,7 +7289,8 @@ async function bootApp() {
   updateSbStatus();
   if (remoteUpdateSource === 'none') {
     setSyncStatusState('out-of-sync');
-    setStartupFileSelectionRequired(true);
+    if (!configuredFileLoaded && !parsedLocalState) beginStartupFileSelection();
+    else if (!configuredFileLoaded) setStartupFileSelectionRequired(true);
     return;
   }
   await loadStoredPlannerDirectoryHandle();

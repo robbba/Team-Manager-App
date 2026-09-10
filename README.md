@@ -16,14 +16,12 @@ Recommended folder layout:
 portable-team-manager/
 ├── index.html
 ├── your-planner.json
-├── data.example.json
 └── assets/   (if present in your build)
 ```
 
 Recommended startup:
 
 - Serve the folder locally for reliable browser file and fetch behavior in Edge.
-- If needed, copy `data.example.json` to a working planner file before first launch.
 - `python -m http.server 8080`
 - `py -m http.server 8080`
 - Then open `http://localhost:8080`
@@ -35,6 +33,8 @@ Startup behavior:
 - Otherwise, Team Manager shows a required **Choose your data file** step before normal interaction.
 - Browser recovery state can still be used after a file is selected.
 
+The startup screen also supports **Create blank planner** for a new empty planner.
+
 Use **Choose Data File** to open a planner JSON and **Save As** to create a writable copy. When the browser has native file access to the selected folder, Team Manager can also write silent weekly backups into a `backups/` subfolder.
 
 Team Manager checks for external changes and keeps a visible sync status:
@@ -43,6 +43,8 @@ Team Manager checks for external changes and keeps a visible sync status:
 - **Out of sync** (red)
 
 Auto-update runs every 60 seconds by default, and **Sync Now** is available next to **Save** for manual sync.
+
+If no JSON file is attached yet, **Save** opens the Save As flow so a newly created blank planner can be saved to a file.
 
 ## Work time codes
 
@@ -59,3 +61,17 @@ Planned assignments remain visible with diagonal hatching, but only Confirmed ac
 Dragging across dates creates a visible selection. **Remove from [activity]** removes only that activity from the selected dates; daily statuses and other activities remain. **Clear all selected cells** is the separate action for clearing everything in the selection. Both actions participate in Undo and browser recovery.
 
 In Grid View, use **Import .ics holidays** in the Holidays section. Standard all-day `VEVENT` entries are shown for review before import. Only events in the active planner year are offered.
+
+## Grid tools
+
+- Activity filters include All, Planned only, Confirmed only, and Cancelled only. Specific filters reveal a matching activity; this can be disabled under Settings → Grid behavior.
+- Activity titles jump to their timeline bars. Past activities can be expanded and are shown before current activities when expanded.
+- Drag across employee dates to edit a range. New activities assign selected participants to Normal Working Hours by default. Activity abbreviations support up to six characters; narrow employee cells use a four-character display fallback.
+- Right-click an employee/date cell to edit status, activity assignment, overtime, or a per-cell note. Notes are saved with the planner and appear in cell hover text.
+- Drag across dates in the Holidays section to create a holiday period.
+
+## Special days and work checks
+
+Settings → Manage Special Days supports recurring dates in `DD-MM` format, such as `04-07`, and one-off dates. Each entry can be edited, colored, and marked as non-working. Special days highlight the date headers, activity grid, employee cells, and a compact Special days row in the Holidays section. Their visual highlighting can be hidden without removing their capacity effect.
+
+Settings → Work schedule checks allows a boss password to be configured. After unlocking the local boss view, activity cells can be marked as checked against an external time system. Checked cells show a gray overlay and green checkmark only while the boss view is unlocked. The password gates the local UI; it does not encrypt the planner JSON.
