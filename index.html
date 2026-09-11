@@ -748,6 +748,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
         <button class="btn btn-sm" type="button" onclick="importData()">Choose Data File</button>
         <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As...</button>
+        <button class="btn btn-sm" type="button" onclick="loadExampleTestData()">Load example data (testing)</button>
       </div>
       <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
     </div>
@@ -880,6 +881,10 @@ const DEFAULT_SHIFT_TEMPLATES = [
   { id: 'shift-normal', name: 'Normal Working Hours', start: '0730', end: '1500', category: 'normal', color: '#64748b', hours: 7.5 },
   { id: 'shift-day', name: 'Day', start: '0730', end: '2400', category: 'day', color: '#f59e0b', hours: 16.5 },
   { id: 'shift-night', name: 'Night', start: '0000', end: '0730', category: 'night', color: '#3b82f6', hours: 7.5 },
+];
+const LOCAL_ONLY_APP_SETTING_KEYS = [
+  'darkMode', 'autoSaveEnabled', 'autoSyncEnabled', 'showOnlyConfirmedActivities',
+  'activityStatusFilter', 'jumpToTodayOnGridChange', 'specialDaysVisible',
 ];
 
 let appSettings = {
@@ -1116,6 +1121,7 @@ function loadSettings() {
       appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
+      appSettings.autoSyncEnabled = parsed.autoSyncEnabled !== false;
       appSettings.showOnlyConfirmedActivities = parsed.showOnlyConfirmedActivities === true;
       appSettings.activityStatusFilter = normalizeActivityStatusFilter(parsed.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
       appSettings.jumpToTodayOnGridChange = parsed.jumpToTodayOnGridChange !== false;
@@ -1148,6 +1154,11 @@ function persistSettings() {
   const saved = lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
   if (saved) lsRemove(LEGACY_SETTINGS_KEY);
   return saved;
+}
+function plannerAppSettingsSnapshot() {
+  const settings = JSON.parse(JSON.stringify(appSettings));
+  LOCAL_ONLY_APP_SETTING_KEYS.forEach(key => delete settings[key]);
+  return settings;
 }
 function normalizeSpecialDays(value) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -1369,7 +1380,6 @@ function resetSpecialDayForm() {
 function setSpecialDaysVisibility(visible) {
   appSettings.specialDaysVisible = visible === true;
   persistSettings();
-  markUnsaved();
   renderPage();
 }
 function toggleSpecialDayFields() {
@@ -2807,22 +2817,19 @@ window.addEventListener('beforeunload', event => {
 function safeColor(c) { return /^#[0-9a-fA-F]{3,8}$/.test(String(c || '')) ? c : PALETTE[0]; }
 function loadFromData(data) {
   const normalized = normalizeStateVersion(data || {});
-  const rawGridPreferences = normalized.gridPreferences && typeof normalized.gridPreferences === 'object' && !Array.isArray(normalized.gridPreferences)
-    ? normalized.gridPreferences
-    : null;
   pendingRemoteRefreshData = null;
   pendingRemoteRefreshSavedAt = null;
   lastSyncTime = normalized.savedAt || new Date().toISOString();
   undoStack = [];
   updateUndoButton();
   if (normalized.appSettings) {
-    appSettings = { ...appSettings, ...normalized.appSettings };
+    const localSettings = Object.fromEntries(LOCAL_ONLY_APP_SETTING_KEYS.map(key => [key, appSettings[key]]));
+    appSettings = { ...appSettings, ...normalized.appSettings, ...localSettings };
     appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(appSettings.coreWorkdayRange, '0730-1500');
     appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || 7.5;
     appSettings.holidays = Array.isArray(appSettings.holidays) ? appSettings.holidays : [];
     appSettings.specialDays = normalizeSpecialDays(appSettings.specialDays);
   }
-  applyGridPreferences(rawGridPreferences || {}, { resetMissing: true });
   appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
     ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
     : {};
@@ -2976,13 +2983,7 @@ function snapshotData() {
     version: DATA_VERSION,
     savedAt: new Date().toISOString(),
     dailyStatusesSeparated: true,
-    appSettings: JSON.parse(JSON.stringify(appSettings)),
-    gridPreferences: {
-      year: gridYear,
-      hiddenEmployeeIds: [...hiddenEmployees],
-      viewMode: gridViewMode,
-      collapsedSections: { ...collapsedGridSections },
-    },
+    appSettings: plannerAppSettingsSnapshot(),
     departmentColors: appSettings.departmentColors || {},
     activityTypes: appSettings.activityTypes || [],
     workCodes: appSettings.workCodes || [],
@@ -3654,6 +3655,42 @@ async function createBlankPlanner() {
     if (err?.name !== 'AbortError') alert(`Could not create planner: ${err?.message || 'Unknown error occurred.'}`);
   }
 }
+// Adds a couple of sample employees/activities for local testing; not part of the release data model.
+async function loadExampleTestData() {
+  recordUndo();
+  const addDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return fmt(d); };
+  const empA = { id: nextEmpId++, name: 'Alex Morgan', email: '', role: 'Planner', department: 'Operations', level: '', birthday: '', homeAddress: '', phoneWork: '', phonePrivate: '', categoryIds: [] };
+  const empB = { id: nextEmpId++, name: 'Jamie Lee', email: '', role: 'Team Lead', department: 'Operations', level: '', birthday: '', homeAddress: '', phoneWork: '', phonePrivate: '', categoryIds: [] };
+  const empC = { id: nextEmpId++, name: 'Taylor Smith', email: '', role: 'Specialist', department: 'Support', level: '', birthday: '', homeAddress: '', phoneWork: '', phonePrivate: '', categoryIds: [] };
+  employees.push(empA, empB, empC);
+  employees.sort((a, b) => a.name.localeCompare(b.name));
+
+  const makeActivity = (name, abbr, startOffset, endOffset, color, status, participantIds) => {
+    const act = {
+      id: nextActId++, name, abbreviation: abbr, project: '', order: '', billing: '', type: '', status,
+      countsTowardLoad: true, dayShift: '0730-2400', nightShift: '0000-0730', includeWeekends: false,
+      color, startDate: addDays(startOffset), endDate: addDays(endOffset),
+      participants: participantIds.map(id => ({ id })), notes: '',
+    };
+    activities.push(act);
+    for (const id of participantIds) {
+      for (const day = new Date(`${act.startDate}T00:00:00`); fmt(day) <= act.endDate; day.setDate(day.getDate() + 1)) {
+        activityShiftsMap[`${id}_${fmt(day)}_${act.id}`] = { shift: 'normal', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false };
+      }
+    }
+    return act;
+  };
+  makeActivity('Initial Planning Workshop', 'PLAN', -10, -8, '#64748b', 'confirmed', [empA.id, empB.id]);
+  makeActivity('Current Operations Brief', 'OPS', -1, 2, '#3b82f6', 'confirmed', [empA.id, empC.id]);
+  makeActivity('Future Coordination Exercise', 'COORD', 14, 16, '#22c55e', 'tentative', [empB.id, empC.id]);
+  activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+  markUnsaved();
+  await saveState();
+  closeModal('settings-modal');
+  renderPage();
+  showToast('Example test data added (3 employees, 3 activities).', 5000);
+}
 function nav(page) {
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
@@ -3688,7 +3725,6 @@ function planningHorizonHeaderStyle(date) {
   const horizonDate = planningHorizonDate();
   if (!horizonDate) return '';
   if (date === horizonDate) return `${planningHorizonStyle(date)}color:var(--muted) !important;font-weight:800;`;
-  if (date === dateBeforeIso(horizonDate)) return 'color:var(--text) !important;font-weight:800;';
   return '';
 }
 function dateBeforeIso(isoDate) {
@@ -3893,12 +3929,13 @@ function renderGridBody(days, today) {
   const renderActRow = (act, dim) => {
     const attendCount = act.participants.length;
     const lifecycle = activityStatusMeta(act);
+    const typeMeta = activityTypeMeta(act);
     const lifecycleBadge = lifecycle.status === 'confirmed' ? '' : `<span class="act-lifecycle ${lifecycle.className}">${lifecycle.label}</span>`;
     const barBackground = lifecycle.status === 'tentative'
       ? `repeating-linear-gradient(135deg,color-mix(in srgb,${act.color} 38%,transparent) 0 5px,color-mix(in srgb,${act.color} 12%,transparent) 5px 10px)`
       : act.color;
     const barOpacity = lifecycle.status === 'tentative' ? '.9' : (dim ? '.16' : '.28');
-    let row = `<tr><td class="gempl sticky-left" style="${dim ? 'opacity:.65;' : ''}cursor:pointer" onclick="openActModal(${act.id})" title="Click to edit ${esc(act.name)}">
+    let row = `<tr><td class="gempl sticky-left" style="${dim ? 'opacity:.65;' : ''}cursor:pointer" onclick="openActModal(${act.id})" title="${esc(act.name)}${typeMeta ? ` · ${esc(typeMeta.label)}` : ''}\nClick to edit">
       <div class="act-cell-name">
         <span class="flex items-center gap-2" style="min-width:0">
           <span class="act-dot" style="background:${act.color}"></span>
@@ -3926,7 +3963,7 @@ function renderGridBody(days, today) {
       const isS = ds === visibleStart, isE = ds === visibleEnd;
       if (inR) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
-        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
+        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)}${typeMeta ? ` · ${esc(typeMeta.label)}` : ''} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
           <div class="act-bar${lifecycle.status === 'cancelled' ? ' cancelled-bar' : ''}" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${barOpacity};border-radius:${brl} ${brr}"></div>
           ${isS ? `<span class="grid-span-label" style="color:${act.color};width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
         </td>`;
@@ -4164,6 +4201,10 @@ function cellActivities(empId, ds) {
     })
     .sort((a, b) => a.id - b.id);
 }
+// All participant activities for the date regardless of shift/work-code assignment, so boss checks aren't limited to assigned cells.
+function participantActivitiesForDate(empId, ds) {
+  return activities.filter(act => ds >= act.startDate && ds <= act.endDate && participantFor(act, empId));
+}
 
 function isEmployeeBirthday(emp, dateString) {
   if (!emp || !emp.birthday || !dateString) return false;
@@ -4214,7 +4255,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   if (!tipParts.length) tipParts.push('Click to set status');
 
   const primaryActivity = acts[0];
-  const checkedActivity = bossSessionActive ? acts.find(act => workScheduleChecksMap[`${emp.id}_${ds}_${act.id}`] === true) : null;
+  const checkedActivity = bossSessionActive ? participantActivitiesForDate(emp.id, ds).find(act => workScheduleChecksMap[`${emp.id}_${ds}_${act.id}`] === true) : null;
   const gridActivityAbbreviation = primaryActivity?.abbreviation ? primaryActivity.abbreviation.slice(0, 4) : '';
   const activeWorkCode = primaryActivity?.workCode || null;
   let cellText = '', cellStyleStr = '';
@@ -4494,45 +4535,61 @@ function _showPicker(event, empId, dates) {
   document.getElementById('pk-head').innerHTML = `<b>${esc(emp?.name || '')}</b>${dateLabel}`;
 
   const acts = activities.filter(act => actParticipantIds(act).includes(empId) && pickerDates.some(date => date >= act.startDate && date <= act.endDate));
-  document.getElementById('pk-status-section').style.display = 'flex';
   const entry = getEntryObj(`${empId}_${pickerDate}`);
-  const btns = document.getElementById('pk-status-btns');
-  btns.innerHTML = statuses.length
-    ? statuses.map(s => `<button class="pk-btn${entry?.status === s.key ? ' pk-sel' : ''}" title="${esc(s.label)}" style="${statusStyle(s.color)};border:1px solid ${s.color}50" onclick="pickStatusById(${s.id})"><span class="pk-initial">${esc(s.abbr)}</span><span class="pk-status-label">${esc(s.label)}</span></button>`).join('')
-    : '<div style="padding:4px 6px;font-size:11.5px;color:var(--muted)">No daily statuses configured.</div>';
-  document.getElementById('pk-duration-section').style.display = 'none';
-  document.getElementById('pk-time').value = (entry?.durationType === 'time' && entry.time) ? entry.time : '';
-  const cellNotes = pickerDates.map(date => cellNotesMap[`${empId}_${date}`] || '');
-  const sharedCellNote = cellNotes.length && cellNotes.every(note => note === cellNotes[0]) ? cellNotes[0] : '';
-  document.getElementById('pk-note-section').innerHTML = `<div class="pk-sep"></div><div class="pk-label">Cell note</div><div class="pk-shift-box"><div class="pk-field"><span class="pk-field-label">Note${pickerDates.length > 1 ? ' for selected dates' : ''}</span><textarea class="pk-input" id="pk-cell-note" maxlength="240" rows="2" placeholder="Meeting, absence reason, or other context">${esc(sharedCellNote)}</textarea></div><div class="pk-save-row"><button class="pk-clear" ${cellNotes.some(Boolean) ? '' : 'disabled'} onclick="removeCellNote()">Remove note</button><button class="btn btn-sm btn-primary" onclick="saveCellNote()">Save note</button></div></div>`;
-  const overtimeEntries = pickerDates.map(date => overtimeMap[`${empId}_${date}`]).filter(Boolean);
-  const sharedOvertimeHours = overtimeEntries.length === pickerDates.length && overtimeEntries.every(item => item.hours === overtimeEntries[0].hours)
-    ? overtimeEntries[0].hours
-    : '';
-  const sharedOvertimeNote = overtimeEntries.length === pickerDates.length && overtimeEntries.every(item => item.note === overtimeEntries[0].note)
-    ? overtimeEntries[0].note
-    : '';
-  document.getElementById('pk-overtime-section').innerHTML = `
-    <div class="pk-sep"></div>
-    <div class="pk-label">Additional work</div>
-    <div class="pk-shift-box">
-      <div class="pk-shift-title"><span class="pk-color-dot" style="background:#c2410c"></span><span>Overtime (OT)</span></div>
-      <div class="pk-field"><span class="pk-field-label">Hours${pickerDates.length > 1 ? ' per selected day' : ''}</span><input class="pk-input" id="pk-overtime-hours" type="text" inputmode="decimal" placeholder="e.g. 2.5" value="${esc(sharedOvertimeHours)}"></div>
-      <div class="pk-field"><span class="pk-field-label">Note (optional)</span><input class="pk-input" id="pk-overtime-note" type="text" maxlength="120" placeholder="Reason or context" value="${esc(sharedOvertimeNote)}"></div>
-      <div class="pk-save-row"><button class="pk-clear" ${overtimeEntries.length ? '' : 'disabled'} onclick="removeOvertime()">Remove OT</button><button class="btn btn-sm btn-primary" onclick="saveOvertime()">Save OT</button></div>
-    </div>`;
-  const hasCellActivity = activities.some(act => actParticipantIds(act).includes(empId) && pickerDate >= act.startDate && pickerDate <= act.endDate && (() => { const assignment = activityAssignment(`${empId}_${pickerDate}_${act.id}`); return assignment.assigned === true && !assignment.excluded; })());
-  document.getElementById('pk-clear-btn').style.display = (entry || hasCellActivity || overtimeEntries.length || cellNotes.some(Boolean)) ? 'block' : 'none';
-  document.getElementById('pk-clear-label').textContent = pickerDates.length > 1 ? 'Clear all selected cells' : 'Clear cell';
-  document.getElementById('pk-add-activity-btn').style.display = pickerDates.length > 1 ? 'flex' : 'none';
+  if (bossSessionActive) {
+    document.getElementById('pk-status-section').style.display = 'none';
+    document.getElementById('pk-duration-section').style.display = 'none';
+    document.getElementById('pk-note-section').innerHTML = '';
+    document.getElementById('pk-overtime-section').innerHTML = '';
+    document.getElementById('pk-clear-btn').style.display = 'none';
+    document.getElementById('pk-add-activity-btn').style.display = 'none';
+  } else {
+    document.getElementById('pk-status-section').style.display = 'flex';
+    const btns = document.getElementById('pk-status-btns');
+    btns.innerHTML = statuses.length
+      ? statuses.map(s => `<button class="pk-btn${entry?.status === s.key ? ' pk-sel' : ''}" title="${esc(s.label)}" style="${statusStyle(s.color)};border:1px solid ${s.color}50" onclick="pickStatusById(${s.id})"><span class="pk-initial">${esc(s.abbr)}</span><span class="pk-status-label">${esc(s.label)}</span></button>`).join('')
+      : '<div style="padding:4px 6px;font-size:11.5px;color:var(--muted)">No daily statuses configured.</div>';
+    document.getElementById('pk-duration-section').style.display = 'none';
+    document.getElementById('pk-time').value = (entry?.durationType === 'time' && entry.time) ? entry.time : '';
+    const cellNotes = pickerDates.map(date => cellNotesMap[`${empId}_${date}`] || '');
+    const sharedCellNote = cellNotes.length && cellNotes.every(note => note === cellNotes[0]) ? cellNotes[0] : '';
+    document.getElementById('pk-note-section').innerHTML = `<div class="pk-sep"></div><div class="pk-label">Cell note</div><div class="pk-shift-box"><div class="pk-field"><span class="pk-field-label">Note${pickerDates.length > 1 ? ' for selected dates' : ''}</span><textarea class="pk-input" id="pk-cell-note" maxlength="240" rows="2" placeholder="Meeting, absence reason, or other context">${esc(sharedCellNote)}</textarea></div><div class="pk-save-row"><button class="pk-clear" ${cellNotes.some(Boolean) ? '' : 'disabled'} onclick="removeCellNote()">Remove note</button><button class="btn btn-sm btn-primary" onclick="saveCellNote()">Save note</button></div></div>`;
+    const overtimeEntries = pickerDates.map(date => overtimeMap[`${empId}_${date}`]).filter(Boolean);
+    const sharedOvertimeHours = overtimeEntries.length === pickerDates.length && overtimeEntries.every(item => item.hours === overtimeEntries[0].hours)
+      ? overtimeEntries[0].hours
+      : '';
+    const sharedOvertimeNote = overtimeEntries.length === pickerDates.length && overtimeEntries.every(item => item.note === overtimeEntries[0].note)
+      ? overtimeEntries[0].note
+      : '';
+    document.getElementById('pk-overtime-section').innerHTML = `
+      <div class="pk-sep"></div>
+      <div class="pk-label">Additional work</div>
+      <div class="pk-shift-box">
+        <div class="pk-shift-title"><span class="pk-color-dot" style="background:#c2410c"></span><span>Overtime (OT)</span></div>
+        <div class="pk-field"><span class="pk-field-label">Hours${pickerDates.length > 1 ? ' per selected day' : ''}</span><input class="pk-input" id="pk-overtime-hours" type="text" inputmode="decimal" placeholder="e.g. 2.5" value="${esc(sharedOvertimeHours)}"></div>
+        <div class="pk-field"><span class="pk-field-label">Note (optional)</span><input class="pk-input" id="pk-overtime-note" type="text" maxlength="120" placeholder="Reason or context" value="${esc(sharedOvertimeNote)}"></div>
+        <div class="pk-save-row"><button class="pk-clear" ${overtimeEntries.length ? '' : 'disabled'} onclick="removeOvertime()">Remove OT</button><button class="btn btn-sm btn-primary" onclick="saveOvertime()">Save OT</button></div>
+      </div>`;
+    const hasCellActivity = activities.some(act => actParticipantIds(act).includes(empId) && pickerDate >= act.startDate && pickerDate <= act.endDate && (() => { const assignment = activityAssignment(`${empId}_${pickerDate}_${act.id}`); return assignment.assigned === true && !assignment.excluded; })());
+    document.getElementById('pk-clear-btn').style.display = (entry || hasCellActivity || overtimeEntries.length || cellNotes.some(Boolean)) ? 'block' : 'none';
+    document.getElementById('pk-clear-label').textContent = pickerDates.length > 1 ? 'Clear all selected cells' : 'Clear cell';
+    document.getElementById('pk-add-activity-btn').style.display = pickerDates.length > 1 ? 'flex' : 'none';
+  }
 
   const sect = document.getElementById('pk-shift-section');
-  if (acts.length) {
+  if (acts.length && bossSessionActive) {
+    sect.innerHTML = '<div class="pk-sep"></div><div class="pk-label">Work schedule check</div>' + acts.map(act => {
+      const checkedInWorkSystem = pickerDates.some(date => workScheduleChecksMap[`${empId}_${date}_${act.id}`] === true);
+      return `<div class="pk-shift-box">
+        <div class="pk-shift-title"><span class="act-dot" style="background:${act.color};width:9px;height:9px"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(act.name)}${act.abbreviation ? ` (${esc(act.abbreviation)})` : ''}</span></div>
+        <div class="pk-save-row"><button class="pk-chip${checkedInWorkSystem ? ' sel' : ''}" onclick="toggleWorkScheduleCheck(${empId},${act.id})">${checkedInWorkSystem ? '✓ Checked' : 'Mark checked'}</button></div>
+      </div>`;
+    }).join('');
+  } else if (acts.length) {
     sect.innerHTML = '<div class="pk-sep"></div><div class="pk-label">Activity assignment</div>' + acts.map(act => {
       const firstDate = pickerDates.find(date => date >= act.startDate && date <= act.endDate) || pickerDate;
       const assignmentKey = `${empId}_${firstDate}_${act.id}`;
       const assignment = activityAssignment(assignmentKey);
-      const checkedInWorkSystem = pickerDates.some(date => workScheduleChecksMap[`${empId}_${date}_${act.id}`] === true);
       const selectedCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
       const rawShift = assignment.shift || '';
       const selectedShift = !assignment.assigned || assignment.excluded
@@ -4558,7 +4615,6 @@ function _showPicker(event, empId, dates) {
           <button class="pk-chip${selectedShift === 'custom' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'custom')">Custom</button>
         </div><div id="pk-custom-shift-wrap-${act.id}" style="display:${selectedShift === 'custom' ? 'block' : 'none'}"><input class="pk-input" id="pk-custom-shift-${act.id}" type="text" placeholder="1500-2000" value="${esc(selectedShift === 'custom' ? assignment.shift : '')}" oninput="document.getElementById('pk-shifts-${act.id}').dataset.shift=this.value.trim()"><div class="form-hint">Expected format: HHMM-HHMM, for example 1500-2000.</div></div></div>
         <div class="pk-save-row">
-          ${bossSessionActive ? `<button class="pk-chip${checkedInWorkSystem ? ' sel' : ''}" onclick="toggleWorkScheduleCheck(${empId},${act.id})">${checkedInWorkSystem ? '✓ Checked' : 'Mark checked'}</button>` : ''}
           <button class="pk-clear" ${assignment.assigned && !assignment.excluded ? '' : 'disabled'} onclick="clearActivityAssignment(${empId},${act.id})">${assignment.assigned && !assignment.excluded ? `Remove from ${esc(act.abbreviation || act.name)}` : 'Not assigned'}</button>
           <button class="btn btn-sm btn-primary" onclick="saveActivityAssignment(${empId},${act.id})">Set</button>
         </div>
@@ -6473,6 +6529,12 @@ function staffingLoadForDates(dateStrings) {
     : (total.extraHours + total.overtimeHours > 0 ? Infinity : 0);
   return total;
 }
+function staffingActivityCountForDates(dateStrings) {
+  return activities.filter(activity => {
+    if (activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return false;
+    return dateStrings.some(date => date >= activity.startDate && date <= activity.endDate);
+  }).length;
+}
 function renderTeamStaffingChart(dateStrings) {
   if (!dateStrings.length || !employees.length) return '<div class="empty-note" style="padding:24px">No staffing data for this interval.</div>';
   const bucketSize = dateStrings.length > 93 ? 'month' : (dateStrings.length > 45 ? 'week' : 'day');
@@ -6484,13 +6546,30 @@ function renderTeamStaffingChart(dateStrings) {
     bucket.dates.push(date);
   }
   const points = buckets
-    .map(bucket => ({ ...bucket, load: staffingLoadForDates(bucket.dates) }))
+    .map(bucket => ({ ...bucket, load: staffingLoadForDates(bucket.dates), activityCount: staffingActivityCountForDates(bucket.dates) }))
     .filter(point => point.load.capacityHours > 0 || point.load.extraHours > 0 || point.load.overtimeHours > 0);
   if (!points.length) return '<div class="empty-note" style="padding:24px">No working days with staffing data for this interval.</div>';
   const width = 760, height = 210, left = 42, right = 18, top = 18, bottom = 34;
-  const maxValue = Math.max(120, ...points.map(point => Number.isFinite(point.load.percentage) ? point.load.percentage : 140)) + 10;
-  const x = index => left + (points.length === 1 ? (width - left - right) / 2 : index * (width - left - right) / (points.length - 1));
-  const y = value => top + (maxValue - Math.min(maxValue, Math.max(0, value))) * (height - top - bottom) / maxValue;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const highestLoad = Math.max(100, ...points.map(point => Number.isFinite(point.load.percentage) ? point.load.percentage : 140));
+  const maxValue = Math.max(120, Math.ceil((highestLoad * 1.1) / 20) * 20);
+  const maxActivityCount = Math.max(1, ...points.map(point => point.activityCount));
+  const maxActivityBarHeight = plotHeight * .85;
+  const x = index => left + ((index + .5) * plotWidth / points.length);
+  const y = value => top + (maxValue - Math.min(maxValue, Math.max(0, value))) * plotHeight / maxValue;
+  const barWidth = Math.max(5, Math.min(28, (plotWidth / points.length) * .62));
+  const activityBars = points.map((point, index) => {
+    const barHeight = point.activityCount * maxActivityBarHeight / maxActivityCount;
+    return `<rect x="${x(index) - barWidth / 2}" y="${height - bottom - barHeight}" width="${barWidth}" height="${barHeight}" rx="2" fill="#14b8a6" opacity=".32"><title>${esc(point.key)}: ${point.activityCount} ${point.activityCount === 1 ? 'activity' : 'activities'}</title></rect>`;
+  }).join('');
+  const activityLabels = points.map((point, index) => {
+    if (!point.activityCount) return '';
+    const barHeight = point.activityCount * maxActivityBarHeight / maxActivityCount;
+    const barTop = height - bottom - barHeight;
+    const labelY = barHeight >= 20 ? barTop + 14 : barTop - 4;
+    return `<text x="${x(index)}" y="${labelY}" text-anchor="middle" font-size="10" font-weight="700" fill="#0f766e">${point.activityCount}</text>`;
+  }).join('');
   const line = points.map((point, index) => `${x(index)},${y(Number.isFinite(point.load.percentage) ? point.load.percentage : maxValue)}`).join(' ');
   const gridValue = value => `<line x1="${left}" x2="${width - right}" y1="${y(value)}" y2="${y(value)}" stroke="currentColor" opacity=".12"/><text x="${left - 7}" y="${y(value) + 4}" text-anchor="end" font-size="10" fill="currentColor" opacity=".65">${value}%</text>`;
   const labels = points.map((point, index) => {
@@ -6501,9 +6580,9 @@ function renderTeamStaffingChart(dateStrings) {
   const markers = points.map((point, index) => {
     const value = Number.isFinite(point.load.percentage) ? point.load.percentage : maxValue;
     const overtime = point.load.overtimeHours > 0;
-    return `<circle cx="${x(index)}" cy="${y(value)}" r="${overtime ? 4 : 3}" fill="${overtime ? '#c2410c' : 'var(--accent-blue)'}"><title>${esc(point.key)}: ${Number.isFinite(point.load.percentage) ? `${formatHoursNumber(point.load.percentage)}%` : 'Overloaded'}${overtime ? ` · ${formatHoursNumber(point.load.overtimeHours)}h overtime` : ''}</title></circle>`;
+    return `<circle cx="${x(index)}" cy="${y(value)}" r="${overtime ? 4 : 3}" fill="${overtime ? '#c2410c' : 'var(--accent-blue)'}"><title>${esc(point.key)}: ${Number.isFinite(point.load.percentage) ? `${formatHoursNumber(point.load.percentage)}% staffing load` : 'Overloaded'} · ${point.activityCount} ${point.activityCount === 1 ? 'activity' : 'activities'}${overtime ? ` · ${formatHoursNumber(point.load.overtimeHours)}h overtime` : ''}</title></circle>`;
   }).join('');
-  return `<div style="overflow:auto"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Team staffing load over selected interval" style="width:100%;min-width:520px;height:210px;color:var(--muted);display:block"><text x="${left}" y="11" font-size="10" fill="currentColor">Team staffing load</text>${gridValue(100)}${gridValue(appSettings.highMax)}<polyline points="${line}" fill="none" stroke="var(--accent-blue)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${markers}${labels}</svg></div>`;
+  return `<div style="overflow:auto"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Team staffing load and activity count over selected interval" style="width:100%;min-width:520px;height:210px;color:var(--muted);display:block"><text x="${left}" y="11" font-size="10" fill="currentColor">Staffing load</text><rect x="${left + 78}" y="3" width="9" height="9" rx="2" fill="#14b8a6" opacity=".55"/><text x="${left + 92}" y="11" font-size="10" fill="currentColor">Activities (max ${maxActivityCount})</text>${activityBars}${gridValue(100)}${gridValue(appSettings.highMax)}<polyline points="${line}" fill="none" stroke="var(--accent-blue)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${markers}${activityLabels}${labels}</svg></div>`;
 }
 function renderDashboard() {
   const today = todayStr();
