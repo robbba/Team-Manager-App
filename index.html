@@ -12,6 +12,7 @@
   --text: #1f2937; --muted: #4b5563; --primary: #334155; --primary-fg: #ffffff;
   --accent-blue: #3b82f6; --destructive: #dc2626;
   --sw: 256px; --radius: 8px;
+  --weekend-bg: #fff7ed; --weekend-text: #c2410c; --weekend-border: #fed7aa;
 }
 body.dark {
   --bg: #0f1318; --surface: #191e27; --muted-bg: #1a1f2a; --border: #232935;
@@ -19,6 +20,7 @@ body.dark {
   --bg: #0f1724; --surface: #141d2a; --muted-bg: #1f2937; --border: #334155;
   --text: #f1f5f9; --muted: #cbd5e1; --primary: #d2def1; --primary-fg: #0f1724;
   --accent-blue: #7fb0f7; --destructive: #ef4444;
+  --weekend-bg: #1a1f2a; --weekend-text: #fca5a5; --weekend-border: #78350f;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
@@ -198,6 +200,7 @@ tr:hover .act-cell-actions { opacity: 1; }
 .btn-danger { color: var(--destructive); border-color: color-mix(in srgb, var(--destructive) 40%, var(--border)); }
 .btn-danger:hover { background: color-mix(in srgb, var(--destructive) 10%, transparent); }
 .btn-icon { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.course-date-field { width: 100%; min-width: 0; margin-top: 4px; padding: 3px 4px; font-size: 10px; line-height: 1.2; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
 .card-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
 .card-title-muted { font-size: 13px; font-weight: 500; color: var(--muted); }
@@ -468,7 +471,7 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
 
 <!-- Course manager modal -->
 <div class="modal-bg" id="course-modal">
-  <div class="modal" style="width:480px">
+  <div class="modal" style="width:320px">
     <h3 id="course-modal-title">Add Course</h3>
     <p class="modal-desc">Add a course or qualification to track across the personnel status board.</p>
     <div class="form-row"><label>Course name *</label><input id="course-name" placeholder="First aid course"></div>
@@ -1354,8 +1357,11 @@ function addHolidaySetting() {
   document.getElementById('set-holiday-end').value = '';
   document.getElementById('set-holiday-name').value = '';
   renderHolidaySettings();
+  persistSettings();
+  saveState().catch(() => {});
+  if (canUseFileSystemSave()) saveData().catch(() => {});
 }
-function removeHolidaySetting(index) { appSettings.holidays.splice(index, 1); renderHolidaySettings(); }
+function removeHolidaySetting(index) { appSettings.holidays.splice(index, 1); renderHolidaySettings(); persistSettings(); saveState().catch(() => {}); if (canUseFileSystemSave()) saveData().catch(() => {}); }
 function openSpecialDaysModal() {
   appSettings.specialDays = normalizeSpecialDays(appSettings.specialDays);
   resetSpecialDayForm();
@@ -1435,7 +1441,7 @@ async function addSpecialDay() {
     const existing = specialDays[editingSpecialDay.kind]?.[editingSpecialDay.index];
     record.id = existing?.id || record.id;
     specialDays[editingSpecialDay.kind].splice(editingSpecialDay.index, 1);
-    if (kind === 'recurring') specialDays.recurring.push(record);
+    if (editingSpecialDay.kind === 'recurring') specialDays.recurring.push(record);
     else specialDays.oneOff.push(record);
   }
   recordUndo();
@@ -1539,6 +1545,8 @@ function saveHolidayFromModal() {
   persistSettings();
   closeModal('holiday-modal');
   renderPage();
+  saveState().catch(() => {});
+  if (canUseFileSystemSave()) saveData().catch(() => {});
 }
 function deleteHolidayFromModal() {
   if (editingHolidayIndex === null) return;
@@ -1547,6 +1555,8 @@ function deleteHolidayFromModal() {
   persistSettings();
   closeModal('holiday-modal');
   renderPage();
+  saveState().catch(() => {});
+  if (canUseFileSystemSave()) saveData().catch(() => {});
 }
 
 let importedHolidayEvents = [];
@@ -1723,7 +1733,7 @@ function setHolidayImportSelection(mode) {
   else importedHolidayEvents.forEach(item => item.selected = false);
   renderHolidayImportModal();
 }
-function confirmHolidayImport() {
+async function confirmHolidayImport() {
   if (!importedHolidayEvents.length) return;
   recordUndo();
   const selected = importedHolidayEvents.filter(item => item.selected);
@@ -1746,6 +1756,8 @@ function confirmHolidayImport() {
   persistSettings();
   closeHolidayImportModal();
   renderPage();
+  await saveState();
+  if (canUseFileSystemSave()) await saveData();
 }
 async function saveSettings() {
   const name = document.getElementById('set-app-name').value.trim();
@@ -3724,7 +3736,7 @@ function planningHorizonStyle(date) {
 function planningHorizonHeaderStyle(date) {
   const horizonDate = planningHorizonDate();
   if (!horizonDate) return '';
-  if (date === horizonDate) return `${planningHorizonStyle(date)}color:var(--muted) !important;font-weight:800;`;
+  if (date === horizonDate) return `${planningHorizonStyle(date)}color:var(--muted) !important;`;
   return '';
 }
 function dateBeforeIso(isoDate) {
@@ -5456,16 +5468,16 @@ function openActivityReport(id) {
     <div style="margin-bottom:14px"><div style="background:var(--muted-bg);border:1px solid var(--border);border-radius:6px;padding:10px"><div><b>Cost Center:</b> ${esc(act.project || 'Not specified')}</div><div style="margin-top:4px"><b>Order:</b> ${esc(act.order || 'Not specified')}</div><div style="margin-top:4px"><b>Billing explanation:</b> ${esc(act.billing || 'No note')}</div></div><div class="muted text-sm" style="margin-top:7px">Period: ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)} · ${(act.participants || []).length} participant${(act.participants || []).length === 1 ? '' : 's'}</div></div>
     <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:620px">
       <thead><tr style="text-align:left;border-bottom:2px solid var(--border)">
-        <th style="padding:7px 8px;min-width:150px">Employee</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 8px;min-width:92px;background:${weekend ? '#fff7ed' : 'transparent'};color:${weekend ? '#c2410c' : 'inherit'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}
+        <th style="padding:7px 8px;min-width:150px">Employee</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 8px;min-width:92px;background:${weekend ? 'var(--weekend-bg)' : 'transparent'};color:${weekend ? 'var(--weekend-text)' : 'inherit'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}
       </tr></thead>
       <tbody>${participantGroups.length ? participantGroups.map(group => `<tr><td colspan="${dates.length + 1}" style="padding:7px 8px;background:${group.color}18;border-bottom:1px solid ${group.color}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${group.color};margin-right:5px"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${esc(emp.name)}</td>${dates.map(date => {
           const info = activityAssignmentInfo(act, emp.id, date);
           const label = info ? `${info.workCode.abbreviation} (${info.administrativeValue})` : '—';
           const deviation = dailyDeviationLabel(emp.id, date);
           const details = `${info ? `<div style="font-size:11px;margin-top:2px">${esc(info.physicalShift)}</div>` : ''}${deviation ? `<div style="font-size:10px;margin-top:3px;color:var(--destructive)">${esc(deviation)}</div>` : ''}`;
-          const weekendBackground = isWknd(new Date(`${date}T00:00:00`)) ? '#fff7ed' : 'transparent';
+          const weekendBackground = isWknd(new Date(`${date}T00:00:00`)) ? 'var(--weekend-bg)' : 'transparent';
           const cellBackground = info ? `${info.workCode.color}14` : weekendBackground;
-          return `<td style="padding:8px;background:${cellBackground};color:${info ? 'var(--text)' : 'var(--muted)'};border-left:${weekendBackground !== 'transparent' ? '1px solid #fed7aa' : '0'}"><strong>${esc(label)}</strong>${details}</td>`;
+          return `<td style="padding:8px;background:${cellBackground};color:${info ? 'var(--text)' : 'var(--muted)'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}"><strong>${esc(label)}</strong>${details}</td>`;
         }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${dates.length + 1}" class="empty-note" style="padding:24px;text-align:center">No participants assigned.</td></tr>`}</tbody>
     </table>`;
   document.getElementById('activity-report-modal').classList.add('open');
@@ -5524,7 +5536,7 @@ function printActivityReport() {
   const printWindow = window.open('', '_blank', 'width=1100,height=800');
   if (!printWindow) { alert('Please allow pop-ups to print the activity report.'); return; }
   printWindow.document.write(`<!doctype html><html><head><title>Work Schedule - ${esc(act.name)}</title><style>
-    @page{size:landscape;margin:8mm}*{box-sizing:border-box}body{font:9px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.info-box{background:#f5f5f5;border:1px solid #d8d8d8;border-radius:6px;padding:8px;margin-top:8px;display:flex;gap:20px}.period{color:#666;margin:7px 0 10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:5px 4px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:145px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:#fff7ed}.empty-note{text-align:center;padding:20px}.scheduled{color:#111}.section-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+    @page{size:landscape;margin:8mm}*{box-sizing:border-box}body{font:9px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.info-box{background:#f5f5f5;border:1px solid #d8d8d8;border-radius:6px;padding:8px;margin-top:8px;display:flex;gap:20px}.period{color:#666;margin:7px 0 10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:5px 4px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:145px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:var(--weekend-bg)}.empty-note{text-align:center;padding:20px}.scheduled{color:#111}.section-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
   </style></head><body>${sections.join('')}</body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
@@ -5627,11 +5639,11 @@ function renderTeamScheduleReport() {
     <div style="margin-bottom:14px"><div style="font-weight:600;font-size:14px">Team Work Schedule</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div></div>
     ${teamReportBillingSummary(reportActivities)}
     <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:${220 + dates.length * 92 + 150}px">
-      <thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="padding:7px 8px;min-width:210px;position:sticky;left:0;background:var(--surface);z-index:1">Employee / Activity</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 6px;min-width:92px;background:${weekend ? '#fff7ed' : 'var(--surface)'};color:${weekend ? '#c2410c' : 'inherit'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}<th style="padding:7px 8px;min-width:70px">Days</th><th style="padding:7px 8px;min-width:70px">Hours</th></tr></thead>
+      <thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="padding:7px 8px;min-width:210px;position:sticky;left:0;background:var(--surface);z-index:1">Employee / Activity</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 6px;min-width:92px;background:${weekend ? 'var(--weekend-bg)' : 'var(--surface)'};color:${weekend ? 'var(--weekend-text)' : 'inherit'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}<th style="padding:7px 8px;min-width:70px">Days</th><th style="padding:7px 8px;min-width:70px">Hours</th></tr></thead>
       <tbody>${entries.map(entry => {
         const totalHours = dates.reduce((sum, date) => sum + (teamReportEntryCellInfo(entry, date)?.hours || 0), 0);
         const totalDays = dates.reduce((sum, date) => sum + (teamReportEntryCellInfo(entry, date)?.days || 0), 0);
-        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 8px;position:sticky;left:0;background:var(--surface);z-index:1"><div style="font-weight:600">${esc(entry.emp.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${teamReportActivityLabels(entry.activities)}</div></td>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); const cellInfo = teamReportEntryCellInfo(entry, date); return `<td style="padding:7px 6px;vertical-align:top;background:${cellInfo ? `color-mix(in srgb, ${cellInfo.workCode.color} ${cellInfo.tint * 100}%, transparent)` : (weekend ? '#fff7ed' : 'transparent')};border-left:${weekend ? '1px solid #fed7aa' : '0'}">${cellInfo ? cellInfo.html : ''}</td>`; }).join('')}<td style="padding:7px 8px;white-space:nowrap;font-weight:600">${entry.activities.length ? totalDays.toFixed(2) : ''}</td><td style="padding:7px 8px;white-space:nowrap;font-weight:600">${entry.activities.length ? totalHours.toFixed(1) : ''}</td></tr>`;
+        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 8px;position:sticky;left:0;background:var(--surface);z-index:1"><div style="font-weight:600">${esc(entry.emp.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${teamReportActivityLabels(entry.activities)}</div></td>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); const cellInfo = teamReportEntryCellInfo(entry, date); return `<td style="padding:7px 6px;vertical-align:top;background:${cellInfo ? `color-mix(in srgb, ${cellInfo.workCode.color} ${cellInfo.tint * 100}%, transparent)` : (weekend ? 'var(--weekend-bg)' : 'transparent')};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}">${cellInfo ? cellInfo.html : ''}</td>`; }).join('')}<td style="padding:7px 8px;white-space:nowrap;font-weight:600">${entry.activities.length ? totalDays.toFixed(2) : ''}</td><td style="padding:7px 8px;white-space:nowrap;font-weight:600">${entry.activities.length ? totalHours.toFixed(1) : ''}</td></tr>`;
       }).join('')}</tbody>
     </table></div>`;
 }
@@ -5666,7 +5678,7 @@ function printTeamScheduleReport() {
   }
   const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the team schedule.'); return; }
-  printWindow.document.write(`<!doctype html><html><head><title>Team Work Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:170px}.date-column{width:auto}.total-column{width:38px;font-weight:600}.muted{color:#666;font-size:8px;margin-top:2px}.activity-name{margin-top:3px}.weekend{background:#fff7ed}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
+  printWindow.document.write(`<!doctype html><html><head><title>Team Work Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:170px}.date-column{width:auto}.total-column{width:38px;font-weight:600}.muted{color:#666;font-size:8px;margin-top:2px}.activity-name{margin-top:3px}.weekend{background:var(--weekend-bg)}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
 
@@ -5787,7 +5799,7 @@ function printActivityScheduleReport() {
   }
   const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the activity schedule.'); return; }
-  printWindow.document.write(`<!doctype html><html><head><title>Activity Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111;--destructive:#dc2626;--surface:#fff}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere;position:relative}.employee-column{width:170px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:#fff7ed}.act-cell-name{display:flex;flex-direction:column;gap:2px}.act-dot{display:inline-block;width:10px;height:10px;border-radius:50%}.act-lifecycle{padding:1px 4px;border-radius:4px;font-size:8px;font-weight:700;text-transform:uppercase}.act-lifecycle.planned{color:#92400e;background:#fef3c7;border:1px solid #f59e0b}.act-lifecycle.cancelled{color:#b91c1c;background:#fee2e2;border:1px solid #ef4444}.act-bar{position:absolute;top:4px;bottom:4px}.act-bar.cancelled-bar::after{content:'';position:absolute;left:0;right:0;top:50%;height:3px;background:var(--destructive);box-shadow:0 0 0 1px var(--surface);transform:translateY(-50%)}.grid-span-label{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:5}.grid-span-status.cancelled{color:#b91c1c;background:#fee2e2;border:1px solid #ef4444;font-size:9px;font-weight:800;padding:0 3px;border-radius:3px;margin-left:4px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
+  printWindow.document.write(`<!doctype html><html><head><title>Activity Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111;--destructive:#dc2626;--surface:#fff}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere;position:relative}.employee-column{width:170px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:var(--weekend-bg)}.act-cell-name{display:flex;flex-direction:column;gap:2px}.act-dot{display:inline-block;width:10px;height:10px;border-radius:50%}.act-lifecycle{padding:1px 4px;border-radius:4px;font-size:8px;font-weight:700;text-transform:uppercase}.act-lifecycle.planned{color:#92400e;background:#fef3c7;border:1px solid #f59e0b}.act-lifecycle.cancelled{color:#b91c1c;background:#fee2e2;border:1px solid #ef4444}.act-bar{position:absolute;top:4px;bottom:4px}.act-bar.cancelled-bar::after{content:'';position:absolute;left:0;right:0;top:50%;height:3px;background:var(--destructive);box-shadow:0 0 0 1px var(--surface);transform:translateY(-50%)}.grid-span-label{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:5}.grid-span-status.cancelled{color:#b91c1c;background:#fee2e2;border:1px solid #ef4444;font-size:9px;font-weight:800;padding:0 3px;border-radius:3px;margin-left:4px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
 
@@ -5834,6 +5846,13 @@ async function saveCourseStatus(courseId, employeeId, status, plannedDate) {
   else courseStatuses[key] = { status, plannedDate: plannedDate || '' };
   markUnsaved(); await saveState(); renderStatusBoard();
 }
+function enableTakenCourseDates() {
+  document.querySelectorAll('#content input[type="date"]').forEach(input => {
+    const status = input.previousElementSibling;
+    if (status?.matches('select') && status.value === 'taken') input.disabled = false;
+  });
+}
+new MutationObserver(enableTakenCourseDates).observe(document.getElementById('content'), { childList: true, subtree: true });
 let editingRequirementId = null;
 let editingRequirementEmployeeId = null;
 function requirementRecordFor(requirementId, employeeId, year = boardYear) {
@@ -5928,7 +5947,7 @@ function renderLegacyStatusBoard() {
     <div class="mb-6"><div class="page-title">Personnel Status Board</div><div class="page-sub">Track courses, planned training, and fitness tests for every employee.</div></div>
     <div class="flex items-center justify-between mb-4" style="gap:12px;flex-wrap:wrap"><div class="card-title" style="font-size:15px">Courses (${courses.length})</div><button class="btn btn-primary" onclick="openCourseModal()">Add course</button></div>
     <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:${boardWidth}px;font-size:12px">
-      <thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:10px 12px;min-width:240px">Course</th>${employeeList.map(employee => `<th style="padding:10px 12px;min-width:180px;vertical-align:top"><div>${esc(employee.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${esc(employee.department)}</div></th>`).join('')}</tr></thead>
+      <thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:10px 12px;min-width:160px">Course</th>${employeeList.map(employee => `<th style="padding:8px 7px;min-width:140px;vertical-align:top"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(employee.name)}</div><div class="muted" style="font-size:9px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(employee.department)}</div></th>`).join('')}</tr></thead>
       <tbody>${courseRows.length ? courseRows.map(course => `<tr style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px"><button class="btn btn-sm" onclick="openCourseModal(${course.id})" style="text-align:left;max-width:220px;white-space:normal">${esc(course.name)}${course.code ? `<span class="muted" style="display:block;font-size:10px;margin-top:2px">${esc(course.code)}</span>` : ''}</button></td>${employeeList.map(employee => { const record = courseStatusFor(course.id, employee.id); const compliance = courseComplianceMeta(record.status); return `<td style="padding:8px 12px;vertical-align:top"><div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:${compliance.color};font-size:10px;font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:${compliance.color};display:inline-block"></span>${compliance.label}</div><select class="plain-select" style="width:100%;font-size:11px" onchange="saveCourseStatus(${course.id},${employee.id},this.value,this.nextElementSibling.value)"><option value="not_relevant"${record.status === 'not_relevant' ? ' selected' : ''}>Not relevant</option><option value="mandatory"${record.status === 'mandatory' ? ' selected' : ''}>Mandatory, not planned</option><option value="planned"${record.status === 'planned' ? ' selected' : ''}>Planned</option><option value="taken"${record.status === 'taken' ? ' selected' : ''}>Taken</option></select><input type="date" value="${esc(record.plannedDate || '')}" ${record.status === 'planned' ? '' : 'disabled'} style="width:100%;margin-top:5px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--surface);color:var(--text)" onchange="saveCourseStatus(${course.id},${employee.id},this.previousElementSibling.value,this.value)" title="Planned date"></td>`; }).join('')}</tr>`).join('') : `<tr><td colspan="${employeeList.length + 1}" class="empty-note">No courses yet. Add a course to start tracking.</td></tr>`}</tbody>
     </table></div>
     <div class="card" style="margin-top:24px;padding:0;overflow:auto"><div style="padding:14px 12px 8px;font-weight:600">Fitness Tests</div><table style="width:100%;border-collapse:collapse;min-width:${180 + employeeList.length * 130}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:10px 12px;min-width:150px">Test</th>${employeeList.map(employee => `<th style="padding:10px 8px;min-width:125px;white-space:nowrap">${esc(employee.name)}</th>`).join('')}</tr></thead><tbody>${['condition', 'strength'].map(testType => `<tr style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px;font-weight:600">${testType === 'condition' ? 'Condition' : 'Strength'}</td>${employeeList.map(employee => { const record = fitnessFor(employee.id, testType); const label = record.required === false ? 'Not required' : (record.grade ? `Grade ${esc(record.grade)}` : 'Not entered'); const color = record.required === false ? 'var(--muted)' : (record.grade ? '#16a34a' : '#dc2626'); return `<td style="padding:8px;vertical-align:top"><button class="btn btn-sm" onclick="openFitnessModal(${employee.id},'${testType}')" style="width:100%;text-align:left;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="Click to edit date and grade">${label}</button></td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -5954,21 +5973,21 @@ function renderStatusBoard() {
     a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
   const courseRows = [...courses].sort((a, b) => a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
   const requirementColumns = [...requirements].sort((a, b) => a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
-  const courseBoardWidth = 260 + employeeList.length * 190;
+  const courseBoardWidth = 260 + employeeList.length * 150;
   const requirementBoardWidth = 230 + requirementColumns.length * 190;
   const courseBody = courseRows.length ? courseRows.map(course => `
     <tr style="border-bottom:1px solid var(--border)">
-      <td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px">
-        <button class="btn btn-sm" onclick="openCourseModal(${course.id})" style="text-align:left;max-width:220px;white-space:normal">${esc(course.name)}${course.code ? `<span class="muted" style="display:block;font-size:10px;margin-top:2px">${esc(course.code)}</span>` : ''}</button>
+      <td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:8px 10px">
+        <button class="btn btn-sm" onclick="openCourseModal(${course.id})" style="text-align:left;max-width:130px;white-space:normal;font-size:11px">${esc(course.name)}${course.code ? `<span class="muted" style="display:block;font-size:9px;margin-top:2px">${esc(course.code)}</span>` : ''}</button>
       </td>
       ${employeeList.map(employee => {
         const record = courseStatusFor(course.id, employee.id);
         const compliance = courseComplianceMeta(record.status);
-        return `<td style="padding:8px 12px;vertical-align:top"><div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:${compliance.color};font-size:10px;font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:${compliance.color};display:inline-block"></span>${compliance.label}</div><select class="plain-select" style="width:100%;font-size:11px" onchange="saveCourseStatus(${course.id},${employee.id},this.value,this.nextElementSibling.value)"><option value="not_relevant"${record.status === 'not_relevant' ? ' selected' : ''}>Not relevant</option><option value="mandatory"${record.status === 'mandatory' ? ' selected' : ''}>Mandatory, not planned</option><option value="planned"${record.status === 'planned' ? ' selected' : ''}>Planned</option><option value="taken"${record.status === 'taken' ? ' selected' : ''}>Taken</option></select><input type="date" value="${esc(record.plannedDate || '')}" ${record.status === 'planned' ? '' : 'disabled'} style="width:100%;margin-top:5px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--surface);color:var(--text)" onchange="saveCourseStatus(${course.id},${employee.id},this.previousElementSibling.value,this.value)" title="Planned date"></td>`;
+        return `<td style="padding:4px 5px;vertical-align:top"><div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;color:${compliance.color};font-size:9px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="width:7px;height:7px;border-radius:50%;background:${compliance.color};display:inline-block;flex:0 0 auto"></span>${compliance.label}</div><select class="plain-select" style="width:100%;font-size:10px" onchange="saveCourseStatus(${course.id},${employee.id},this.value,this.nextElementSibling.value)"><option value="not_relevant"${record.status === 'not_relevant' ? ' selected' : ''}>Not relevant</option><option value="mandatory"${record.status === 'mandatory' ? ' selected' : ''}>Mandatory, not planned</option><option value="planned"${record.status === 'planned' ? ' selected' : ''}>Planned</option><option value="taken"${record.status === 'taken' ? ' selected' : ''}>Taken</option></select><input class="course-date-field" type="date" value="${esc(record.plannedDate || '')}" ${record.status === 'planned' || record.status === 'taken' ? '' : 'disabled'} onchange="saveCourseStatus(${course.id},${employee.id},this.previousElementSibling.value,this.value)" title="Course date"></td>`;
       }).join('')}
     </tr>`).join('') : `<tr><td colspan="${employeeList.length + 1}" class="empty-note">No courses yet. Add a course to start tracking.</td></tr>`;
   const requirementBody = employeeList.length && requirementColumns.length
-    ? employeeList.map(employee => `<tr data-employee-id="${employee.id}" style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:10px 12px"><div style="font-weight:600">${esc(employee.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${esc(employee.department)}</div></td>${requirementColumns.map(requirement => `<td data-requirement-id="${requirement.id}" style="padding:8px;vertical-align:top">${annualRequirementCell(requirement, employee)}</td>`).join('')}</tr>`).join('')
+    ? employeeList.map(employee => `<tr data-employee-id="${employee.id}" style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:8px 10px"><div style="font-weight:600;font-size:11px">${esc(employee.name)}</div><div class="muted" style="font-size:9px;margin-top:2px">${esc(employee.department)}</div></td>${requirementColumns.map(requirement => `<td data-requirement-id="${requirement.id}" style="padding:5px 6px;vertical-align:top">${annualRequirementCell(requirement, employee)}</td>`).join('')}</tr>`).join('')
     : `<tr><td colspan="${requirementColumns.length + 1}" class="empty-note">${employeeList.length ? 'No annual requirements yet. Add one to start tracking.' : 'Add employees before tracking annual requirements.'}</td></tr>`;
 
   document.getElementById('content').innerHTML = `
@@ -5981,9 +6000,9 @@ function renderStatusBoard() {
       </div>
     </div>
     <div class="flex items-center justify-between mb-4" style="gap:12px;flex-wrap:wrap"><div class="card-title" style="font-size:15px">Courses (${courses.length})</div><button class="btn btn-primary" onclick="openCourseModal()">Add course</button></div>
-    <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:${courseBoardWidth}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:10px 12px;min-width:240px">Course</th>${employeeList.map(employee => `<th style="padding:10px 12px;min-width:180px;vertical-align:top"><div>${esc(employee.name)}</div><div class="muted" style="font-size:10px;margin-top:2px">${esc(employee.department)}</div></th>`).join('')}</tr></thead><tbody>${courseBody}</tbody></table></div>
+    <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:${courseBoardWidth}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:8px 10px;min-width:140px">Course</th>${employeeList.map(employee => `<th style="padding:8px 10px;min-width:130px;vertical-align:top"><div style="font-size:11px">${esc(employee.name)}</div><div class="muted" style="font-size:9px;margin-top:2px">${esc(employee.department)}</div></th>`).join('')}</tr></thead><tbody>${courseBody}</tbody></table></div>
     <div class="flex items-center justify-between" style="gap:12px;flex-wrap:wrap;margin:24px 0 16px"><div><div class="card-title" style="font-size:15px">Annual Requirements (${requirements.length})</div><div class="muted text-sm" style="margin-top:3px">Records shown for ${boardYear}.</div></div><button class="btn btn-primary" onclick="openRequirementDefinitionModal()">Add requirement</button></div>
-    <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:${requirementBoardWidth}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:10px 12px;min-width:210px">Employee</th>${requirementColumns.map(requirement => `<th data-requirement-id="${requirement.id}" style="padding:8px;min-width:180px;vertical-align:top"><button class="btn btn-sm" onclick="openRequirementDefinitionModal(${requirement.id})" style="width:100%;height:auto;text-align:left;white-space:normal">${esc(requirement.name)}</button></th>`).join('')}</tr></thead><tbody>${requirementBody}</tbody></table></div>`;
+    <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:${requirementBoardWidth}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:8px 10px;min-width:140px">Employee</th>${requirementColumns.map(requirement => `<th data-requirement-id="${requirement.id}" style="padding:6px 8px;min-width:150px;vertical-align:top"><button class="btn btn-sm" onclick="openRequirementDefinitionModal(${requirement.id})" style="width:100%;height:auto;text-align:left;white-space:normal;font-size:11px">${esc(requirement.name)}</button></th>`).join('')}</tr></thead><tbody>${requirementBody}</tbody></table></div>`;
 }
 
 // ═══ PERSONNEL ═══════════════════════════════════════════════════════════════
@@ -6590,8 +6609,10 @@ function renderDashboard() {
   const counts = {};
   statuses.forEach(s => { counts[s.key] = 0; });
   let availableToday = 0;
+  let availablePartialHours = 0;
   let oooToday = 0;
   let absentToday = 0;
+  let absentPartialHours = 0;
   const unavailableTodayPeople = [];
   for (const emp of employees) {
     const entry = getEntryObj(`${emp.id}_${today}`);
@@ -6599,19 +6620,31 @@ function renderDashboard() {
     const status = entry ? siFor(entry.status) : null;
     const unavailableActivity = unavailableActivityFor(emp.id, today);
     const statusUnavailable = status && (status.isAbsence || status.isOutOfOffice);
+    const isPartial = entry?.durationType === 'time';
+    const partialHours = isPartial && entry?.time ? (timeRangeHours(entry.time) ?? 0) : 0;
+    const coreHours = appSettings.coreHoursPerDay || 7.5;
+    const availableHours = isPartial ? Math.max(0, coreHours - partialHours) : (statusUnavailable ? 0 : coreHours);
     if (!statusUnavailable && !unavailableActivity) {
-      availableToday++;
+      availableToday += isPartial ? 0 : 1;
+      availablePartialHours += isPartial ? availableHours : 0;
     }
     if (statusUnavailable) {
-      unavailableTodayPeople.push({ name: emp.name, status: status.label });
+      unavailableTodayPeople.push({ name: emp.name, status: isPartial ? `${status.label} (${partialHours}h)` : status.label });
     } else if (unavailableActivity) {
       const assignment = activityAssignment(`${emp.id}_${today}_${unavailableActivity.id}`);
       const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
       unavailableTodayPeople.push({ name: emp.name, status: `${workCode?.name || 'Activity'} · ${unavailableActivity.name}` });
     }
     if ((status && status.isOutOfOffice) || (!statusUnavailable && unavailableActivity)) oooToday++;
-    if (status && status.isAbsence) absentToday++;
+    if (status && status.isAbsence) {
+      absentToday += isPartial ? 0 : 1;
+      absentPartialHours += isPartial ? partialHours : 0;
+    }
   }
+  const totalAvailableHours = availableToday * (appSettings.coreHoursPerDay || 7.5) + availablePartialHours;
+  const totalCoreHours = employees.length * (appSettings.coreHoursPerDay || 7.5);
+  const availableDisplay = totalCoreHours > 0 ? (totalAvailableHours / totalCoreHours * 100).toFixed(0) + '%' : '0%';
+  const availableDetail = availablePartialHours > 0 ? ` (${availableToday} full + ${availablePartialHours.toFixed(1)}h partial)` : ` (${availableToday})`;
   const unavailableTodayInline = unavailableTodayPeople.length
     ? `Unavailable today: ${unavailableTodayPeople.map(item => `${item.name} (${item.status})`).join(', ')}`
     : 'Everyone is available today.';
@@ -6619,26 +6652,34 @@ function renderDashboard() {
   const trendDays = [];
   for (let i = 0; i < 14; i++) { const d = new Date(); d.setDate(d.getDate() + i); trendDays.push(d); }
   const totalEmployees = employees.length || 1;
+  const coreHours = appSettings.coreHoursPerDay || 7.5;
   const trendData = trendDays.map(d => {
     const ds = fmt(d), dayCounts = {};
     let assignmentUnavailable = 0;
+    let partialAbsenceHours = 0;
     statuses.forEach(s => { dayCounts[s.key] = 0; });
     for (const emp of employees) {
       const entry = getEntryObj(`${emp.id}_${ds}`);
       if (entry && dayCounts[entry.status] !== undefined) dayCounts[entry.status]++;
       const status = entry ? siFor(entry.status) : null;
       if ((!status || (!status.isAbsence && !status.isOutOfOffice)) && unavailableActivityFor(emp.id, ds)) assignmentUnavailable++;
+      if (entry?.durationType === 'time' && status?.isAbsence) {
+        partialAbsenceHours += timeRangeHours(entry.time) ?? 0;
+      }
     }
     const unavailableStatusKeys = statuses.filter(s => s.isAbsence || s.isOutOfOffice).map(s => s.key);
     const unavailable = unavailableStatusKeys.reduce((sum, key) => sum + (dayCounts[key] || 0), 0) + assignmentUnavailable;
     const available = Math.max(0, totalEmployees - unavailable);
+    const availableHours = available * coreHours + Math.max(0, (totalEmployees * coreHours - partialAbsenceHours - unavailable * coreHours));
     return {
       date: d,
       ds,
       counts: dayCounts,
       total: Object.values(dayCounts).reduce((a, b) => a + b, 0),
       available,
+      availableHours,
       unavailable,
+      partialAbsenceHours,
       assignmentUnavailable,
     };
   });
@@ -6672,7 +6713,10 @@ function renderDashboard() {
   const upcomingInlineName = item => {
     const st = siFor(item.entry.status);
     const label = st ? st.label : friendlyStatusLabel(item.entry.status);
-    return `${esc(item.emp.name)} <span class="muted" style="font-size:12px">(${esc(label)})</span>`;
+    const isPartial = item.entry?.durationType === 'time';
+    const hours = isPartial && item.entry?.time ? timeRangeHours(item.entry.time) : 0;
+    const detail = isPartial && hours ? `${label} (${hours.toFixed(1)}h)` : label;
+    return `${esc(item.emp.name)} <span class="muted" style="font-size:12px">(${esc(detail)})</span>`;
   };
 
   const wlRange = workloadRange();
@@ -6793,12 +6837,14 @@ function renderDashboard() {
               if (c > 0) segs.push(`<div class="trend-seg" style="height:${(c / trendMax) * 100}%;background:${s.color}"></div>`);
             });
             if (t.assignmentUnavailable > 0) segs.push(`<div class="trend-seg" style="height:${(t.assignmentUnavailable / trendMax) * 100}%;background:#0ea5e9"></div>`);
+            const availableHours = t.availableHours || (t.available * coreHours);
             const tipLines = [
-              `<div><span class="dot" style="width:7px;height:7px;border-radius:50%;display:inline-block;background:#22c55e;margin-right:4px"></span>Available: <b>${t.available} / ${totalEmployees}</b></div>`
+              `<div><span class="dot" style="width:7px;height:7px;border-radius:50%;display:inline-block;background:#22c55e;margin-right:4px"></span>Available: <b>${t.available} (${availableHours.toFixed(1)}h)</b></div>`
             ];
             unavailableStatuses.filter(s => (t.counts[s.key] || 0) > 0).forEach(s => {
               tipLines.push(`<div><span class="dot" style="width:7px;height:7px;border-radius:50%;display:inline-block;background:${s.color};margin-right:4px"></span>${esc(s.label)}: <b>${t.counts[s.key]}</b></div>`);
             });
+            if (t.partialAbsenceHours > 0) tipLines.push(`<div><span class="dot" style="width:7px;height:7px;border-radius:50%;display:inline-block;background:#f59e0b;margin-right:4px"></span>Partial absence: <b>${t.partialAbsenceHours.toFixed(1)}h</b></div>`);
             if (t.assignmentUnavailable > 0) tipLines.push(`<div><span class="dot" style="width:7px;height:7px;border-radius:50%;display:inline-block;background:#0ea5e9;margin-right:4px"></span>Assigned elsewhere: <b>${t.assignmentUnavailable}</b></div>`);
             const tip = tipLines.join('') || '<div class="muted">No status entries</div>';
             const isTodayCol = t.ds === today;
