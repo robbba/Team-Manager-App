@@ -201,6 +201,18 @@ tr:hover .act-cell-actions { opacity: 1; }
 .btn-danger:hover { background: color-mix(in srgb, var(--destructive) 10%, transparent); }
 .btn-icon { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 .course-date-field { width: 100%; min-width: 0; margin-top: 4px; padding: 3px 4px; font-size: 10px; line-height: 1.2; }
+.course-date-btn { width: 100%; min-width: 0; margin-top: 4px; padding: 4px 6px; font-size: 10px; line-height: 1.2; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text); cursor: pointer; text-align: left; font-family: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.course-date-btn:hover { background: var(--muted-bg); }
+.course-date-btn.empty { color: var(--muted); font-style: italic; }
+.course-cell { display: block; width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; text-align: left; font-family: inherit; transition: background .12s, border-color .12s; }
+.course-cell:hover { background: var(--muted-bg); border-color: var(--accent, var(--accent-blue)); }
+.course-cell-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.course-cell-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.course-cell-status { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.security-label { display: inline-flex; align-items: center; justify-content: center; padding: 4px 12px; border-radius: 4px; border: 1.5px solid currentColor; background: var(--security-label-color, #16a34a); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; line-height: 1; box-shadow: 0 1px 2px rgba(0,0,0,.08); user-select: none; }
+.security-label-inline { margin-left: auto; }
+.security-label-floating { position: fixed; top: 8px; right: 8px; z-index: 1500; }
+@media print { .security-label-floating { position: fixed; top: 8px; right: 8px; } .security-label { box-shadow: none; } }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
 .card-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
 .card-title-muted { font-size: 13px; font-weight: 500; color: var(--muted); }
@@ -512,6 +524,22 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
   </div>
 </div>
 
+<!-- Course status edit modal (used by Status Board cells) -->
+<div class="modal-bg" id="course-cell-modal">
+  <div class="modal" style="width:380px">
+    <h3 id="course-cell-modal-title">Course status</h3>
+    <p class="modal-desc" id="course-cell-modal-desc"></p>
+    <div class="form-row"><label>Status</label><select id="course-cell-status" class="plain-select" style="width:100%"><option value="not_relevant">Not relevant</option><option value="mandatory">Mandatory, not planned</option><option value="planned">Planned</option><option value="taken">Taken</option></select></div>
+    <div class="form-row"><label>Date</label><input id="course-cell-date" type="date"></div>
+    <div class="form-hint" id="course-cell-date-hint">Date is used for Planned and Taken statuses.</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="course-cell-clear-btn" style="margin-right:auto" onclick="clearCourseCellFromModal()">Clear</button>
+      <button class="btn" onclick="closeModal('course-cell-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCourseCellFromModal()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Activity modal -->
 <div class="modal-bg" id="act-modal">
   <div class="modal" style="width:520px">
@@ -737,6 +765,15 @@ a.tel-link:hover { color: var(--accent-blue); border-color: var(--accent-blue); 
       <div class="form-hint">Controls automatic horizontal repositioning after changing the grid view, section visibility, or activity filter.</div>
     </div>
     <div class="form-row">
+      <label>Security classification</label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-security-label-enabled" type="checkbox"> Show security label</label>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:8px">
+        <div><label class="muted text-sm">Label text</label><input id="set-security-label-text" type="text" maxlength="32" placeholder="BEGRENSET"></div>
+        <div><label class="muted text-sm">Color</label><input id="set-security-label-color" type="color" style="width:48px;height:34px;padding:2px"></div>
+      </div>
+      <div class="form-hint">Displays a classification banner (e.g. BEGRENSET) on the Schedule view, Activity Schedule report, Status Board, and on every printed page. Visual only — does not restrict access.</div>
+    </div>
+    <div class="form-row">
       <label>Activity discussion deadline</label>
       <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
         <div><label class="muted text-sm">Days from today</label><input id="set-planning-horizon-days" type="number" min="0" max="365" step="1"></div>
@@ -858,7 +895,7 @@ function svgIcon(name, title = '') {
   return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="${title ? 'false' : 'true'}"${title ? ` role="img"><title>${esc(title)}</title>` : '>'}${paths[name] || ''}</svg>`;
 }
 function shiftChangeIcon(title = 'Night shift change') {
-  return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="${title ? 'false' : 'true'}"${title ? ` role="img"><title>${esc(title)}</title>` : '>'}<circle cx="12" cy="12" r="7"/><path d="M12 8v4l3 2"/><path d="M17 6a7 7 0 0 1 1.5 10.5"/><path d="M16 6h3v3"/></svg>`;
+  return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="${title ? 'false' : 'true'}"${title ? ` role="img"><title>${esc(title)}</title>` : '>'}<path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5z"/></svg>`;
 }
 
 // ═══ SAFE STORAGE ════════════════════════════════════════════════════════════
@@ -914,6 +951,7 @@ let appSettings = {
   workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })),
   shiftTemplates: DEFAULT_SHIFT_TEMPLATES.map(shift => ({ ...shift })),
   summaryColumns: null,
+  securityLabel: { enabled: false, text: 'BEGRENSET', color: '#16a34a' },
 };
 
 function normalizeHexColor(color, fallback = '#3b82f6') {
@@ -978,12 +1016,28 @@ function loadSettings() {
       appSettings.departmentColors = parsed.departmentColors && typeof parsed.departmentColors === 'object'
         ? Object.fromEntries(Object.entries(parsed.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
         : {};
+      appSettings.securityLabel = normalizeSecurityLabel(parsed.securityLabel);
       return;
     }
     appSettings.darkMode = lsGet(LEGACY_THEME_KEY) === 'dark';
   } catch (err) { }
 }
 function persistSettings() { return lsSet(SETTINGS_KEY, JSON.stringify(appSettings)); }
+function normalizeSecurityLabel(value) {
+  const fallback = { enabled: false, text: 'BEGRENSET', color: '#16a34a' };
+  if (!value || typeof value !== 'object') return { ...fallback };
+  return {
+    enabled: value.enabled === true,
+    text: typeof value.text === 'string' && value.text.trim() ? value.text.trim().slice(0, 32) : fallback.text,
+    color: normalizeHexColor(value.color, fallback.color),
+  };
+}
+function renderSecurityLabel(extraClass = '') {
+  const cfg = normalizeSecurityLabel(appSettings.securityLabel);
+  if (!cfg.enabled) return '';
+  const cls = extraClass ? `security-label ${extraClass}` : 'security-label';
+  return `<span class="${cls}" style="--security-label-color:${esc(cfg.color)}" aria-label="Security classification ${esc(cfg.text)}">${esc(cfg.text)}</span>`;
+}
 function normalizeCoreWorkdayRange(value, fallback = '0730-1500') {
   const normalized = String(value || '').trim().replace(/\s+/g, '').replace('–', '-');
   const m = normalized.match(/^(\d{1,2}):?(\d{2})-(\d{1,2}):?(\d{2})$/);
@@ -1144,6 +1198,7 @@ function loadSettings() {
         : {};
       appSettings.activityTypes = normalizeActivityTypes(parsed.activityTypes);
       appSettings.workCodes = normalizeWorkCodes(parsed.workCodes);
+      appSettings.securityLabel = normalizeSecurityLabel(parsed.securityLabel);
       if (legacyRaw) {
         lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
         lsRemove(LEGACY_SETTINGS_KEY);
@@ -1279,6 +1334,10 @@ function openSettings() {
   document.getElementById('set-jump-to-today').checked = appSettings.jumpToTodayOnGridChange !== false;
   document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
   document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
+  const secLabel = normalizeSecurityLabel(appSettings.securityLabel);
+  document.getElementById('set-security-label-enabled').checked = secLabel.enabled === true;
+  document.getElementById('set-security-label-text').value = secLabel.text;
+  document.getElementById('set-security-label-color').value = secLabel.color;
   document.getElementById('set-admin-password').value = '';
   document.getElementById('boss-session-status').textContent = bossSessionActive ? 'Boss view is unlocked.' : 'Boss view is locked.';
   renderHolidaySettings();
@@ -1787,6 +1846,11 @@ async function saveSettings() {
   }
   appSettings.planningHorizonDays = planningHorizonDays;
   appSettings.planningHorizonColor = normalizeHexColor(document.getElementById('set-planning-horizon-color').value, '#ef4444');
+  appSettings.securityLabel = normalizeSecurityLabel({
+    enabled: document.getElementById('set-security-label-enabled').checked,
+    text: document.getElementById('set-security-label-text').value,
+    color: document.getElementById('set-security-label-color').value,
+  });
   const adminPassword = document.getElementById('set-admin-password').value;
   if (adminPassword) appSettings.adminPasswordHash = await hashAdminPassword(adminPassword);
   if (!persistSettings() || !lsSet(LOCAL_STATE_KEY, JSON.stringify(snapshotData()))) {
@@ -2724,6 +2788,7 @@ let summaryWeekValue = isoWeekStringFromDate(new Date());
 let workloadPeriod = 'year';
 let workloadAnchorDate = fmt(new Date());
 let boardYear = new Date().getFullYear();
+let boardFilters = { dept: '', status: 'all', search: '' };
 let summarySortKey = 'people', summarySortDir = 'asc';
 let summaryColumnsDraft = null;
 let empSearch = '', empFilterDept = '', empFilterCatId = null;
@@ -3792,6 +3857,7 @@ function renderGrid() {
             <span class="year-label">${gridYear}</span>
             <button class="btn btn-icon" onclick="changeGridYear(1)" aria-label="Next year">${svgIcon('chevronRight')}</button>
           </div>
+          ${renderSecurityLabel('security-label-inline')}
           ${hiddenEmployees.size ? `<button class="btn btn-sm" onclick="showAllEmployees()">Show all employees</button>` : ''}
 
           <!-- Holiday modal -->
@@ -4000,7 +4066,7 @@ function renderGridBody(days, today) {
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   if (showTimelineSections) {
     html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
-        <span class="flex items-center justify-between"><span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.holidays ? 'Expand holidays' : 'Collapse holidays'}" aria-label="${collapsedGridSections.holidays ? 'Expand holidays section' : 'Collapse holidays section'}" aria-expanded="${collapsedGridSections.holidays ? 'false' : 'true'}" onclick="toggleGridSection('holidays')">${svgIcon(collapsedGridSections.holidays ? 'chevronRight' : 'chevronDown')}</button>Holidays (${yearHolidays.length})</span>
+        <span class="flex items-center justify-between"><span class="flex items-center" style="gap:6px">Holidays (${yearHolidays.length})</span>
           <span class="flex items-center" style="gap:6px"><button type="button" class="filter-chip${showHolidays ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" onclick="showHolidays=!showHolidays;renderPage()">Show holidays</button><span class="icon-btn" style="visibility:hidden" aria-hidden="true">${svgIcon('report')}</span><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" aria-label="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
           </span>
         </span></td><td colspan="${days.length}"></td></tr>`;
@@ -5465,7 +5531,7 @@ function openActivityReport(id) {
 
   document.getElementById('activity-report-title').textContent = `Work Schedule: ${act.name}`;
   document.getElementById('activity-report-content').innerHTML = `
-    <div style="margin-bottom:14px"><div style="background:var(--muted-bg);border:1px solid var(--border);border-radius:6px;padding:10px"><div><b>Cost Center:</b> ${esc(act.project || 'Not specified')}</div><div style="margin-top:4px"><b>Order:</b> ${esc(act.order || 'Not specified')}</div><div style="margin-top:4px"><b>Billing explanation:</b> ${esc(act.billing || 'No note')}</div></div><div class="muted text-sm" style="margin-top:7px">Period: ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)} · ${(act.participants || []).length} participant${(act.participants || []).length === 1 ? '' : 's'}</div></div>
+    <div style="margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div style="flex:1;min-width:0"><div style="background:var(--muted-bg);border:1px solid var(--border);border-radius:6px;padding:10px"><div><b>Cost Center:</b> ${esc(act.project || 'Not specified')}</div><div style="margin-top:4px"><b>Order:</b> ${esc(act.order || 'Not specified')}</div><div style="margin-top:4px"><b>Billing explanation:</b> ${esc(act.billing || 'No note')}</div></div><div class="muted text-sm" style="margin-top:7px">Period: ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)} · ${(act.participants || []).length} participant${(act.participants || []).length === 1 ? '' : 's'}</div></div>${renderSecurityLabel()}</div>
     <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:620px">
       <thead><tr style="text-align:left;border-bottom:2px solid var(--border)">
         <th style="padding:7px 8px;min-width:150px">Employee</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 8px;min-width:92px;background:${weekend ? 'var(--weekend-bg)' : 'transparent'};color:${weekend ? 'var(--weekend-text)' : 'inherit'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}
@@ -5475,7 +5541,8 @@ function openActivityReport(id) {
           const label = info ? `${info.workCode.abbreviation} (${info.administrativeValue})` : '—';
           const deviation = dailyDeviationLabel(emp.id, date);
           const details = `${info ? `<div style="font-size:11px;margin-top:2px">${esc(info.physicalShift)}</div>` : ''}${deviation ? `<div style="font-size:10px;margin-top:3px;color:var(--destructive)">${esc(deviation)}</div>` : ''}`;
-          const weekendBackground = isWknd(new Date(`${date}T00:00:00`)) ? 'var(--weekend-bg)' : 'transparent';
+          const weekend = isWknd(new Date(`${date}T00:00:00`));
+          const weekendBackground = weekend ? 'var(--weekend-bg)' : 'transparent';
           const cellBackground = info ? `${info.workCode.color}14` : weekendBackground;
           return `<td style="padding:8px;background:${cellBackground};color:${info ? 'var(--text)' : 'var(--muted)'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}"><strong>${esc(label)}</strong>${details}</td>`;
         }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${dates.length + 1}" class="empty-note" style="padding:24px;text-align:center">No participants assigned.</td></tr>`}</tbody>
@@ -5636,7 +5703,7 @@ function renderTeamScheduleReport() {
   const entries = teamReportEntries(start, end);
   const reportActivities = teamReportActivities(entries);
   content.innerHTML = `
-    <div style="margin-bottom:14px"><div style="font-weight:600;font-size:14px">Team Work Schedule</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div></div>
+    <div style="margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div><div style="font-weight:600;font-size:14px">Team Work Schedule</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div></div>${renderSecurityLabel()}</div>
     ${teamReportBillingSummary(reportActivities)}
     <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:${220 + dates.length * 92 + 150}px">
       <thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="padding:7px 8px;min-width:210px;position:sticky;left:0;background:var(--surface);z-index:1">Employee / Activity</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 6px;min-width:92px;background:${weekend ? 'var(--weekend-bg)' : 'var(--surface)'};color:${weekend ? 'var(--weekend-text)' : 'inherit'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}<th style="padding:7px 8px;min-width:70px">Days</th><th style="padding:7px 8px;min-width:70px">Hours</th></tr></thead>
@@ -5654,11 +5721,13 @@ function printTeamScheduleReport() {
   const dates = teamReportDates(start, end);
   const entries = teamReportEntries(start, end);
   const reportActivities = teamReportActivities(entries);
+  const secCfg = normalizeSecurityLabel(appSettings.securityLabel);
+  const secLabelHtml = secCfg.enabled ? `<span class="security-label" style="--security-label-color:${esc(secCfg.color)}">${esc(secCfg.text)}</span>` : '';
   const sections = [];
   for (let i = 0; i < dates.length; i += 14) {
     const chunkDates = dates.slice(i, i + 14);
     sections.push(`<section class="report-section">
-      <h1>Team Work Schedule</h1>
+      <div class="report-header"><h1>Team Work Schedule</h1>${secLabelHtml}</div>
       <div class="period">Period: ${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])}</div>
       ${i === 0 ? teamReportBillingSummary(reportActivities) : ''}
       <table><thead><tr><th class="employee-column">Employee / Activity</th>${chunkDates.map(date => {
@@ -5678,7 +5747,7 @@ function printTeamScheduleReport() {
   }
   const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the team schedule.'); return; }
-  printWindow.document.write(`<!doctype html><html><head><title>Team Work Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:170px}.date-column{width:auto}.total-column{width:38px;font-weight:600}.muted{color:#666;font-size:8px;margin-top:2px}.activity-name{margin-top:3px}.weekend{background:var(--weekend-bg)}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
+  printWindow.document.write(`<!doctype html><html><head><title>Team Work Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:5px}.report-header h1{font-size:18px;margin:0}.security-label{display:inline-flex;align-items:center;justify-content:center;padding:3px 10px;border-radius:4px;border:1.5px solid currentColor;background:var(--security-label-color,#16a34a);color:#fff;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1;-webkit-print-color-adjust:exact;print-color-adjust:exact}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:170px}.date-column{width:auto}.total-column{width:38px;font-weight:600}.muted{color:#666;font-size:8px;margin-top:2px}.activity-name{margin-top:3px}.weekend{background:var(--weekend-bg)}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
 
@@ -5775,8 +5844,9 @@ function renderActivityScheduleReport() {
   const statuses = activityScheduleStatuses();
   const dates = activityScheduleDates(start, end);
   const filtered = activityScheduleFilteredActivities(start, end, statuses);
+  const secLabel = renderSecurityLabel();
   content.innerHTML = `
-    <div style="margin-bottom:14px"><div style="font-weight:600;font-size:14px">Activity Schedule</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div></div>
+    <div style="margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div><div style="font-weight:600;font-size:14px">Activity Schedule</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div></div>${secLabel}</div>
     ${!filtered.length ? '<div class="empty-note" style="padding:24px;text-align:center">No activities match the selected period and filters.</div>' : `<div style="overflow:auto"><table class="gtable"><thead><tr><th class="gempl sticky-left" rowspan="3" style="min-width:210px">Activity</th></tr>${activityScheduleDateHeaders(dates)}</thead><tbody>${filtered.map(act => activityScheduleBarRow(act, dates)).join('')}</tbody></table></div>`}
   `;
 }
@@ -5787,11 +5857,13 @@ function printActivityScheduleReport() {
   const statuses = activityScheduleStatuses();
   const dates = activityScheduleDates(start, end);
   const filtered = activityScheduleFilteredActivities(start, end, statuses);
+  const secCfg = normalizeSecurityLabel(appSettings.securityLabel);
+  const secLabelHtml = secCfg.enabled ? `<span class="security-label" style="--security-label-color:${esc(secCfg.color)}">${esc(secCfg.text)}</span>` : '';
   const sections = [];
   for (let i = 0; i < dates.length; i += 14) {
     const chunkDates = dates.slice(i, i + 14);
     sections.push(`<section class="report-section">
-      <h1>Activity Schedule</h1>
+      <div class="report-header"><h1>Activity Schedule</h1>${secLabelHtml}</div>
       <div class="period">Period: ${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])}</div>
       <table><thead><tr><th class="employee-column" rowspan="3">Activity</th></tr>${activityScheduleDateHeaders(chunkDates)}</thead>
       <tbody>${filtered.map(act => activityScheduleBarRow(act, chunkDates)).join('')}</tbody></table>
@@ -5799,7 +5871,7 @@ function printActivityScheduleReport() {
   }
   const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the activity schedule.'); return; }
-  printWindow.document.write(`<!doctype html><html><head><title>Activity Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111;--destructive:#dc2626;--surface:#fff}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere;position:relative}.employee-column{width:170px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:var(--weekend-bg)}.act-cell-name{display:flex;flex-direction:column;gap:2px}.act-dot{display:inline-block;width:10px;height:10px;border-radius:50%}.act-lifecycle{padding:1px 4px;border-radius:4px;font-size:8px;font-weight:700;text-transform:uppercase}.act-lifecycle.planned{color:#92400e;background:#fef3c7;border:1px solid #f59e0b}.act-lifecycle.cancelled{color:#b91c1c;background:#fee2e2;border:1px solid #ef4444}.act-bar{position:absolute;top:4px;bottom:4px}.act-bar.cancelled-bar::after{content:'';position:absolute;left:0;right:0;top:50%;height:3px;background:var(--destructive);box-shadow:0 0 0 1px var(--surface);transform:translateY(-50%)}.grid-span-label{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:5}.grid-span-status.cancelled{color:#b91c1c;background:#fee2e2;border:1px solid #ef4444;font-size:9px;font-weight:800;padding:0 3px;border-radius:3px;margin-left:4px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
+  printWindow.document.write(`<!doctype html><html><head><title>Activity Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111;--destructive:#dc2626;--surface:#fff}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:5px}.report-header h1{font-size:18px;margin:0}.security-label{display:inline-flex;align-items:center;justify-content:center;padding:3px 10px;border-radius:4px;border:1.5px solid currentColor;background:var(--security-label-color,#16a34a);color:#fff;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1;-webkit-print-color-adjust:exact;print-color-adjust:exact}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere;position:relative}.employee-column{width:170px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:var(--weekend-bg)}.act-cell-name{display:flex;flex-direction:column;gap:2px}.act-dot{display:inline-block;width:10px;height:10px;border-radius:50%}.act-lifecycle{padding:1px 4px;border-radius:4px;font-size:8px;font-weight:700;text-transform:uppercase}.act-lifecycle.planned{color:#92400e;background:#fef3c7;border:1px solid #f59e0b}.act-lifecycle.cancelled{color:#b91c1c;background:#fee2e2;border:1px solid #ef4444}.act-bar{position:absolute;top:4px;bottom:4px}.act-bar.cancelled-bar::after{content:'';position:absolute;left:0;right:0;top:50%;height:3px;background:var(--destructive);box-shadow:0 0 0 1px var(--surface);transform:translateY(-50%)}.grid-span-label{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:5}.grid-span-status.cancelled{color:#b91c1c;background:#fee2e2;border:1px solid #ef4444;font-size:9px;font-weight:800;padding:0 3px;border-radius:3px;margin-left:4px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
 
@@ -5846,13 +5918,34 @@ async function saveCourseStatus(courseId, employeeId, status, plannedDate) {
   else courseStatuses[key] = { status, plannedDate: plannedDate || '' };
   markUnsaved(); await saveState(); renderStatusBoard();
 }
-function enableTakenCourseDates() {
-  document.querySelectorAll('#content input[type="date"]').forEach(input => {
-    const status = input.previousElementSibling;
-    if (status?.matches('select') && status.value === 'taken') input.disabled = false;
-  });
+let editingCourseCell = null;
+function openCourseCellModal(courseId, employeeId) {
+  const course = courses.find(c => c.id === courseId);
+  const employee = empById(employeeId);
+  if (!course || !employee) return;
+  editingCourseCell = { courseId, employeeId };
+  const record = courseStatusFor(courseId, employeeId);
+  document.getElementById('course-cell-modal-title').textContent = course.name;
+  document.getElementById('course-cell-modal-desc').textContent = `${employee.name} · ${employee.department || ''}`.trim();
+  document.getElementById('course-cell-status').value = record.status || 'not_relevant';
+  document.getElementById('course-cell-date').value = record.plannedDate || '';
+  document.getElementById('course-cell-modal').classList.add('open');
+  setTimeout(() => document.getElementById('course-cell-date').focus(), 30);
 }
-new MutationObserver(enableTakenCourseDates).observe(document.getElementById('content'), { childList: true, subtree: true });
+async function saveCourseCellFromModal() {
+  if (!editingCourseCell) return;
+  const status = document.getElementById('course-cell-status').value;
+  const date = document.getElementById('course-cell-date').value;
+  await saveCourseStatus(editingCourseCell.courseId, editingCourseCell.employeeId, status, date);
+  closeModal('course-cell-modal');
+  editingCourseCell = null;
+}
+async function clearCourseCellFromModal() {
+  if (!editingCourseCell) return;
+  await saveCourseStatus(editingCourseCell.courseId, editingCourseCell.employeeId, 'not_relevant', '');
+  closeModal('course-cell-modal');
+  editingCourseCell = null;
+}
 let editingRequirementId = null;
 let editingRequirementEmployeeId = null;
 function requirementRecordFor(requirementId, employeeId, year = boardYear) {
@@ -5966,26 +6059,168 @@ function annualRequirementCell(requirement, employee) {
   const due = record.dueDate ? `<div style="font-size:10px;margin-top:2px;color:${overdue ? 'var(--destructive)' : 'var(--muted)'}">Due ${fmtMed(record.dueDate)}</div>` : '';
   return `<button class="btn btn-sm" onclick="openRequirementRecordModal(${requirement.id},${employee.id})" style="width:100%;height:auto;min-height:54px;padding:7px 9px;text-align:left;white-space:normal;border-color:${overdue ? 'var(--destructive)' : 'var(--border)'};background:${overdue ? 'color-mix(in srgb,var(--destructive) 9%,var(--surface))' : 'var(--surface)'}" title="Edit annual requirement"><strong style="color:${accent}">${status}</strong>${completed}${due}</button>`;
 }
+function courseCellSummary(record) {
+  const counts = { mandatory: 0, planned: 0, taken: 0, not_relevant: 0 };
+  return counts;
+}
+function courseCellHtml(course, employee) {
+  const record = courseStatusFor(course.id, employee.id);
+  const compliance = courseComplianceMeta(record.status);
+  const dateLabel = record.plannedDate ? fmtMed(record.plannedDate) : '';
+  const dateLine = dateLabel ? `<div class="muted" style="font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${dateLabel}</div>` : '';
+  const overdue = record.status === 'planned' && record.plannedDate && record.plannedDate < todayStr();
+  const accent = overdue ? 'var(--destructive)' : compliance.color;
+  const statusLabel = overdue ? 'Overdue' : compliance.label;
+  return `<button type="button" class="course-cell" onclick="openCourseCellModal(${course.id},${employee.id})" title="${esc(course.name)} · ${esc(employee.name)} — click to edit" style="--accent:${accent}">
+    <div class="course-cell-row">
+      <span class="course-cell-dot" style="background:${accent}"></span>
+      <span class="course-cell-status" style="color:${accent}">${esc(statusLabel)}</span>
+    </div>
+    ${dateLine}
+  </button>`;
+}
+function setBoardFilter(key, value) {
+  boardFilters[key] = value;
+  renderStatusBoard();
+}
 function renderStatusBoard() {
-  const employeeList = [...employees].sort((a, b) =>
+  const allEmployees = [...employees].sort((a, b) =>
     a.department.localeCompare(b.department, 'nb', { sensitivity: 'base' }) ||
     ((a.sortOrder ?? 99) - (b.sortOrder ?? 99)) ||
     a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
   const courseRows = [...courses].sort((a, b) => a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
   const requirementColumns = [...requirements].sort((a, b) => a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
-  const courseBoardWidth = 260 + employeeList.length * 150;
+
+  // Apply filters
+  const searchLower = (boardFilters.search || '').toLowerCase();
+  const employeeList = allEmployees.filter(emp => {
+    if (boardFilters.dept && emp.department !== boardFilters.dept) return false;
+    if (searchLower && !emp.name.toLowerCase().includes(searchLower) && !(emp.department || '').toLowerCase().includes(searchLower)) return false;
+    if (boardFilters.status !== 'all') {
+      const hasMatch = courseRows.some(course => {
+        const rec = courseStatusFor(course.id, emp.id);
+        if (boardFilters.status === 'overdue') {
+          return rec.status === 'planned' && rec.plannedDate && rec.plannedDate < todayStr();
+        }
+        return rec.status === boardFilters.status;
+      });
+      if (!hasMatch) return false;
+    }
+    return true;
+  });
+
+  // Group employees by department for sticky headers
+  const byDept = new Map();
+  for (const emp of employeeList) {
+    const dept = emp.department || 'Unassigned';
+    if (!byDept.has(dept)) byDept.set(dept, []);
+    byDept.get(dept).push(emp);
+  }
+  const deptGroups = [...byDept.entries()].map(([dept, list]) => ({ dept, list }));
+
+  // Per-employee summary counts
+  function employeeSummary(emp) {
+    const counts = { mandatory: 0, planned: 0, taken: 0, overdue: 0 };
+    for (const course of courseRows) {
+      const rec = courseStatusFor(course.id, emp.id);
+      if (rec.status === 'mandatory') counts.mandatory++;
+      else if (rec.status === 'planned') {
+        if (rec.plannedDate && rec.plannedDate < todayStr()) counts.overdue++;
+        else counts.planned++;
+      } else if (rec.status === 'taken') counts.taken++;
+    }
+    return counts;
+  }
+  // Per-course summary counts
+  function courseSummary(course) {
+    const counts = { mandatory: 0, planned: 0, taken: 0, overdue: 0, total: employeeList.length };
+    for (const emp of employeeList) {
+      const rec = courseStatusFor(course.id, emp.id);
+      if (rec.status === 'mandatory') counts.mandatory++;
+      else if (rec.status === 'planned') {
+        if (rec.plannedDate && rec.plannedDate < todayStr()) counts.overdue++;
+        else counts.planned++;
+      } else if (rec.status === 'taken') counts.taken++;
+    }
+    return counts;
+  }
+
+  const allDepts = [...new Set(allEmployees.map(e => e.department).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb', { sensitivity: 'base' }));
   const requirementBoardWidth = 230 + requirementColumns.length * 190;
-  const courseBody = courseRows.length ? courseRows.map(course => `
-    <tr style="border-bottom:1px solid var(--border)">
-      <td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:8px 10px">
-        <button class="btn btn-sm" onclick="openCourseModal(${course.id})" style="text-align:left;max-width:130px;white-space:normal;font-size:11px">${esc(course.name)}${course.code ? `<span class="muted" style="display:block;font-size:9px;margin-top:2px">${esc(course.code)}</span>` : ''}</button>
-      </td>
-      ${employeeList.map(employee => {
-        const record = courseStatusFor(course.id, employee.id);
-        const compliance = courseComplianceMeta(record.status);
-        return `<td style="padding:4px 5px;vertical-align:top"><div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;color:${compliance.color};font-size:9px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="width:7px;height:7px;border-radius:50%;background:${compliance.color};display:inline-block;flex:0 0 auto"></span>${compliance.label}</div><select class="plain-select" style="width:100%;font-size:10px" onchange="saveCourseStatus(${course.id},${employee.id},this.value,this.nextElementSibling.value)"><option value="not_relevant"${record.status === 'not_relevant' ? ' selected' : ''}>Not relevant</option><option value="mandatory"${record.status === 'mandatory' ? ' selected' : ''}>Mandatory, not planned</option><option value="planned"${record.status === 'planned' ? ' selected' : ''}>Planned</option><option value="taken"${record.status === 'taken' ? ' selected' : ''}>Taken</option></select><input class="course-date-field" type="date" value="${esc(record.plannedDate || '')}" ${record.status === 'planned' || record.status === 'taken' ? '' : 'disabled'} onchange="saveCourseStatus(${course.id},${employee.id},this.previousElementSibling.value,this.value)" title="Course date"></td>`;
-      }).join('')}
-    </tr>`).join('') : `<tr><td colspan="${employeeList.length + 1}" class="empty-note">No courses yet. Add a course to start tracking.</td></tr>`;
+
+  // Filter bar
+  const filterBar = `
+    <div class="flex items-center gap-2 mb-4" style="flex-wrap:wrap">
+      <div class="search-box" style="max-width:240px">
+        <span class="search-ico"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></span>
+        <input id="board-search" type="text" placeholder="Search employees…" value="${esc(boardFilters.search)}" oninput="setBoardFilter('search', this.value)">
+      </div>
+      <select class="plain-select" style="height:32px;padding:5px 9px" onchange="setBoardFilter('dept', this.value)" aria-label="Filter by department">
+        <option value="">All departments</option>
+        ${allDepts.map(d => `<option value="${esc(d)}"${boardFilters.dept === d ? ' selected' : ''}>${esc(d)}</option>`).join('')}
+      </select>
+      <select class="plain-select" style="height:32px;padding:5px 9px" onchange="setBoardFilter('status', this.value)" aria-label="Filter by status">
+        <option value="all"${boardFilters.status === 'all' ? ' selected' : ''}>All statuses</option>
+        <option value="mandatory"${boardFilters.status === 'mandatory' ? ' selected' : ''}>Mandatory only</option>
+        <option value="planned"${boardFilters.status === 'planned' ? ' selected' : ''}>Planned only</option>
+        <option value="overdue"${boardFilters.status === 'overdue' ? ' selected' : ''}>Overdue only</option>
+        <option value="taken"${boardFilters.status === 'taken' ? ' selected' : ''}>Taken only</option>
+      </select>
+      ${(boardFilters.dept || boardFilters.search || boardFilters.status !== 'all') ? `<button class="btn btn-sm" onclick="boardFilters={dept:'',status:'all',search:''};renderStatusBoard()">Clear filters</button>` : ''}
+      <span class="muted text-sm" style="margin-left:auto">${employeeList.length} of ${allEmployees.length} employees · ${courseRows.length} courses</span>
+    </div>`;
+
+  // Build course table (employee × course matrix)
+  let courseBody;
+  if (!courseRows.length) {
+    courseBody = `<tr><td class="empty-note">No courses yet. Add a course to start tracking.</td></tr>`;
+  } else if (!employeeList.length) {
+    courseBody = `<tr><td class="empty-note">No employees match the current filters.</td></tr>`;
+  } else {
+    const rows = [];
+    for (const group of deptGroups) {
+      const deptColor = resolveDeptColor(group.dept) || '#3b82f6';
+      rows.push(`<tr class="dept-row"><td colspan="${courseRows.length + 2}" style="background:${deptColor}1a;border-bottom:1px solid ${deptColor};color:var(--text)">${esc(group.dept)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`);
+      for (const emp of group.list) {
+        const summary = employeeSummary(emp);
+        const summaryParts = [];
+        if (summary.overdue) summaryParts.push(`<span style="color:var(--destructive);font-weight:700">${summary.overdue} overdue</span>`);
+        if (summary.mandatory) summaryParts.push(`<span style="color:#dc2626">${summary.mandatory} mandatory</span>`);
+        if (summary.planned) summaryParts.push(`<span style="color:#ca8a04">${summary.planned} planned</span>`);
+        if (summary.taken) summaryParts.push(`<span style="color:#16a34a">${summary.taken} taken</span>`);
+        const summaryHtml = summaryParts.length ? `<div class="muted" style="font-size:10px;margin-top:3px;display:flex;flex-wrap:wrap;gap:6px">${summaryParts.join(' · ')}</div>` : '';
+        rows.push(`<tr data-employee-id="${emp.id}" style="border-bottom:1px solid var(--border)">
+          <td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:8px 10px;min-width:180px">
+            <div style="font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(emp.name)}</div>
+            <div class="muted" style="font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(emp.department || '')}</div>
+            ${summaryHtml}
+          </td>
+          ${courseRows.map(course => `<td style="padding:4px 5px;vertical-align:top;min-width:120px">${courseCellHtml(course, emp)}</td>`).join('')}
+          <td style="padding:4px 5px;vertical-align:top;min-width:90px;text-align:center">
+            <div style="font-size:11px;font-weight:600;color:${summary.overdue ? 'var(--destructive)' : 'var(--text)'}">${summary.overdue + summary.mandatory + summary.planned + summary.taken}/${courseRows.length}</div>
+            <div class="muted" style="font-size:9px;margin-top:2px">tracked</div>
+          </td>
+        </tr>`);
+      }
+    }
+    courseBody = rows.join('');
+  }
+
+  // Course summary header row
+  const courseSummaryHeader = courseRows.length ? `<tr style="background:var(--muted-bg);font-size:10px;font-weight:600;color:var(--muted)">
+    <td style="position:sticky;left:0;background:var(--muted-bg);z-index:1;padding:6px 10px;text-align:right">Course totals →</td>
+    ${courseRows.map(course => {
+      const s = courseSummary(course);
+      const parts = [];
+      if (s.overdue) parts.push(`<span style="color:var(--destructive)">${s.overdue}OD</span>`);
+      if (s.mandatory) parts.push(`<span style="color:#dc2626">${s.mandatory}M</span>`);
+      if (s.planned) parts.push(`<span style="color:#ca8a04">${s.planned}P</span>`);
+      if (s.taken) parts.push(`<span style="color:#16a34a">${s.taken}T</span>`);
+      return `<td style="padding:6px 5px;text-align:center;min-width:120px"><div style="display:flex;flex-direction:column;gap:2px;align-items:center">${parts.length ? parts.join(' ') : '<span class="muted">—</span>'}<div class="muted" style="font-size:9px">${s.taken}/${s.total}</div></div></td>`;
+    }).join('')}
+    <td style="padding:6px 5px"></td>
+  </tr>` : '';
+
   const requirementBody = employeeList.length && requirementColumns.length
     ? employeeList.map(employee => `<tr data-employee-id="${employee.id}" style="border-bottom:1px solid var(--border)"><td style="position:sticky;left:0;background:var(--surface);z-index:1;padding:8px 10px"><div style="font-weight:600;font-size:11px">${esc(employee.name)}</div><div class="muted" style="font-size:9px;margin-top:2px">${esc(employee.department)}</div></td>${requirementColumns.map(requirement => `<td data-requirement-id="${requirement.id}" style="padding:5px 6px;vertical-align:top">${annualRequirementCell(requirement, employee)}</td>`).join('')}</tr>`).join('')
     : `<tr><td colspan="${requirementColumns.length + 1}" class="empty-note">${employeeList.length ? 'No annual requirements yet. Add one to start tracking.' : 'Add employees before tracking annual requirements.'}</td></tr>`;
@@ -5993,14 +6228,18 @@ function renderStatusBoard() {
   document.getElementById('content').innerHTML = `
     <div class="flex items-center justify-between mb-6" style="gap:12px;flex-wrap:wrap">
       <div><div class="page-title">Personnel Status Board</div><div class="page-sub">Track courses, planned training, annual certifications, and recurring requirements.</div></div>
-      <div class="year-nav" style="gap:8px;background:var(--surface);padding:4px 8px;border-radius:8px;border:1px solid var(--border)">
-        <button class="btn btn-icon" onclick="changeBoardYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
-        <span class="year-label" style="min-width:60px">${boardYear}</span>
-        <button class="btn btn-icon" onclick="changeBoardYear(1)" aria-label="Next year">${svgIcon('chevronRight')}</button>
+      <div class="flex items-center gap-2" style="flex-wrap:wrap">
+        ${renderSecurityLabel()}
+        <div class="year-nav" style="gap:8px;background:var(--surface);padding:4px 8px;border-radius:8px;border:1px solid var(--border)">
+          <button class="btn btn-icon" onclick="changeBoardYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
+          <span class="year-label" style="min-width:60px">${boardYear}</span>
+          <button class="btn btn-icon" onclick="changeBoardYear(1)" aria-label="Next year">${svgIcon('chevronRight')}</button>
+        </div>
       </div>
     </div>
-    <div class="flex items-center justify-between mb-4" style="gap:12px;flex-wrap:wrap"><div class="card-title" style="font-size:15px">Courses (${courses.length})</div><button class="btn btn-primary" onclick="openCourseModal()">Add course</button></div>
-    <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:${courseBoardWidth}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:8px 10px;min-width:140px">Course</th>${employeeList.map(employee => `<th style="padding:8px 10px;min-width:130px;vertical-align:top"><div style="font-size:11px">${esc(employee.name)}</div><div class="muted" style="font-size:9px;margin-top:2px">${esc(employee.department)}</div></th>`).join('')}</tr></thead><tbody>${courseBody}</tbody></table></div>
+    ${filterBar}
+    <div class="flex items-center justify-between mb-4" style="gap:12px;flex-wrap:wrap"><div class="card-title" style="font-size:15px">Courses (${courseRows.length})</div><button class="btn btn-primary" onclick="openCourseModal()">Add course</button></div>
+    <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:8px 10px;min-width:180px">Employee</th>${courseRows.map(course => `<th style="padding:8px 10px;min-width:120px;vertical-align:top"><button class="btn btn-sm" onclick="openCourseModal(${course.id})" style="text-align:left;width:100%;height:auto;white-space:normal;font-size:11px">${esc(course.name)}${course.code ? `<span class="muted" style="display:block;font-size:9px;margin-top:2px">${esc(course.code)}</span>` : ''}</button></th>`).join('')}<th style="padding:8px 10px;min-width:90px;background:var(--muted-bg);font-size:11px">Total</th></tr></thead><tbody>${courseBody}${courseSummaryHeader}</tbody></table></div>
     <div class="flex items-center justify-between" style="gap:12px;flex-wrap:wrap;margin:24px 0 16px"><div><div class="card-title" style="font-size:15px">Annual Requirements (${requirements.length})</div><div class="muted text-sm" style="margin-top:3px">Records shown for ${boardYear}.</div></div><button class="btn btn-primary" onclick="openRequirementDefinitionModal()">Add requirement</button></div>
     <div class="card" style="padding:0;overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:${requirementBoardWidth}px;font-size:12px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="position:sticky;left:0;background:var(--surface);z-index:2;padding:8px 10px;min-width:140px">Employee</th>${requirementColumns.map(requirement => `<th data-requirement-id="${requirement.id}" style="padding:6px 8px;min-width:150px;vertical-align:top"><button class="btn btn-sm" onclick="openRequirementDefinitionModal(${requirement.id})" style="width:100%;height:auto;text-align:left;white-space:normal;font-size:11px">${esc(requirement.name)}</button></th>`).join('')}</tr></thead><tbody>${requirementBody}</tbody></table></div>`;
 }
