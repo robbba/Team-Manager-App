@@ -107,6 +107,7 @@ let appSettings = {
   specialDaysVisible: true,
   adminPasswordHash: '',
   departmentColors: {},
+  subdepartmentColors: {},
   activityTypes: [],
   workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })),
   shiftTemplates: DEFAULT_SHIFT_TEMPLATES.map(shift => ({ ...shift })),
@@ -175,6 +176,9 @@ function loadSettings() {
       appSettings.summaryColumns = normalizeSummaryColumns(parsed.summaryColumns);
       appSettings.departmentColors = parsed.departmentColors && typeof parsed.departmentColors === 'object'
         ? Object.fromEntries(Object.entries(parsed.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
+        : {};
+      appSettings.subdepartmentColors = parsed.subdepartmentColors && typeof parsed.subdepartmentColors === 'object'
+        ? Object.fromEntries(Object.entries(parsed.subdepartmentColors).map(([key, value]) => [String(key), normalizeHexColor(value)]))
         : {};
       appSettings.securityLabel = normalizeSecurityLabel(parsed.securityLabel);
       return;
@@ -325,6 +329,8 @@ function normalizeStateVersion(data) {
   normalized.requirementRecords = annualRequirements.requirementRecords;
   if (!normalized.departmentColors || typeof normalized.departmentColors !== 'object') normalized.departmentColors = {};
   normalized.departmentColors = Object.fromEntries(Object.entries(normalized.departmentColors || {}).map(([dept, value]) => [String(dept), normalizeHexColor(value)]));
+  if (!normalized.subdepartmentColors || typeof normalized.subdepartmentColors !== 'object') normalized.subdepartmentColors = {};
+  normalized.subdepartmentColors = Object.fromEntries(Object.entries(normalized.subdepartmentColors).map(([key, value]) => [String(key), normalizeHexColor(value)]));
   return normalized;
 }
 
@@ -2113,6 +2119,9 @@ function loadFromData(data) {
   appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
     ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
     : {};
+  appSettings.subdepartmentColors = normalized.subdepartmentColors && typeof normalized.subdepartmentColors === 'object'
+    ? Object.fromEntries(Object.entries(normalized.subdepartmentColors).map(([key, value]) => [String(key), normalizeHexColor(value)]))
+    : {};
   appSettings.workCodes = normalizeWorkCodes(normalized.workCodes);
   appSettings.shiftTemplates = normalizeShiftTemplates(normalized.shiftTemplates);
   appSettings.summaryColumns = normalizeSummaryColumns(normalized.summaryColumns ?? appSettings.summaryColumns);
@@ -2135,6 +2144,7 @@ function loadFromData(data) {
     phonePrivate: e.phonePrivate || '',
     birthday: e.birthday || '',
     homeAddress: e.homeAddress || '',
+    subdepartment: e.subdepartment || e.team || '',
     categoryIds: Array.isArray(e.categoryIds) && e.categoryIds.length
       ? e.categoryIds.map(Number).filter(Number.isFinite)
       : (joinCatIds[+e.id] || []),
@@ -2267,6 +2277,7 @@ function snapshotData() {
     dailyStatusesSeparated: true,
     appSettings: plannerAppSettingsSnapshot(),
     departmentColors: appSettings.departmentColors || {},
+    subdepartmentColors: appSettings.subdepartmentColors || {},
     activityTypes: appSettings.activityTypes || [],
     workCodes: appSettings.workCodes || [],
     shiftTemplates: appSettings.shiftTemplates || [],
@@ -2728,6 +2739,13 @@ function resolveDeptColor(dept) {
   const index = Math.max(0, departments.indexOf(dept));
   return PALETTE[index % PALETTE.length];
 }
+function subdepartmentColorKey(dept, subdept) { return `${dept}\u0000${subdept}`; }
+function resolveSubdepartmentColor(dept, subdept) {
+  const key = subdepartmentColorKey(dept, subdept);
+  return appSettings.subdepartmentColors?.[key]
+    ? normalizeHexColor(appSettings.subdepartmentColors[key])
+    : null;
+}
 function deptColorMap() {
   const { bg, accent } = deptPalettes();
   const map = {};
@@ -2740,10 +2758,19 @@ function deptColorMap() {
   });
   return map;
 }
+// Colors for a department/subdepartment row group. If a subteam has its own
+// color selected, it is used for both the background tint and accent border;
+// otherwise the group falls back to the parent department's colors.
+function groupColorsFor(dept, subdept, deptColors) {
+  const teamColor = resolveSubdepartmentColor(dept, subdept);
+  if (!teamColor) return deptColors;
+  return { bg: `${teamColor}22`, accent: teamColor };
+}
 function sortedEmployees() {
   return [...employees].sort((a, b) =>
     ((a.sortOrder ?? 99) - (b.sortOrder ?? 99)) ||
     a.department.localeCompare(b.department) ||
+    (a.subdepartment || '').localeCompare(b.subdepartment || '') ||
     a.name.localeCompare(b.name));
 }
 function deptGroups() {
@@ -2751,10 +2778,13 @@ function deptGroups() {
   const order = [], byDept = new Map();
   for (const emp of sorted) {
     if (hiddenEmployees.has(emp.id)) continue;
-    if (!byDept.has(emp.department)) { byDept.set(emp.department, []); order.push(emp.department); }
-    byDept.get(emp.department).push(emp);
+    const department = emp.department || 'Unassigned';
+    const subdepartment = emp.subdepartment || 'General';
+    const key = `${department}\u0000${subdepartment}`;
+    if (!byDept.has(key)) { byDept.set(key, { department, subdepartment, emps: [] }); order.push(key); }
+    byDept.get(key).emps.push(emp);
   }
-  return order.map(dept => ({ dept, emps: byDept.get(dept) }));
+  return order.map(key => { const group = byDept.get(key); return { dept: group.department, subdept: group.subdepartment, emps: group.emps }; });
 }
 function normalizeDepartmentName(value) {
   return String(value || '').trim().toLowerCase();
@@ -2797,6 +2827,13 @@ function toggleEmployeeDepartment(deptName, forceState) {
 function setEmployeeDepartmentVisibility(deptName, shouldShow) {
   toggleEmployeeDepartment(deptName, shouldShow === true);
 }
+function toggleEmployeeSubdepartment(subdeptKey, shouldShow) {
+  const [deptName, subdeptName] = String(subdeptKey).split('\u0000');
+  const targetSet = hiddenEmployeesDraft || hiddenEmployees;
+  employees.filter(emp => normalizeDepartmentName(emp.department) === normalizeDepartmentName(deptName) && (emp.subdepartment || 'General') === subdeptName)
+    .forEach(emp => shouldShow ? targetSet.delete(emp.id) : targetSet.add(emp.id));
+  if (hiddenEmployeesDraft) rebuildEmployeePicker(); else { saveGridPreferences(); renderPage(); }
+}
 function rebuildEmployeePicker() {
   const picker = document.getElementById('employee-picker');
   if (!picker) return;
@@ -2813,11 +2850,17 @@ function rebuildEmployeePicker() {
     const visible = deptEmployees.filter(emp => !hiddenSet.has(emp.id)).length;
     const allChecked = deptEmployees.length && visible === deptEmployees.length;
     const someChecked = visible > 0 && visible < deptEmployees.length;
-    const employeeMarkup = deptEmployees.map(emp => `
+    const subgroups = [...new Set(deptEmployees.map(emp => emp.subdepartment || 'General'))].sort((a, b) => a.localeCompare(b));
+    const employeeMarkup = subgroups.map(subdept => {
+      const teamEmployees = deptEmployees.filter(emp => (emp.subdepartment || 'General') === subdept).sort((a, b) => a.name.localeCompare(b.name));
+      const teamKey = `${deptLabel}\u0000${subdept}`;
+      const teamVisible = teamEmployees.filter(emp => !hiddenSet.has(emp.id)).length;
+      return `<div style="margin:4px 0 2px 18px;font-weight:600;color:var(--muted)"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" ${teamVisible === teamEmployees.length ? 'checked' : ''} onchange="toggleEmployeeSubdepartment(${esc(JSON.stringify(teamKey))}, this.checked); return false;"><span>${esc(subdept)}</span></label></div>` + teamEmployees.map(emp => `
       <label class="picker-row" style="display:flex;align-items:center;gap:8px;padding:5px 0">
         <input type="checkbox" ${hiddenSet.has(emp.id) ? '' : 'checked'} onchange="toggleEmployeeVisibility(${emp.id}, this.checked); return false;">
         <span>${esc(emp.name)}</span>
       </label>`).join('');
+    }).join('');
     return `
       <div style="border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface)">
         <label class="picker-row" style="display:flex;align-items:center;gap:8px;padding:0 0 6px;font-weight:600;color:var(--text)">
@@ -3043,7 +3086,7 @@ function renderGrid() {
   }
   flushMonth(); flushWeek();
   document.getElementById('content').innerHTML = cleanHtml(`
-    <div id="grid-wrap">
+    <div id="grid-wrap" style="min-height:0">
       <div class="grid-topbar">
         <div>
           <div class="page-title">${esc(appSettings.appName)}</div>
@@ -3130,7 +3173,7 @@ function renderGrid() {
           </div>
         </div>
       </div>
-      <div id="grid-scroll" style="position:relative">
+      <div id="grid-scroll" style="position:relative;min-height:0;overflow:auto" onwheel="handleActivityListWheel(event)">
         <div id="employee-picker" style="display:none"></div>
         <table class="gtable">
           <thead>
@@ -3174,11 +3217,11 @@ function renderGridBody(days, today) {
     : yearActs.filter(a => activityStatus(a) === activityFilter);
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
-  const visibleActivities = pastActivitiesExpanded ? [...pastActs, ...currentActs] : currentActs;
-  const paginateActivities = gridViewMode !== 'timeline';
-  const pageSize = paginateActivities ? activityPageCapacity() : Math.max(1, visibleActivities.length);
+  const visibleActivities = [...pastActs, ...currentActs].sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate) || a.name.localeCompare(b.name));
+  const paginateActivities = gridViewMode !== 'timeline' && visibleActivities.length > activityPageCapacity();
+  const pageSize = gridViewMode === 'timeline' ? Math.max(1, visibleActivities.length) : activityPageCapacity();
   activityPageSize = pageSize;
-  const maxOffset = paginateActivities ? Math.max(0, Math.floor((visibleActivities.length - 1) / pageSize) * pageSize) : 0;
+  const maxOffset = paginateActivities ? Math.max(0, visibleActivities.length - pageSize) : 0;
   activityPageOffset = paginateActivities ? Math.min(activityPageOffset, maxOffset) : 0;
   const activityPage = paginateActivities ? visibleActivities.slice(activityPageOffset, activityPageOffset + pageSize) : visibleActivities;
   const pageStart = visibleActivities.length ? activityPageOffset + 1 : 0;
@@ -3194,8 +3237,8 @@ function renderGridBody(days, today) {
         <span class="flex items-center justify-between">
           <span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.activities ? 'Expand activities' : 'Collapse activities'}" aria-label="${collapsedGridSections.activities ? 'Expand activities section' : 'Collapse activities section'}" aria-expanded="${collapsedGridSections.activities ? 'false' : 'true'}" onclick="toggleGridSection('activities')">${svgIcon(collapsedGridSections.activities ? 'chevronRight' : 'chevronDown')}</button>Activities (${activityHeadingText})</span>
           <span class="flex items-center" style="gap:6px">
-            ${paginateActivities && visibleActivities.length > pageSize ? `<button class="icon-btn" title="Previous activities" aria-label="Previous activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
-            <button class="icon-btn" title="Next activities" aria-label="Next activities" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
+            ${paginateActivities ? `<button class="icon-btn" title="Scroll to previous activity" aria-label="Scroll to previous activity" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
+            <button class="icon-btn" title="Scroll to next activity" aria-label="Scroll to next activity" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
             <select id="activity-status-filter" class="plain-select" style="height:25px;padding:2px 6px;font-size:10px;min-width:104px" onchange="setActivityStatusFilter(this.value)"><option value="all" ${activityFilter === 'all' ? 'selected' : ''}>All activities</option><option value="tentative" ${activityFilter === 'tentative' ? 'selected' : ''}>Planned only</option><option value="confirmed" ${activityFilter === 'confirmed' ? 'selected' : ''}>Confirmed only</option><option value="cancelled" ${activityFilter === 'cancelled' ? 'selected' : ''}>Cancelled only</option></select>
             <button class="icon-btn" title="Activity Schedule" aria-label="Activity Schedule" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
             <button class="icon-btn" title="Add activity" aria-label="Add activity" onclick="openActModal()">${svgIcon('plus')}</button>
@@ -3219,7 +3262,7 @@ function renderGridBody(days, today) {
       ? `repeating-linear-gradient(135deg,color-mix(in srgb,${act.color} 38%,transparent) 0 5px,color-mix(in srgb,${act.color} 12%,transparent) 5px 10px)`
       : act.color;
     const barOpacity = lifecycle.status === 'tentative' ? '.9' : (dim ? '.16' : '.28');
-    let row = `<tr><td class="gempl sticky-left" style="${dim ? 'opacity:.65;' : ''}cursor:pointer" onclick="openActModal(${act.id})" title="${esc(act.name)}${typeMeta ? ` · ${esc(typeMeta.label)}` : ''}\nClick to edit">
+    let row = `<tr class="activity-grid-row"><td class="gempl sticky-left" style="${dim ? 'opacity:.65;' : ''}cursor:pointer" onclick="openActModal(${act.id})" title="${esc(act.name)}${typeMeta ? ` · ${esc(typeMeta.label)}` : ''}\nClick to edit">
       <div class="act-cell-name">
         <span class="flex items-center gap-2" style="min-width:0">
           <span class="act-dot" style="background:${act.color}"></span>
@@ -3259,12 +3302,6 @@ function renderGridBody(days, today) {
   };
   if (showTimelineSections && !collapsedGridSections.activities && hasAnyActivities) {
     activityPage.forEach(act => { html += renderActRow(act, act.endDate < today); });
-    if (pastActs.length) {
-      html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)">
-        <button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" aria-expanded="${pastActivitiesExpanded ? 'true' : 'false'}" onclick="togglePastActivities()">
-          Past activities (${pastActs.length})
-        </button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
-    }
   }
 
   const yearHolidays = holidayPeriodsForYear(gridYear);
@@ -3328,15 +3365,16 @@ function renderGridBody(days, today) {
       }
       const colorMap = deptColorMap();
       for (const group of deptGroups()) {
-        const colors = colorMap[group.dept] || { bg: 'transparent', accent: 'var(--border)' };
+        const deptColors = colorMap[group.dept] || { bg: 'transparent', accent: 'var(--border)' };
+        const colors = groupColorsFor(group.dept, group.subdept, deptColors);
         html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-bottom:2px solid ${colors.accent};border-right:2px solid ${colors.accent} !important;z-index:21;padding:2px 7px">
             <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">${esc(group.dept)}</span>
-            <span style="font-size:10px;color:var(--muted);opacity:.7"> · ${group.emps.length} ${group.emps.length === 1 ? 'person' : 'people'}</span>
+            <span style="font-size:10px;color:${colors.accent};font-weight:600"> · ${esc(group.subdept)} · ${group.emps.length} ${group.emps.length === 1 ? 'person' : 'people'}</span>
           </td><td colspan="${days.length}" style="background:${colors.bg};opacity:.45;border-bottom:2px solid ${colors.accent}"></td></tr>`;
         for (const emp of group.emps) {
           html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-right:2px solid ${colors.accent} !important">
             <div class="flex items-center justify-between gap-2"><div class="emp-name">${esc(emp.name)}</div></div>
-            <div class="emp-sub">${esc(emp.role)}</div>
+            <div class="emp-sub">${esc(emp.role)}${emp.subdepartment ? ` · ${esc(emp.subdepartment)}` : ''}</div>
           </td>`;
           for (const d of days) {
             const ds = fmt(d);
@@ -3351,9 +3389,9 @@ function renderGridBody(days, today) {
 }
 
 function activityPageCapacity() {
-  if (window.innerHeight <= 800) return 4;
-  if (window.innerHeight <= 1100) return 6;
-  return 8;
+  if (window.innerHeight <= 900) return 8;
+  if (window.innerHeight <= 1200) return 9;
+  return 10;
 }
 function changeActivityPage(direction) {
   const today = todayStr();
@@ -3364,10 +3402,26 @@ function changeActivityPage(direction) {
     : yearActs.filter(a => activityStatus(a) === activityFilter);
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
-  const visibleActivities = pastActivitiesExpanded ? [...pastActs, ...currentActs] : currentActs;
-  const maxOffset = Math.max(0, Math.floor((visibleActivities.length - 1) / activityPageSize) * activityPageSize);
-  activityPageOffset = Math.min(Math.max(0, activityPageOffset + direction * activityPageSize), maxOffset);
+  const visibleActivities = [...pastActs, ...currentActs];
+  const maxOffset = Math.max(0, visibleActivities.length - activityPageSize);
+  activityPageOffset = Math.min(Math.max(0, activityPageOffset + direction), maxOffset);
   renderGridBody(daysOfYear(gridYear), todayStr());
+}
+let activityWheelLocked = false;
+function handleActivityListWheel(event) {
+  if (gridViewMode === 'timeline' || Math.abs(event.deltaY) <= Math.abs(event.deltaX) || !event.target.closest?.('.activity-grid-row')) return;
+  // While the pointer is over an activity row, always swallow vertical wheel
+  // input so the surrounding page never scrolls, even mid-throttle during a
+  // fast scroll burst. Only the page-change action itself is throttled.
+  event.preventDefault();
+  event.stopPropagation();
+  if (activityWheelLocked) return;
+  const direction = event.deltaY > 0 ? 1 : -1;
+  const oldOffset = activityPageOffset;
+  changeActivityPage(direction);
+  if (activityPageOffset === oldOffset) return;
+  activityWheelLocked = true;
+  setTimeout(() => { activityWheelLocked = false; }, 120);
 }
 function scrollToActivityCell(rowKey, date) {
   const scroll = document.getElementById('grid-scroll');
@@ -3489,6 +3543,14 @@ function cellActivities(empId, ds) {
 function participantActivitiesForDate(empId, ds) {
   return activities.filter(act => ds >= act.startDate && ds <= act.endDate && participantFor(act, empId));
 }
+function bossCheckKey(empId, date, kind, id) {
+  return `${empId}_${date}_boss_${kind}_${encodeURIComponent(String(id))}`;
+}
+function isBossCheckSet(empId, date, kind, id) {
+  const currentKey = bossCheckKey(empId, date, kind, id);
+  if (workScheduleChecksMap[currentKey] === true) return true;
+  return kind === 'activity' && workScheduleChecksMap[`${empId}_${date}_${id}`] === true;
+}
 
 function isEmployeeBirthday(emp, dateString) {
   if (!emp || !emp.birthday || !dateString) return false;
@@ -3539,7 +3601,8 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   if (!tipParts.length) tipParts.push('Click to set status');
 
   const primaryActivity = acts[0];
-  const checkedActivity = bossSessionActive ? participantActivitiesForDate(emp.id, ds).find(act => workScheduleChecksMap[`${emp.id}_${ds}_${act.id}`] === true) : null;
+  const checkedActivity = bossSessionActive ? participantActivitiesForDate(emp.id, ds).find(act => isBossCheckSet(emp.id, ds, 'activity', act.id)) : null;
+  const checkedStatus = bossSessionActive && si && isBossCheckSet(emp.id, ds, 'status', si.key) ? si : null;
   const gridActivityAbbreviation = primaryActivity?.abbreviation ? primaryActivity.abbreviation.slice(0, 4) : '';
   const activeWorkCode = primaryActivity?.workCode || null;
   let cellText = '', cellStyleStr = '';
@@ -3575,7 +3638,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const overtimeBadge = overtime
     ? `<span class="overtime-badge" title="Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` · ${esc(overtime.note)}` : ''}">OT ${formatHoursNumber(overtime.hours)}h</span>`
     : '';
-  const workScheduleCheckBadge = checkedActivity ? `<span class="work-schedule-check" title="Checked in external work system">✓</span>` : '';
+  const workScheduleCheckBadge = checkedActivity || checkedStatus ? `<span class="work-schedule-check" title="Checked in external work system">✓</span>` : '';
 
   const fullDayStatusStyle = !primaryActivity && !isPartial && si
     ? `background:${si.color}20 !important;color:${si.color} !important;`
@@ -3591,7 +3654,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const activityTextStyle = primaryActivity ? `color:${activityColor};` : '';
   const cancelledTextStyle = isCancelledActivity ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : '';
 
-  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}${checkedActivity ? ' work-schedule-checked-cell' : ''}"
+  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}${checkedActivity || checkedStatus ? ' work-schedule-checked-cell' : ''}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
     onclick="handleCellClick(event,${emp.id},'${ds}')"
@@ -3861,14 +3924,20 @@ function _showPicker(event, empId, dates) {
   }
 
   const sect = document.getElementById('pk-shift-section');
-  if (acts.length && bossSessionActive) {
-    sect.innerHTML = '<div class="pk-sep"></div><div class="pk-label">Work schedule check</div>' + acts.map(act => {
-      const checkedInWorkSystem = pickerDates.some(date => workScheduleChecksMap[`${empId}_${date}_${act.id}`] === true);
+  if (bossSessionActive) {
+    const status = entry ? siFor(entry.status) : null;
+    const statusItem = status ? `<div class="pk-shift-box">
+        <div class="pk-shift-title"><span class="pk-color-dot" style="background:${status.color}"></span><span>Daily code: ${esc(status.label)}${status.isAbsence ? ' (absence)' : ''}</span></div>
+        <div class="pk-save-row"><button class="pk-chip${pickerDates.some(date => isBossCheckSet(empId, date, 'status', status.key)) ? ' sel' : ''}" onclick="toggleBossCheck(${empId},'status',${JSON.stringify(status.key)})">${pickerDates.some(date => isBossCheckSet(empId, date, 'status', status.key)) ? '✓ Checked' : 'Mark checked'}</button></div>
+      </div>` : '';
+    const activityItems = acts.map(act => {
+      const checkedInWorkSystem = pickerDates.some(date => isBossCheckSet(empId, date, 'activity', act.id));
       return `<div class="pk-shift-box">
         <div class="pk-shift-title"><span class="act-dot" style="background:${act.color};width:9px;height:9px"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(act.name)}${act.abbreviation ? ` (${esc(act.abbreviation)})` : ''}</span></div>
-        <div class="pk-save-row"><button class="pk-chip${checkedInWorkSystem ? ' sel' : ''}" onclick="toggleWorkScheduleCheck(${empId},${act.id})">${checkedInWorkSystem ? '✓ Checked' : 'Mark checked'}</button></div>
+        <div class="pk-save-row"><button class="pk-chip${checkedInWorkSystem ? ' sel' : ''}" onclick="toggleBossCheck(${empId},'activity',${act.id})">${checkedInWorkSystem ? '✓ Checked' : 'Mark checked'}</button></div>
       </div>`;
     }).join('');
+    sect.innerHTML = statusItem || activityItems ? '<div class="pk-sep"></div><div class="pk-label">Work schedule check</div>' + statusItem + activityItems : '';
   } else if (acts.length) {
     sect.innerHTML = '<div class="pk-sep"></div><div class="pk-label">Activity assignment</div>' + acts.map(act => {
       const firstDate = pickerDates.find(date => date >= act.startDate && date <= act.endDate) || pickerDate;
@@ -4152,11 +4221,14 @@ async function removeCellNote() {
   closePicker();
 }
 async function toggleWorkScheduleCheck(empId, actId) {
+  return toggleBossCheck(empId, 'activity', actId);
+}
+async function toggleBossCheck(empId, kind, id) {
   if (!bossSessionActive || !pickerDates.length) return;
-  const checked = pickerDates.every(date => workScheduleChecksMap[`${empId}_${date}_${actId}`] === true);
-  await mutateState('toggleWorkScheduleCheck', () => {
+  const checked = pickerDates.every(date => isBossCheckSet(empId, date, kind, id));
+  await mutateState('toggleBossCheck', () => {
   pickerDates.forEach(date => {
-    const key = `${empId}_${date}_${actId}`;
+    const key = bossCheckKey(empId, date, kind, id);
     if (checked) delete workScheduleChecksMap[key];
     else workScheduleChecksMap[key] = true;
   });
@@ -4196,6 +4268,7 @@ async function clearStatus() {
     activities.filter(act => actParticipantIds(act).includes(pickerEmpId) && date >= act.startDate && date <= act.endDate).forEach(act => {
       excludeActivityAssignment(`${pickerEmpId}_${date}_${act.id}`);
       delete workScheduleChecksMap[`${pickerEmpId}_${date}_${act.id}`];
+      delete workScheduleChecksMap[bossCheckKey(pickerEmpId, date, 'activity', act.id)];
     });
   });
   });
@@ -5459,13 +5532,24 @@ async function setDepartmentColor(dept, color) {
     persistSettings();
   }, { saveDisk: true });
   renderPage();
+  showToast(`Color updated for ${dept}. Remember to Save Changes.`, 4000);
+}
+async function setSubdepartmentColor(dept, subdept, color) {
+  const safe = normalizeHexColor(color, resolveDeptColor(dept) || '#64748b');
+  await mutateState('setSubdepartmentColor', () => {
+    appSettings.subdepartmentColors = appSettings.subdepartmentColors || {};
+    appSettings.subdepartmentColors[subdepartmentColorKey(dept, subdept)] = safe;
+    persistSettings();
+  }, { saveDisk: true });
+  renderPage();
+  showToast(`Color updated for ${dept} / ${subdept}. Remember to Save Changes.`, 4000);
 }
 function renderEmployees() {
   const searchLower = empSearch.toLowerCase();
   const filtered = employees.filter(emp => {
     const matchesSearch = !searchLower ||
       emp.name.toLowerCase().includes(searchLower) || (emp.email || '').toLowerCase().includes(searchLower) ||
-      (emp.department || '').toLowerCase().includes(searchLower) || (emp.role || '').toLowerCase().includes(searchLower) ||
+      (emp.department || '').toLowerCase().includes(searchLower) || (emp.subdepartment || '').toLowerCase().includes(searchLower) || (emp.role || '').toLowerCase().includes(searchLower) ||
       (emp.level || '').toLowerCase().includes(searchLower) || (emp.birthday || '').toLowerCase().includes(searchLower) ||
       (emp.homeAddress || '').toLowerCase().includes(searchLower);
     const matchesDept = !empFilterDept || emp.department === empFilterDept;
@@ -5475,12 +5559,15 @@ function renderEmployees() {
   const byDept = new Map();
   for (const emp of filtered) { 
     const deptName = emp.department || 'Unassigned';
-    if (!byDept.has(deptName)) byDept.set(deptName, []); 
-    byDept.get(deptName).push(emp); 
+    const subdeptName = emp.subdepartment || 'General';
+    const groupKey = `${deptName}\u0000${subdeptName}`;
+    if (!byDept.has(groupKey)) byDept.set(groupKey, []);
+    byDept.get(groupKey).push(emp);
   }
-  const groups = [...byDept.entries()].map(([department, list]) => {
+  const groups = [...byDept.entries()].map(([groupKey, list]) => {
+    const [department, subdepartment] = groupKey.split('\u0000');
     const sorted = [...list].sort((a, b) => ((a.sortOrder ?? 99) - (b.sortOrder ?? 99)) || a.name.localeCompare(b.name));
-    return { department, list: sorted, minOrder: sorted[0]?.sortOrder ?? 99 };
+    return { department, subdepartment, list: sorted, minOrder: sorted[0]?.sortOrder ?? 99 };
   }).sort((a, b) => (a.minOrder - b.minOrder) || a.department.localeCompare(b.department));
   const allDepts = [...new Set(employees.map(e => e.department).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const deptSwatches = allDepts.map((dept, idx) => {
@@ -5497,6 +5584,12 @@ function renderEmployees() {
       <div class="swatches" style="gap:5px">${paletteButtons}</div>
     </div>`;
   }).join('');
+  const subdeptSwatches = [...new Set(employees.map(emp => `${emp.department || 'Unassigned'}\u0000${emp.subdepartment || 'General'}`))].sort((a, b) => a.localeCompare(b)).map(key => {
+    const [dept, subdept] = key.split('\u0000');
+    const color = resolveSubdepartmentColor(dept, subdept) || resolveDeptColor(dept) || PALETTE[allDepts.indexOf(dept) % PALETTE.length];
+    const paletteButtons = PALETTE.map(option => `<button type="button" class="swatch${option === color ? ' sel' : ''}" title="${option}" style="background:${option};width:18px;height:18px" onclick="setSubdepartmentColor(${esc(JSON.stringify(dept))},${esc(JSON.stringify(subdept))},'${option}')"></button>`).join('');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:12px"><span style="min-width:160px;display:inline-flex;align-items:center;gap:6px"><span class="chip-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%"></span><span>${esc(dept)} / ${esc(subdept)}</span></span><div class="swatches" style="gap:5px">${paletteButtons}</div></div>`;
+  }).join('');
 
   const catChip = cat => `<span class="chip" style="${chipStyle(cat.color)}"><span class="chip-dot" style="background:${cat.color}"></span>${esc(cat.name)}</span>`;
   let rowsHtml = '';
@@ -5505,14 +5598,14 @@ function renderEmployees() {
   } else {
     for (const group of groups) {
       const deptColor = resolveDeptColor(group.department) || PALETTE[allDepts.indexOf(group.department) % PALETTE.length];
-      rowsHtml += `<tr class="dept-row"><td colspan="10" style="background:${deptColor}22;border-bottom:1px solid ${deptColor};color:var(--text)">${esc(group.department)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
+      rowsHtml += `<tr class="dept-row"><td colspan="10" style="background:${deptColor}22;border-bottom:1px solid ${deptColor};color:var(--text)">${esc(group.department)} <span style="font-weight:400;text-transform:none">/ ${esc(group.subdepartment)} · ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
       for (const emp of group.list) {
         const cats = (emp.categoryIds || []).map(catById).filter(Boolean);
         rowsHtml += `<tr>
           <td><div style="font-weight:500">${esc(emp.name)}</div>${cats.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px">${cats.map(catChip).join('')}</div>` : ''}</td>
           <td class="muted">${esc(emp.email || '') || '<span class="sum-dash">—</span>'}</td>
           <td>${esc(emp.role || '')}</td>
-          <td class="muted">${esc(emp.department || '')}${emp.level ? `<div style="font-size:11px;margin-top:2px">${esc(emp.level)}</div>` : ''}</td>
+          <td class="muted">${esc(emp.department || '')}${emp.subdepartment ? `<div style="font-size:11px;margin-top:2px">${esc(emp.subdepartment)}</div>` : ''}${emp.level ? `<div style="font-size:11px;margin-top:2px">${esc(emp.level)}</div>` : ''}</td>
           <td class="muted">${emp.birthday ? esc(fmtMed(emp.birthday)) : '<span class="sum-dash">—</span>'}</td>
           <td class="muted">${emp.homeAddress ? esc(emp.homeAddress) : '<span class="sum-dash">—</span>'}</td>
           <td>${emp.phoneWork ? `<a class="tel-link" href="tel:${esc(emp.phoneWork)}">${esc(emp.phoneWork)}</a>` : '<span class="sum-dash">—</span>'}</td>
@@ -5542,7 +5635,7 @@ function renderEmployees() {
     <div class="flex items-center gap-2 mb-4" style="flex-wrap:wrap">
       <div class="search-box">
         <span class="search-ico"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></span>
-        <input id="emp-search" placeholder="Search name, email, role, department, or level…" value="${esc(empSearch)}" oninput="empSearch=this.value;renderEmployees();document.getElementById('emp-search').focus()">
+        <input id="emp-search" placeholder="Search name, email, role, department, team, or level…" value="${esc(empSearch)}" oninput="empSearch=this.value;renderEmployees();document.getElementById('emp-search').focus()">
       </div>
       <select class="plain-select" onchange="empFilterDept=this.value;renderEmployees()">
         <option value="">All departments</option>
@@ -5558,7 +5651,7 @@ function renderEmployees() {
         ${svgIcon(deptColorsExpanded ? 'chevronDown' : 'chevronRight')} Department colors
       </button>
       ${deptColorsExpanded
-        ? `<div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:10px">${deptSwatches || '<span class="muted text-sm">No departments yet.</span>'}</div>`
+        ? `<div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:10px">${deptSwatches || '<span class="muted text-sm">No departments yet.</span>'}</div><div class="form-hint" style="margin-top:10px">Team colors</div><div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:6px">${subdeptSwatches || '<span class="muted text-sm">No teams yet.</span>'}</div>`
         : ''}
     </div>
     <div class="card" style="padding:0;overflow:hidden">
@@ -5597,6 +5690,7 @@ function openEmpModal(id) {
   document.getElementById('ef-email').value = emp?.email || '';
   document.getElementById('ef-role').value = emp?.role || '';
   document.getElementById('ef-dept').value = emp?.department || '';
+  document.getElementById('ef-subdept').value = emp?.subdepartment || '';
   document.getElementById('ef-level').value = emp?.level || '';
   document.getElementById('ef-birthday').value = emp?.birthday || '';
   document.getElementById('ef-address').value = emp?.homeAddress || '';
@@ -5613,6 +5707,7 @@ async function saveEmployee() {
   const email = document.getElementById('ef-email').value.trim();
   const role = document.getElementById('ef-role').value.trim();
   const dept = document.getElementById('ef-dept').value.trim();
+  const subdepartment = document.getElementById('ef-subdept').value.trim();
   const level = document.getElementById('ef-level').value.trim();
   const birthday = document.getElementById('ef-birthday').value;
   const homeAddress = document.getElementById('ef-address').value.trim();
@@ -5628,7 +5723,7 @@ async function saveEmployee() {
   }
 
   await mutateState('saveEmployee', () => {
-    const rec = { name, email, role, department: dept, level, birthday, homeAddress, phoneWork, phonePrivate, sortOrder, categoryIds: [...selectedEmpCatIds] };
+    const rec = { name, email, role, department: dept, subdepartment, level, birthday, homeAddress, phoneWork, phonePrivate, sortOrder, categoryIds: [...selectedEmpCatIds] };
     if (editingEmpId) {
       rec.id = editingEmpId;
       const idx = employees.findIndex(e => e.id === editingEmpId);
