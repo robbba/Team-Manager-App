@@ -1,4 +1,10 @@
-# Team Manager
+# ATLAS — Adaptive Timeline, Load & Allocation System
+
+## Workwheel prototype
+
+The optional Workwheel can be enabled from **Application settings**. It is designed for section planning such as JDLOC and stores its experimental data separately from the main planner JSON. Create multiple section wheels, add recurring meetings or deadlines, and use the upcoming panel to review future items.
+
+Workwheel data is recovered in browser storage while testing. Use **Workwheel → Data file** to load a separate JSON file or export the current Workwheel as `workwheel.json`. The feature is fully offline and does not use external services or assets. The current prototype supports none, daily, weekly, and monthly recurrence; weekly activities use the weekday of their start date.
 
 The active application is the standalone [`index.html`](index.html). For the smoothest portable workflow in Edge, keep `index.html`, any `assets/` files, and your planner JSON file together in one folder and open the app from a simple local static server such as `http://localhost:8080`.
 
@@ -57,6 +63,8 @@ Administrative compensation is independent of the physical shift. For example, a
 ## Schedule behavior
 
 Planned assignments remain visible with diagonal hatching, but only Confirmed activities count in Workload, Summary, availability, and reports. Day and Night use lighter and darker shades of the assigned Work Time Code color.
+
+Personnel receive an automatic employee order number when added. The number can be edited from Personnel, and lower numbers appear first within each hierarchy group. Whole departments and named sub-teams can be moved up or down from Personnel → Department order and Sub-team order. Schedule follows that hierarchy, while direct department employees remain above the named sub-teams.
 
 Dragging across dates creates a visible selection. **Remove from [activity]** removes only that activity from the selected dates; daily statuses and other activities remain. **Clear all selected cells** is the separate action for clearing everything in the selection. Both actions participate in Undo and browser recovery.
 

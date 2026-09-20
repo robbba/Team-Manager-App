@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Team Manager</title>
-<link rel="stylesheet" href="css/styles.css">
+<title>ATLAS — Adaptive Timeline, Load &amp; Allocation System</title>
+<link rel="stylesheet" href="css/styles.css?v=17">
 </head>
 <body>
 <aside id="sidebar">
@@ -12,39 +12,50 @@
     <span class="logo-badge">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
     </span>
-    <span class="app-name" id="sb-app-name">Team Manager</span>
+    <span class="app-name" id="sb-app-name">ATLAS</span>
+    <button class="sidebar-pin-btn" id="sidebar-pin-toggle" type="button" onclick="toggleSidebarMode()" aria-label="Use sidebar auto-hide" aria-pressed="true" title="Sidebar pinned">
+      <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l-1 6 3 3H6l3-3z"/><path d="M12 13v7"/></svg><span class="sidebar-pin-label">Pinned</span>
+    </button>
   </div>
   <nav id="sb-nav">
-    <button class="nav-btn" data-page="grid" onclick="nav('grid')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      Schedule
+    <button class="nav-btn" data-page="grid" onclick="nav('grid')" aria-label="Schedule">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="sidebar-item-label">Schedule</span>
     </button>
-    <button class="nav-btn" data-page="dashboard" onclick="nav('dashboard')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v9H3z"/><path d="M14 3h7v5h-7z"/><path d="M14 12h7v9h-7z"/><path d="M3 16h7v5H3z"/></svg>
-      Dashboard
+    <button class="nav-btn" data-page="dashboard" onclick="nav('dashboard')" aria-label="Dashboard">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3h7v9H3z"/><path d="M14 3h7v5h-7z"/><path d="M14 12h7v9h-7z"/><path d="M3 16h7v5H3z"/></svg>
+      <span class="sidebar-item-label">Dashboard</span>
     </button>
-    <button class="nav-btn" data-page="employees" onclick="nav('employees')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      People
+    <button class="nav-btn" data-page="employees" onclick="nav('employees')" aria-label="People">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="sidebar-item-label">People</span>
     </button>
-    <button class="nav-btn" data-page="summary" onclick="nav('summary')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      Summary
+    <button class="nav-btn" data-page="summary" onclick="nav('summary')" aria-label="Summary">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="sidebar-item-label">Summary</span>
+    </button>
+    <button class="nav-btn workwheel-nav" data-page="workwheel" onclick="nav('workwheel')" aria-label="Workwheel" style="display:none">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/><path d="M12 4v6M20 12h-6M12 20v-6M4 12h6"/></svg>
+      <span class="sidebar-item-label">Workwheel</span>
+    </button>
+    <button class="nav-btn shift-rotation-nav" data-page="shift-rotation" onclick="nav('shift-rotation')" style="display:none">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/><path d="M5 4 3 7l3 1"/></svg>
+      Shift Rotation
     </button>
   </nav>
   <div class="sb-section">
     <div class="sb-section-label">Local Data</div>
-    <button class="sb-link" id="save-btn" onclick="saveData()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l3 3v13H4V4z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg> Save</button>
-    <button class="sb-link" id="sync-btn" onclick="syncNow()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6"/><path d="M4 20v-6h6"/><path d="M6.5 9.5A7 7 0 0 1 19 10"/><path d="M17.5 14.5A7 7 0 0 1 5 14"/></svg> Sync Now</button>
-    <button class="sb-link" id="auto-sync-btn" onclick="toggleAutoSync()"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6"/><path d="M4 20v-6h6"/><path d="M6.5 9.5A7 7 0 0 1 19 10"/><path d="M17.5 14.5A7 7 0 0 1 5 14"/></svg> Auto-update: On</button>
-    <button class="sb-link" id="undo-btn" onclick="undoLastChange()" disabled><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/></svg> Undo Change</button>
+    <button class="sb-link" id="save-btn" onclick="saveData()" aria-label="Save"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l3 3v13H4V4z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg><span class="sidebar-item-label">Save</span></button>
+    <button class="sb-link" id="sync-btn" onclick="syncNow()" aria-label="Sync now"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6"/><path d="M4 20v-6h6"/><path d="M6.5 9.5A7 7 0 0 1 19 10"/><path d="M17.5 14.5A7 7 0 0 1 5 14"/></svg><span class="sidebar-item-label">Sync Now</span></button>
+    <button class="sb-link" id="auto-sync-btn" onclick="toggleAutoSync()" aria-label="Toggle automatic updates"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6"/><path d="M4 20v-6h6"/><path d="M6.5 9.5A7 7 0 0 1 19 10"/><path d="M17.5 14.5A7 7 0 0 1 5 14"/></svg><span class="sidebar-item-label">Auto-update: On</span></button>
+    <button class="sb-link" id="undo-btn" onclick="undoLastChange()" aria-label="Undo change" disabled><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/></svg><span class="sidebar-item-label">Undo Change</span></button>
     <div class="sb-info" id="file-status" title="No active JSON file"><span class="db-indicator connected" id="db-dot"></span><span id="db-status-text">Updated</span></div>
   </div>
-  <div class="sb-section">
+  <div class="sb-section sidebar-footer">
     <div class="sb-today" id="sb-today"></div>
     <div class="sb-footrow" style="margin-top:8px">
-      <button class="sb-link" id="theme-toggle" onclick="toggleTheme()" style="flex:1"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5z"/></svg> Dark mode</button>
-      <button class="sb-link" onclick="openSettings()" title="Application settings" style="width:auto"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.2 2.5 2.7.4 2-1.9 1.8 1.8-1.9 2 .4 2.7L21 12l-2.5 1.2-.4 2.7 1.9 2-1.8 1.8-2-1.9-2.7.4L12 21l-1.2-2.5-2.7-.4-2 1.9-1.8-1.8 1.9-2-.4-2.7L3 12l2.5-1.2.4-2.7-1.9-2 1.8-1.8 2 1.9 2.7-.4z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button class="sb-link" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle color theme" style="flex:1"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5z"/></svg><span class="sidebar-item-label">Dark mode</span></button>
+      <button class="sb-link" onclick="openSettings()" aria-label="Application settings" title="Application settings" style="width:auto"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.2 2.5 2.7.4 2-1.9 1.8 1.8-1.9 2 .4 2.7L21 12l-2.5 1.2-.4 2.7 1.9 2-1.8 1.8-2-1.9-2.7.4L12 21l-1.2-2.5-2.7-.4-2 1.9-1.8-1.8 1.9-2-.4-2.7L3 12l2.5-1.2.4-2.7-1.9-2 1.8-1.8 2 1.9 2.7-.4z"/><circle cx="12" cy="12" r="3"/></svg></button>
     </div>
   </div>
 </aside>
@@ -86,7 +97,7 @@
       <button class="icon-btn" title="Close" onclick="closeModal('activity-report-modal')">&times;</button>
     </div>
     <div id="activity-report-content" style="overflow:auto;margin-top:14px"></div>
-    <div class="modal-actions">
+    <div class="modal-actions" style="align-items:center">
       <button class="btn" onclick="printActivityReport()">Print</button>
       <button class="btn btn-primary" onclick="exportActivityReportCsv()">Export CSV</button>
     </div>
@@ -97,17 +108,24 @@
 <div class="modal-bg" id="emp-modal">
   <div class="modal">
     <h3 id="emp-modal-title">Add Employee</h3>
-    <p class="modal-desc">Personnel details, contact numbers, address and category tags.</p>
+    <p class="modal-desc">Personnel details, hierarchy order, contact numbers, address and category tags.</p>
     <div class="form-row"><label>Full name *</label><input id="ef-name" placeholder="Jane Smith"></div>
     <div class="form-row"><label>Email *</label><input id="ef-email" type="email" placeholder="jane@company.com"></div>
     <div class="form-row-2">
       <div class="form-row" style="margin:0"><label>Role / title *</label><input id="ef-role" placeholder="Engineer"></div>
-      <div class="form-row" style="margin:0"><label>Main department *</label><input id="ef-dept" placeholder="Operations"></div>
+      <div class="form-row" style="margin:0"><label>Organisation</label><input id="ef-organisation" list="ef-organisations" placeholder="CIS Battalion"></div>
     </div>
-    <div class="form-row"><label>Team / subdepartment <span class="muted" style="font-weight:400">(optional; e.g. Alpha Team)</span></label><input id="ef-subdept" placeholder="Alpha Team">
-      <div class="form-hint">People are grouped under Main department, then Team / subdepartment.</div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label>Department <span class="muted" style="font-weight:400">(optional)</span></label><input id="ef-dept" list="ef-departments" placeholder="JTCC"></div>
+      <div class="form-row" style="margin:0"><label>Section <span class="muted" style="font-weight:400">(optional)</span></label><input id="ef-section" list="ef-sections" placeholder="JDLOC"></div>
     </div>
-    <div class="form-row"><label>Level <span class="muted" style="font-weight:400">(optional; e.g. Management / Senior / Associate)</span></label><input id="ef-level" placeholder="Senior"></div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label>Process <span class="muted" style="font-weight:400">(optional)</span></label><input id="ef-process" list="ef-processes" placeholder="Opsroom"></div>
+      <div class="form-row" style="margin:0"><label>Team <span class="muted" style="font-weight:400">(optional)</span></label><input id="ef-team" list="ef-teams" placeholder="Alpha Team"></div>
+    </div>
+    <datalist id="ef-organisations"></datalist><datalist id="ef-departments"></datalist><datalist id="ef-sections"></datalist><datalist id="ef-processes"></datalist><datalist id="ef-teams"></datalist>
+    <div class="form-hint">Hierarchy: Organisation → Department → Section → Process → Team. Process and Team are optional.</div>
+    <div class="form-row"><label>Level / Rank <span class="muted" style="font-weight:400">(optional; e.g. OR-7 / MAY / COM)</span></label><input id="ef-level" placeholder="OR-7"></div>
     <div class="form-row-2">
       <div class="form-row" style="margin:0"><label>Birthday <span class="muted" style="font-weight:400">(optional)</span></label><input id="ef-birthday" type="date"></div>
       <div class="form-row" style="margin:0"><label>Home address <span class="muted" style="font-weight:400">(optional)</span></label><input id="ef-address" placeholder="Street, city"></div>
@@ -117,13 +135,18 @@
       <div class="form-row" style="margin:0"><label>Private phone</label><input id="ef-phone-priv" type="tel" placeholder="+47 111 22 333"></div>
     </div>
     <div class="form-row">
-      <label>Sort order <span class="muted" style="font-weight:400">(optional, lower = higher)</span></label>
+      <label>Employee order <span class="muted" style="font-weight:400">(lower = higher)</span></label>
       <input id="ef-sort" type="number" min="1" max="9999" placeholder="e.g. 10">
+      <div class="form-hint">Assigned automatically for new employees. Change it to reorder employees within the hierarchy.</div>
     </div>
     <div class="form-row">
       <label>Categories</label>
       <div id="ef-categories"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;margin:8px 0 12px">
+      <input type="checkbox" id="ef-shift-rotation"> Include in Shift Rotation
+    </label>
+    <div class="form-row"><label>Shift Team / Crew <span class="muted" style="font-weight:400">(optional)</span></label><select id="ef-shift-team"><option value="">Unassigned Shift Team</option></select><div class="form-hint">Independent from the organisational Team. Managed in Shift Rotation settings.</div></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('emp-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveEmployee()">Save</button>
@@ -245,9 +268,10 @@
     </label>
     <div class="form-row-2">
       <div class="form-row" style="margin:0"><label>Day shift hours</label><input id="af-day-shift" placeholder="0730-2400"></div>
+      <div class="form-row" style="margin:0"><label>Mid-day / Evening hours</label><input id="af-evening-shift" placeholder="1200-2000"></div>
       <div class="form-row" style="margin:0"><label>Night shift hours</label><input id="af-night-shift" placeholder="0000-0730"></div>
     </div>
-    <div class="form-hint" style="margin:4px 0 12px">Defaults: Day 0730-2400 and Night 0000-0730. Use 24-hour time.</div>
+    <div class="form-hint" style="margin:4px 0 12px">Defaults: Day 0730-2400, Mid-day / Evening 1200-2000, and Night 0000-0730. Use 24-hour time.</div>
     <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;margin:8px 0 12px">
       <input type="checkbox" id="af-include-weekends"> Include weekends in Work Schedule
     </label>
@@ -275,6 +299,10 @@
       <label>Participants <span id="af-participant-count" class="muted" style="font-weight:400"></span></label>
       <div id="af-participants" class="participant-list"></div>
     </div>
+    <label style="display:flex;align-items:flex-start;gap:7px;font-size:12.5px;cursor:pointer;margin:2px 0 12px">
+      <input type="checkbox" id="af-prefill-cells">
+      <span><strong>Prefill selected personnel cells</strong><span class="form-hint" style="display:block">Adds this activity as a placeholder for selected personnel and dates. Existing cell entries and activity assignments are never replaced.</span></span>
+    </label>
     <div class="form-row"><label>Notes (optional)</label><textarea id="af-notes" placeholder="Any additional context…"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-danger" id="af-delete-btn" style="margin-right:auto;display:none" onclick="requestDeleteActivityFromModal()">Delete</button>
@@ -391,48 +419,28 @@
 
 <!-- Settings modal -->
 <div class="modal-bg" id="settings-modal">
-  <div class="modal" style="width:400px">
+  <div class="modal" style="width:560px">
     <h3>Application settings</h3>
     <p class="modal-desc">Customise the app name and working-hours configuration.</p>
+    <div class="form-row"><label>Administration</label><button class="btn" type="button" onclick="openAdministrationSettings()">Open Administration settings</button><div class="form-hint">Boss View, audit information, and protected maintenance tools.</div></div>
     <div class="form-row">
       <label>Application name</label>
       <input id="set-app-name" placeholder="e.g. JDLOC Employee Overview">
       <div class="form-hint">Shown in the sidebar and as the main heading in Grid View.</div>
     </div>
+    <div class="form-row"><label>Schedule</label><button class="btn" type="button" onclick="openScheduleSettings()">Open Schedule settings</button><div class="form-hint">Core workday, grid behavior, special days, planning options, and activity deadline.</div></div>
+    <div class="form-row"><label>Organisation Structure</label><button class="btn" type="button" onclick="openOrganisationStructure()">Manage Organisation Structure</button><div class="form-hint">Reorder and review Departments, Sections, Processes, and Teams.</div></div>
+    <div class="form-row"><label>Personnel</label><button class="btn" type="button" onclick="openPersonnelSettings()">Open Personnel settings</button><div class="form-hint">Staffing thresholds, hierarchy order, and hierarchy colors.</div></div>
     <div class="form-row">
-      <label>Core workday time range</label>
-      <input id="set-core-time" type="text" placeholder="0730-1500" style="width:160px">
-      <div class="form-hint">Used in workload calculations to decide whether activity time is inside or outside core hours (e.g. 0800-1600). <span id="set-core-hours-display"></span></div>
+      <label>Shift Rotation</label>
+      <button class="btn" type="button" onclick="openShiftRotationSettings()">Configure Shift Rotation</button>
+      <div class="form-hint">Enable the rotation planner, define shift lengths, configure colors, and manage Leave and Overtime in one place.</div>
     </div>
     <div class="form-row">
-      <label>Staffing-load thresholds</label>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        <div><label class="muted text-sm">Light up to %</label><input id="set-light-max" type="number" min="0" max="200" step="1"></div>
-        <div><label class="muted text-sm">Normal up to %</label><input id="set-normal-max" type="number" min="1" max="300" step="1"></div>
-        <div><label class="muted text-sm">High up to %</label><input id="set-high-max" type="number" min="1" max="500" step="1"></div>
-      </div>
-      <div class="form-hint">Values above the High limit are Overloaded. Limits must increase from Light to High.</div>
-    </div>
-    <div class="form-row">
-      <label>Planning configuration</label>
-      <button class="btn" type="button" onclick="closeModal('settings-modal');openStatusManager()">Manage Planning Options</button>
-    </div>
-    <div class="form-row">
-      <label>Special days</label>
-      <button class="btn" type="button" onclick="openSpecialDaysModal()">Manage Special Days</button>
-      <div class="form-hint">Recurring and one-off dates stay highlighted in the grid without using extra timeline rows.</div>
-    </div>
-    <div class="form-row">
-      <label>Work schedule checks</label>
-      <input id="set-admin-password" type="password" placeholder="Enter password to set or unlock">
-      <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap"><button class="btn btn-sm btn-primary" type="button" onclick="setBossPassword()">Set password</button><button class="btn btn-sm" type="button" onclick="unlockBossSession()">Unlock boss view</button><button class="btn btn-sm" type="button" onclick="lockBossSession()">Lock boss view</button></div>
-      <div class="form-hint" id="boss-session-status" style="margin-top:6px"></div>
-      <div class="form-hint">The boss view is a local UI gate for marking activity codes entered in the separate time system. It is not encryption for the planner file.</div>
-    </div>
-    <div class="form-row">
-      <label>Grid behavior</label>
-      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-jump-to-today" type="checkbox"> Jump to today after changing grid settings</label>
-      <div class="form-hint">Controls automatic horizontal repositioning after changing the grid view, section visibility, or activity filter.</div>
+      <label>Workwheel</label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-workwheel-enabled" type="checkbox"> Enable Workwheel</label>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:8px"><div><label class="muted text-sm">Upcoming window (days)</label><input id="set-workwheel-upcoming-days" type="number" min="1" max="365" step="1"></div><button class="btn" type="button" onclick="openWorkwheelFileSettings()">Workwheel data file</button></div>
+      <div class="form-hint">Experimental section activity wheels. Data is kept in a separate local JSON file.</div>
     </div>
     <div class="form-row">
       <label>Security classification</label>
@@ -443,25 +451,7 @@
       </div>
       <div class="form-hint">Displays a classification banner (e.g. BEGRENSET) on the Schedule view, Activity Schedule report, Status Board, and on every printed page. Visual only — does not restrict access.</div>
     </div>
-    <div class="form-row">
-      <label>Activity discussion deadline</label>
-      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
-        <div><label class="muted text-sm">Days from today</label><input id="set-planning-horizon-days" type="number" min="0" max="365" step="1"></div>
-        <div><label class="muted text-sm">Line color</label><input id="set-planning-horizon-color" type="color" style="width:48px;height:34px;padding:2px"></div>
-      </div>
-      <div class="form-hint">Shows a vertical deadline line in Schedule. Default is 14 days from today; set to 0 to hide it.</div>
-    </div>
-    <div class="form-row">
-      <label>Local data</label>
-      <div class="form-hint">Choose your data file to work with planner data in this browser. Auto-recovery only protects local recovery state.</div>
-      <div class="form-hint" id="default-json-status" style="margin-top:6px"></div>
-      <div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" type="button" onclick="importData()">Choose Data File</button>
-        <button class="btn btn-sm" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As...</button>
-        <button class="btn btn-sm" type="button" onclick="loadExampleTestData()">Load example data (testing)</button>
-      </div>
-      <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
-    </div>
+    <div class="form-row"><label>Data & Backup</label><button class="btn" type="button" onclick="openDataBackupSettings()">Open Data & Backup</button><div class="form-hint">Choose planner JSON, Save As, recovery status, and test data.</div></div>
     <div class="form-row" style="margin-top:2px">
       <label>About</label>
       <div class="form-hint" id="set-about-version"></div>
@@ -470,6 +460,145 @@
       <button class="btn" onclick="closeModal('settings-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveSettings()">Save</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="workwheel-file-modal">
+  <div class="modal" style="width:520px">
+    <h3>Workwheel data file</h3>
+    <p class="modal-desc">Open or export the separate Workwheel JSON file. Browser recovery is used while testing.</p>
+    <div class="form-hint" id="workwheel-file-status" style="margin-bottom:12px"></div>
+    <div class="flex gap-2" style="flex-wrap:wrap"><button class="btn" type="button" onclick="importWorkwheelFile()">Open JSON</button><button class="btn" type="button" onclick="saveWorkwheelFileAs()">Export JSON</button><button class="btn" type="button" onclick="loadWorkwheelExample()">Load example</button></div>
+    <input id="workwheel-json-file" type="file" accept="application/json,.json" onchange="handleWorkwheelFile(event)" style="display:none">
+    <div class="modal-actions"><button class="btn" onclick="closeModal('workwheel-file-modal')">Done</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="workwheel-create-modal">
+  <div class="modal" style="width:420px">
+    <h3>Create Workwheel</h3>
+    <p class="modal-desc">Create a wheel for a section, for example JDLOC.</p>
+    <div class="form-row"><label for="workwheel-name-input">Wheel name *</label><input id="workwheel-name-input" placeholder="JDLOC" onkeydown="if(event.key==='Enter') saveNewWorkwheel()"></div>
+    <div class="form-row"><label for="workwheel-section-input">Section</label><input id="workwheel-section-input" placeholder="JDLOC"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('workwheel-create-modal')">Cancel</button><button class="btn btn-primary" onclick="saveNewWorkwheel()">Create wheel</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="workwheel-activity-modal">
+  <div class="modal" style="width:480px">
+    <h3>Add Workwheel activity</h3>
+    <p class="modal-desc">Add a meeting, deadline, or recurring section activity.</p>
+    <div class="form-row"><label>Title *</label><input id="ww-activity-title" placeholder="Weekly JDLOC meeting"></div>
+    <div class="form-row-2"><div class="form-row" style="margin:0"><label>Date *</label><input id="ww-activity-date" type="date"></div><div class="form-row" style="margin:0"><label>Time</label><input id="ww-activity-time" placeholder="1000-1100"></div></div>
+    <div class="form-row-2"><div class="form-row" style="margin:0"><label>Type</label><select id="ww-activity-type" class="plain-select"><option value="meeting">Meeting</option><option value="deadline">Deadline</option><option value="briefing">Briefing</option><option value="other">Other</option></select></div><div class="form-row" style="margin:0"><label>Recurrence</label><select id="ww-activity-recurrence" class="plain-select" onchange="toggleWorkwheelWeekday()"><option value="none">None</option><option value="weekly">Weekly</option><option value="fortnightly">Every 14 days</option><option value="monthly">Monthly</option></select></div></div>
+    <div class="form-row-2"><div class="form-row" id="ww-weekday-row" style="margin:0;display:none"><label>Weekday</label><select id="ww-activity-weekday" class="plain-select"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></div><div class="form-row" style="margin:0"><label>Meeting color</label><input id="ww-activity-color" type="color" value="#3b82f6" style="width:52px;height:36px;padding:2px"></div></div>
+    <div class="form-row"><label>Responsible person</label><input id="ww-activity-responsible" placeholder="Name or call sign"></div>
+    <div class="form-row"><label>Notes</label><textarea id="ww-activity-notes" placeholder="Optional notes"></textarea></div>
+    <div class="modal-actions"><button class="btn btn-danger" id="ww-activity-delete" style="margin-right:auto;display:none" onclick="confirmDeleteWorkwheelActivity()">Delete</button><button class="btn" onclick="closeModal('workwheel-activity-modal')">Cancel</button><button class="btn btn-primary" onclick="saveWorkwheelActivity()">Save activity</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="workwheel-template-modal">
+  <div class="modal" style="width:440px">
+    <h3>Add available activity</h3>
+    <p class="modal-desc">Create a reusable activity template for importing into a wheel.</p>
+    <div class="form-row"><label>Activity name *</label><input id="ww-template-title" placeholder="Thursday coordination meeting"></div>
+    <div class="form-row-2"><div class="form-row" style="margin:0"><label>Type</label><select id="ww-template-type" class="plain-select"><option value="meeting">Meeting</option><option value="deadline">Deadline</option><option value="briefing">Briefing</option><option value="other">Other</option></select></div><div class="form-row" style="margin:0"><label>Color</label><input id="ww-template-color" type="color" value="#3b82f6" style="width:52px;height:36px;padding:2px"></div></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('workwheel-template-modal')">Cancel</button><button class="btn btn-primary" onclick="saveWorkwheelActivityTemplate()">Save template</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="data-backup-settings-modal">
+  <div class="modal" style="width:520px">
+    <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Data & Backup</h3><button class="icon-btn" title="Close" onclick="closeModal('data-backup-settings-modal')">&times;</button></div>
+    <p class="modal-desc">Manage the active planner JSON file and local recovery options.</p>
+    <div class="form-hint" id="default-json-status" style="margin-bottom:10px"></div>
+    <div class="flex gap-2" style="flex-wrap:wrap"><button class="btn" type="button" onclick="importData()">Choose Data File</button><button class="btn" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As...</button><button class="btn" type="button" onclick="loadExampleTestData()">Load example data</button></div>
+    <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
+    <div class="modal-actions"><button class="btn" onclick="closeModal('data-backup-settings-modal')">Done</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="schedule-settings-modal">
+  <div class="modal" style="width:520px;max-height:calc(100vh - 32px)">
+    <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Schedule settings</h3><button class="icon-btn" title="Close" onclick="closeModal('schedule-settings-modal')">&times;</button></div>
+    <p class="modal-desc">Configure working hours, schedule behavior, special days, and activity planning deadlines.</p>
+    <div class="form-row"><label>Core workday time range</label><input id="set-core-time" type="text" placeholder="0730-1500"><div class="form-hint">Used in workload calculations. <span id="set-core-hours-display"></span></div></div>
+    <div class="form-row"><label>Grid behavior</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-jump-to-today" type="checkbox"> Jump to today after changing grid settings</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:7px"><input id="set-show-level-rank" type="checkbox"> Show Level / Rank in Schedule and Shift Rotation</label></div>
+    <div class="form-row"><label>Special days</label><button class="btn" type="button" onclick="openSpecialDaysModal()">Manage Special Days</button></div>
+    <div class="form-row"><label>Planning configuration</label><button class="btn" type="button" onclick="closeModal('schedule-settings-modal');openStatusManager()">Manage Planning Options</button></div>
+    <div class="form-row"><label>Activity discussion deadline</label><div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end"><input id="set-planning-horizon-days" type="number" min="0" max="365" step="1" placeholder="Days from today"><input id="set-planning-horizon-color" type="color" style="width:48px;height:34px;padding:2px"></div><div class="form-hint">Set days to 0 to hide the deadline line.</div></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('schedule-settings-modal')">Cancel</button><button class="btn btn-primary" onclick="saveSettings();closeModal('schedule-settings-modal')">Save schedule settings</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="organisation-structure-modal">
+  <div class="modal" style="width:620px;max-height:calc(100vh - 32px)">
+    <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Organisation Structure</h3><button class="icon-btn" title="Close" onclick="closeModal('organisation-structure-modal')">&times;</button></div>
+    <p class="modal-desc">Reorder the existing hierarchy without moving personnel between groups. Drag a handle to reorder items with the same parent, or use the arrow controls for precise keyboard-friendly ordering.</p>
+    <div id="organisation-structure-list" style="max-height:58vh;overflow:auto"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('organisation-structure-modal')">Done</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="personnel-settings-modal">
+  <div class="modal" style="width:620px;max-height:calc(100vh - 32px)">
+    <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Personnel settings</h3><button class="icon-btn" title="Close" onclick="closeModal('personnel-settings-modal')">&times;</button></div>
+    <p class="modal-desc">Configure staffing thresholds and access the personnel hierarchy configuration.</p>
+    <div class="form-row"><label>Staffing-load thresholds</label><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><div><label class="muted text-sm">Light up to %</label><input id="personnel-light-max" type="number" min="0" max="200" step="1"></div><div><label class="muted text-sm">Normal up to %</label><input id="personnel-normal-max" type="number" min="1" max="300" step="1"></div><div><label class="muted text-sm">High up to %</label><input id="personnel-high-max" type="number" min="1" max="500" step="1"></div></div><div class="form-hint">Values above High are Overloaded.</div></div>
+    <div class="form-row"><label>Hierarchy configuration</label><button class="btn" type="button" onclick="closeModal('personnel-settings-modal');openOrganisationStructure()">Manage Organisation Structure</button><button class="btn" type="button" onclick="closeModal('personnel-settings-modal');nav('employees');deptColorsExpanded=true;renderEmployees()" style="margin-left:8px">Manage hierarchy colors</button></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('personnel-settings-modal')">Cancel</button><button class="btn btn-primary" onclick="savePersonnelSettings()">Save personnel settings</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="administration-settings-modal">
+  <div class="modal" style="width:560px;max-height:calc(100vh - 32px)">
+    <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Administration</h3><button class="icon-btn" title="Close" onclick="closeModal('administration-settings-modal')">&times;</button></div>
+    <p class="modal-desc">Protected local controls for Boss View, work schedule checks, data maintenance, and audit information.</p>
+    <div class="form-row"><label>Boss View</label><input id="set-admin-password" type="password" placeholder="Enter password to set or unlock"><div class="flex gap-2" style="margin-top:8px;flex-wrap:wrap"><button class="btn btn-sm btn-primary" type="button" onclick="setBossPassword()">Set password</button><button class="btn btn-sm" type="button" onclick="unlockBossSession()">Unlock</button><button class="btn btn-sm" type="button" onclick="lockBossSession()">Lock</button></div><div class="form-hint" id="boss-session-status" style="margin-top:6px"></div><div class="form-hint">Local workflow gate only; it is not encryption or file access control.</div></div>
+    <div class="form-row"><label>Audit information</label><div id="admin-audit-info" class="form-hint"></div></div>
+    <div class="form-row"><label>Data maintenance</label><div class="form-hint">Planner validation and orphan-reference cleanup are handled automatically during loading and saving.</div></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('administration-settings-modal')">Done</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="shift-rotation-settings-modal">
+  <div class="modal" style="width:560px;max-height:calc(100vh - 32px)">
+    <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Shift Rotation settings</h3><button class="icon-btn" title="Close" onclick="closeModal('shift-rotation-settings-modal')">&times;</button></div>
+    <p class="modal-desc">Configure the rotation planner, shift lengths, colors, and special off-work states.</p>
+    <div class="form-row">
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-shift-rotation-enabled" type="checkbox"> Enable Shift Rotation management</label>
+      <div class="form-hint">Adds a separate rotation planner. Rotation shifts count as normal working hours unless marked Leave.</div>
+    </div>
+    <div class="form-row"><label>Shift lengths</label><div class="form-row-2">
+      <div class="form-row" style="margin:0"><label>Normal Hours</label><input id="set-rotation-normal" placeholder="0730-1500"></div>
+      <div class="form-row" style="margin:0"><label>Day</label><input id="set-rotation-day" placeholder="0730-2400"></div>
+      <div class="form-row" style="margin:0"><label>Mid-day / Evening</label><input id="set-rotation-evening" placeholder="1200-2000"></div>
+      <div class="form-row" style="margin:0"><label>Night</label><input id="set-rotation-night" placeholder="0000-0730"></div>
+    </div></div>
+    <div class="form-row"><label>Shift colors</label><div class="form-row-2">
+      <div class="form-row" style="margin:0"><label>Normal</label><input id="set-rotation-color-normal" type="color" style="width:48px;height:34px;padding:2px"></div>
+      <div class="form-row" style="margin:0"><label>Day</label><input id="set-rotation-color-day" type="color" style="width:48px;height:34px;padding:2px"></div>
+      <div class="form-row" style="margin:0"><label>Mid-day / Evening</label><input id="set-rotation-color-evening" type="color" style="width:48px;height:34px;padding:2px"></div>
+      <div class="form-row" style="margin:0"><label>Night</label><input id="set-rotation-color-night" type="color" style="width:48px;height:34px;padding:2px"></div>
+      <div class="form-row" style="margin:0"><label>Turnaround</label><input id="set-rotation-color-turn" type="color" style="width:48px;height:34px;padding:2px"></div>
+      <div class="form-row" style="margin:0"><label>Leave</label><input id="set-rotation-color-leave" type="color" style="width:48px;height:34px;padding:2px"></div>
+      <div class="form-row" style="margin:0"><label>Overtime</label><input id="set-rotation-color-overtime" type="color" style="width:48px;height:34px;padding:2px"></div>
+    </div></div>
+    <div class="form-row"><label>Shift Teams / Crews</label><div style="display:grid;grid-template-columns:1fr auto auto;gap:8px"><input id="set-shift-team-name" placeholder="e.g. Crew 1"><input id="set-shift-team-color" type="color" value="#3b82f6" style="width:48px;height:34px;padding:2px"><button class="btn btn-sm" type="button" onclick="addShiftTeamSetting()">Add</button></div><div id="set-shift-team-list" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('shift-rotation-settings-modal')">Cancel</button><button class="btn btn-primary" onclick="saveShiftRotationSettings()">Save rotation settings</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="shift-rotation-print-modal">
+  <div class="modal" style="width:520px">
+    <h3>Print Shift Rotation</h3>
+    <p class="modal-desc">Choose the timeframe to print or save as PDF.</p>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label>From</label><input id="rotation-print-start" type="date"></div>
+      <div class="form-row" style="margin:0"><label>To</label><input id="rotation-print-end" type="date"></div>
+    </div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('shift-rotation-print-modal')">Cancel</button><button class="btn btn-primary" onclick="printShiftRotation()">Print / Save PDF</button></div>
   </div>
 </div>
 
@@ -506,6 +635,7 @@
     </div>
   </div>
 </div>
-<script src="app/app.js"></script>
+<script src="app/workwheel.js?v=7"></script>
+<script src="app/app.js?v=15"></script>
 </body>
 </html>

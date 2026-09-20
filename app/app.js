@@ -38,6 +38,7 @@ function svgIcon(name, title = '') {
   const paths = {
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     moon: '<path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5z"/>',
+    evening: '<path d="M4 15a8 8 0 0 1 16 0"/><path d="M4 15h16"/><path d="M8 8.5 6.5 7M16 8.5 17.5 7M12 6V4"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     edit: '<path d="m4 16-.8 4.8L8 20l11.5-11.5a2.1 2.1 0 0 0-3-3z"/><path d="m14.5 6.5 3 3"/>',
     trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"/>',
@@ -46,6 +47,8 @@ function svgIcon(name, title = '') {
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
     chevronUp: '<path d="m18 15-6-6-6 6"/>',
     chevronDown: '<path d="m6 9 6 6 6-6"/>',
+    cornerDownRight: '<path d="M7 5v5a7 7 0 0 0 7 7h3"/><path d="m14 14 3 3-3 3"/>',
+    history: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/>',
     sort: '<path d="m8 7 4-4 4 4M16 17l-4 4-4-4"/>',
     check: '<path d="m5 12 4 4L19 6"/>',
     report: '<path d="M5 20V10M12 20V4M19 20v-7"/>',
@@ -54,8 +57,8 @@ function svgIcon(name, title = '') {
   };
   return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="${title ? 'false' : 'true'}"${title ? ` role="img"><title>${esc(title)}</title>` : '>'}${paths[name] || ''}</svg>`;
 }
-function shiftChangeIcon(title = 'Night shift change') {
-  return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="${title ? 'false' : 'true'}"${title ? ` role="img"><title>${esc(title)}</title>` : '>'}<path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5z"/></svg>`;
+function shiftChangeIcon(title = 'Turnaround') {
+  return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="${title ? 'false' : 'true'}"${title ? ` role="img"><title>${esc(title)}</title>` : '>'}<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/><path d="M5 4 3 7l3 1"/><path d="M3 7a9 9 0 0 1 15-2"/></svg>`;
 }
 
 // ═══ SAFE STORAGE ════════════════════════════════════════════════════════════
@@ -71,8 +74,8 @@ function lsSet(key, value) {
 }
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
-const APP_VERSION = '0.2.0';
-const DATA_VERSION = 7;
+const APP_VERSION = '0.3.0';
+const DATA_VERSION = 9;
 const DEFAULT_WORK_CODES = [
   { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', staffingImpact: 'available', aggregationMode: 'hours', color: '#3b82f6' },
   { id: 'wc2', name: 'Turnusfri', abbreviation: 'TF', staffingImpact: 'available', aggregationMode: 'hours', color: '#64748b' },
@@ -88,13 +91,14 @@ const LOCAL_ONLY_APP_SETTING_KEYS = [
 ];
 
 let appSettings = {
-  appName: 'Team Manager',
+  appName: 'ATLAS',
   darkMode: false,
   autoSaveEnabled: true,
   autoSyncEnabled: true,
   showOnlyConfirmedActivities: false,
   activityStatusFilter: 'all',
   jumpToTodayOnGridChange: true,
+  showLevelRankInSchedule: true,
   coreHoursPerDay: 7.5,
   coreWorkdayRange: '0730-1500',
   lightMax: 70,
@@ -108,11 +112,19 @@ let appSettings = {
   adminPasswordHash: '',
   departmentColors: {},
   subdepartmentColors: {},
+  sectionColors: {},
+  processColors: {},
   activityTypes: [],
   workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })),
   shiftTemplates: DEFAULT_SHIFT_TEMPLATES.map(shift => ({ ...shift })),
   summaryColumns: null,
   securityLabel: { enabled: false, text: 'BEGRENSET', color: '#16a34a' },
+  shiftRotationEnabled: false,
+  shiftRotationRanges: { normal: '0730-1500', day: '0730-2400', evening: '1200-2000', night: '0000-0730' },
+  shiftRotationColors: { normal: '#64748b', day: '#f59e0b', evening: '#14b8a6', night: '#3b82f6', turn: '#8b5cf6', leave: '#b45309', overtime: '#dc2626' },
+  shiftTeams: [],
+  workwheelEnabled: false,
+  workwheelUpcomingDays: 14,
 };
 
 function normalizeHexColor(color, fallback = '#3b82f6') {
@@ -153,7 +165,7 @@ function loadSettings() {
     const raw = lsGet(SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
+      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? (parsed.appName === 'Team Manager' ? 'ATLAS' : parsed.appName) : 'ATLAS';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
       appSettings.showOnlyConfirmedActivities = parsed.showOnlyConfirmedActivities === true;
@@ -180,7 +192,19 @@ function loadSettings() {
       appSettings.subdepartmentColors = parsed.subdepartmentColors && typeof parsed.subdepartmentColors === 'object'
         ? Object.fromEntries(Object.entries(parsed.subdepartmentColors).map(([key, value]) => [String(key), normalizeHexColor(value)]))
         : {};
+      appSettings.sectionColors = parsed.sectionColors && typeof parsed.sectionColors === 'object'
+        ? Object.fromEntries(Object.entries(parsed.sectionColors).map(([key, value]) => [String(key), normalizeHexColor(value)]))
+        : {};
+      appSettings.processColors = parsed.processColors && typeof parsed.processColors === 'object'
+        ? Object.fromEntries(Object.entries(parsed.processColors).map(([key, value]) => [String(key), normalizeHexColor(value)]))
+        : {};
       appSettings.securityLabel = normalizeSecurityLabel(parsed.securityLabel);
+      appSettings.shiftRotationEnabled = parsed.shiftRotationEnabled === true;
+      appSettings.shiftRotationRanges = normalizeShiftRotationRanges(parsed.shiftRotationRanges);
+      appSettings.shiftRotationColors = normalizeShiftRotationColors(parsed.shiftRotationColors);
+      appSettings.shiftTeams = normalizeShiftTeams(parsed.shiftTeams);
+      appSettings.workwheelEnabled = parsed.workwheelEnabled === true;
+      appSettings.workwheelUpcomingDays = Number.isFinite(Number(parsed.workwheelUpcomingDays)) ? Math.max(1, Math.min(365, Math.round(Number(parsed.workwheelUpcomingDays)))) : 14;
       return;
     }
     appSettings.darkMode = lsGet(LEGACY_THEME_KEY) === 'dark';
@@ -213,6 +237,49 @@ function normalizeCoreWorkdayRange(value, fallback = '0730-1500') {
   if (startHour > 23 || endHour > 23 || startMinute > 59 || endMinute > 59) return fallback;
   const canonical = `${String(startHour).padStart(2, '0')}${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}${String(endMinute).padStart(2, '0')}`;
   return timeRangeHours(canonical) ? canonical : fallback;
+}
+function normalizeShiftRotationRanges(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return {
+    normal: normalizeShiftRotationRange(source.normal, '0730-1500'),
+    day: normalizeShiftRotationRange(source.day, '0730-2400'),
+    evening: normalizeShiftRotationRange(source.evening, '1200-2000'),
+    night: normalizeShiftRotationRange(source.night, '0000-0730'),
+  };
+}
+function normalizeShiftRotationColors(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const defaults = appSettings?.shiftRotationColors || { normal: '#64748b', day: '#f59e0b', evening: '#14b8a6', night: '#3b82f6', turn: '#8b5cf6', leave: '#b45309', overtime: '#dc2626' };
+  return Object.fromEntries(Object.keys(defaults).map(key => [key, normalizeHexColor(source[key], defaults[key])]));
+}
+function normalizeShiftTeams(value) {
+  return (Array.isArray(value) ? value : []).map((team, index) => ({
+    id: String(team?.id || `shift-team-${index + 1}`),
+    name: String(team?.name || '').trim(),
+    color: normalizeHexColor(team?.color, PALETTE[index % PALETTE.length]),
+    order: Number.isFinite(Number(team?.order)) ? Number(team.order) : (index + 1) * 10,
+  })).filter(team => team.name).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+}
+function normalizeShiftRotationRange(value, fallback = '') {
+  const normalized = String(value || '').trim().replace(/\s+/g, '').replace('–', '-');
+  const match = normalized.match(/^(\d{1,2}):?(\d{2})-(\d{1,2}):?(\d{2})$/);
+  if (!match) return fallback;
+  const startHour = Number(match[1]), startMinute = Number(match[2]);
+  const endHour = Number(match[3]), endMinute = Number(match[4]);
+  if (startHour > 23 || startMinute > 59 || endHour > 24 || endMinute > 59 || (endHour === 24 && endMinute !== 0)) return fallback;
+  const canonical = `${String(startHour).padStart(2, '0')}${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}${String(endMinute).padStart(2, '0')}`;
+  return timeRangeHours(canonical) ? canonical : fallback;
+}
+function cleanShiftRotationMap(map, employeeList = employees) {
+  if (!map || typeof map !== 'object' || Array.isArray(map)) return {};
+  const employeeIds = new Set((employeeList || []).map(employee => Number(employee?.id)).filter(Number.isFinite));
+  return Object.fromEntries(Object.entries(map).filter(([key, value]) => {
+    const parts = String(key).split('_');
+    const shift = typeof value === 'string' ? value : value?.shift;
+    return parts.length === 2 && employeeIds.has(Number(parts[0])) && isValidIsoDate(parts[1]) &&
+        ['normal', 'day', 'evening', 'night', 'turn', 'leave', 'overtime'].includes(shift) &&
+        (shift !== 'overtime' || Boolean(timeRangeHours(value?.time)));
+      }).map(([key, value]) => [key, typeof value === 'string' ? { shift: value } : { ...value, shift: value.shift }]));
 }
 function normalizeActivityTypes(value) {
   return (Array.isArray(value) ? value : []).map((type, index) => ({
@@ -331,7 +398,29 @@ function normalizeStateVersion(data) {
   normalized.departmentColors = Object.fromEntries(Object.entries(normalized.departmentColors || {}).map(([dept, value]) => [String(dept), normalizeHexColor(value)]));
   if (!normalized.subdepartmentColors || typeof normalized.subdepartmentColors !== 'object') normalized.subdepartmentColors = {};
   normalized.subdepartmentColors = Object.fromEntries(Object.entries(normalized.subdepartmentColors).map(([key, value]) => [String(key), normalizeHexColor(value)]));
+  if (!normalized.sectionColors || typeof normalized.sectionColors !== 'object') normalized.sectionColors = {};
+  normalized.sectionColors = Object.fromEntries(Object.entries(normalized.sectionColors).map(([key, value]) => [String(key), normalizeHexColor(value)]));
+  if (!normalized.processColors || typeof normalized.processColors !== 'object') normalized.processColors = {};
+  normalized.processColors = Object.fromEntries(Object.entries(normalized.processColors).map(([key, value]) => [String(key), normalizeHexColor(value)]));
+  normalized.departmentOrder = normalizeHierarchyOrder(raw.departmentOrder);
+  normalized.subdepartmentOrder = normalizeHierarchyOrder(raw.subdepartmentOrder || raw.subteamOrder);
+  normalized.hierarchyOrder = normalizeHierarchyOrderTree(raw.hierarchyOrder);
   return normalized;
+}
+
+function normalizeHierarchyOrder(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value)
+    .map(([key, order]) => [String(key), Number(order)])
+    .filter(([, order]) => Number.isInteger(order) && order > 0 && order <= 9999));
+}
+function normalizeHierarchyOrderTree(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const result = {};
+  for (const level of ['department', 'section', 'process', 'team']) {
+    result[level] = normalizeHierarchyOrder(source[level]);
+  }
+  return result;
 }
 
 function loadSettings() {
@@ -341,7 +430,7 @@ function loadSettings() {
     const raw = newRaw || legacyRaw;
     if (raw) {
       const parsed = JSON.parse(raw);
-      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? parsed.appName : 'Team Manager';
+      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? (parsed.appName === 'Team Manager' ? 'ATLAS' : parsed.appName) : 'ATLAS';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
       appSettings.autoSyncEnabled = parsed.autoSyncEnabled !== false;
@@ -365,6 +454,10 @@ function loadSettings() {
       appSettings.activityTypes = normalizeActivityTypes(parsed.activityTypes);
       appSettings.workCodes = normalizeWorkCodes(parsed.workCodes);
       appSettings.securityLabel = normalizeSecurityLabel(parsed.securityLabel);
+      appSettings.shiftRotationEnabled = parsed.shiftRotationEnabled === true;
+      appSettings.shiftRotationRanges = normalizeShiftRotationRanges(parsed.shiftRotationRanges);
+      appSettings.shiftRotationColors = normalizeShiftRotationColors(parsed.shiftRotationColors);
+      appSettings.shiftTeams = normalizeShiftTeams(parsed.shiftTeams);
       if (legacyRaw) {
         lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
         lsRemove(LEGACY_SETTINGS_KEY);
@@ -400,11 +493,30 @@ function normalizeSpecialDays(value) {
   };
 }
 const GRID_YEAR_KEY = 'teamManagerGridYear';
+const GRID_PERIOD_KEY = 'teamManagerGridPeriod';
+const APP_ZOOM_KEY = 'teamManagerAppZoom';
 const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
 const GRID_VIEW_MODE_KEY = 'teamManagerGridViewMode';
 const GRID_SECTION_COLLAPSE_KEY = 'teamManagerGridCollapsedSections';
 function normalizeGridViewMode(value) {
   return ['all', 'timeline', 'employees'].includes(value) ? value : 'all';
+}
+function normalizeGridPeriod(value) {
+  return ['year', 'month', 'week'].includes(value) ? value : 'year';
+}
+function normalizeAppZoom(value) {
+  const zoom = Number(value);
+  return [80, 90, 100, 110, 125, 150, 175].includes(zoom) ? zoom : 100;
+}
+function applyAppZoom(value = appZoom) {
+  appZoom = normalizeAppZoom(value);
+  document.documentElement.style.setProperty('--app-zoom', `${appZoom / 100}`);
+  document.documentElement.dataset.appZoom = String(appZoom);
+  lsSet(APP_ZOOM_KEY, String(appZoom));
+}
+function loadAppZoom() {
+  appZoom = normalizeAppZoom(lsGet(APP_ZOOM_KEY));
+  applyAppZoom(appZoom);
 }
 function normalizeGridCollapsedSections(value) {
   const defaults = { activities: false, holidays: false, employees: false };
@@ -428,6 +540,9 @@ function applyGridPreferences(preferences, options = {}) {
   if (Object.prototype.hasOwnProperty.call(preferences, 'viewMode')) {
     gridViewMode = normalizeGridViewMode(preferences.viewMode);
   } else if (resetMissing) gridViewMode = 'all';
+  if (Object.prototype.hasOwnProperty.call(preferences, 'period')) {
+    gridPeriod = normalizeGridPeriod(preferences.period);
+  } else if (resetMissing) gridPeriod = 'year';
   if (Object.prototype.hasOwnProperty.call(preferences, 'collapsedSections')) {
     collapsedGridSections = normalizeGridCollapsedSections(preferences.collapsedSections);
   } else if (resetMissing) collapsedGridSections = { activities: false, holidays: false, employees: false };
@@ -446,6 +561,7 @@ function loadGridPreferences() {
     year: parseInt(lsGet(GRID_YEAR_KEY), 10),
     hiddenEmployeeIds: savedHidden,
     viewMode: lsGet(GRID_VIEW_MODE_KEY) || 'all',
+    period: lsGet(GRID_PERIOD_KEY) || 'year',
     collapsedSections: savedCollapsed,
   }, { resetMissing: true });
 }
@@ -453,12 +569,43 @@ function saveGridPreferences() {
   lsSet(GRID_YEAR_KEY, String(gridYear));
   lsSet(GRID_HIDDEN_EMPLOYEES_KEY, JSON.stringify([...hiddenEmployees]));
   lsSet(GRID_VIEW_MODE_KEY, gridViewMode);
+  lsSet(GRID_PERIOD_KEY, gridPeriod);
   lsSet(GRID_SECTION_COLLAPSE_KEY, JSON.stringify(collapsedGridSections));
 }
 function applyTheme() {
   document.body.classList.toggle('dark', appSettings.darkMode);
   const toggle = document.getElementById('theme-toggle');
-  if (toggle) toggle.innerHTML = `${svgIcon(appSettings.darkMode ? 'sun' : 'moon')} ${appSettings.darkMode ? 'Light mode' : 'Dark mode'}`;
+  if (toggle) {
+    const action = appSettings.darkMode ? 'Light mode' : 'Dark mode';
+    toggle.innerHTML = `${svgIcon(appSettings.darkMode ? 'sun' : 'moon')}<span class="sidebar-item-label">${action}</span>`;
+    toggle.setAttribute?.('aria-label', `Switch to ${action.toLowerCase()}`);
+  }
+}
+const SIDEBAR_MODE_KEY = 'team-manager-sidebar-mode';
+let sidebarMode = 'pinned';
+function loadSidebarMode() {
+  sidebarMode = lsGet(SIDEBAR_MODE_KEY) === 'autohide' ? 'autohide' : 'pinned';
+}
+function applySidebarMode() {
+  const sidebar = document.getElementById('sidebar');
+  const toggle = document.getElementById('sidebar-pin-toggle');
+  if (!sidebar || !toggle) return;
+  const autoHide = sidebarMode === 'autohide';
+  sidebar.classList.toggle('autohide', autoHide);
+  toggle.setAttribute('aria-pressed', String(!autoHide));
+  toggle.setAttribute('aria-label', autoHide ? 'Pin sidebar open' : 'Use sidebar auto-hide');
+  toggle.title = autoHide ? 'Sidebar auto-hide. Select to pin.' : 'Sidebar pinned. Select for auto-hide.';
+  const label = toggle.querySelector('.sidebar-pin-label');
+  if (label) label.textContent = autoHide ? 'Auto-hide' : 'Pinned';
+  document.querySelectorAll('#sidebar .nav-btn, #sidebar .sb-link').forEach(button => {
+    if (!button.dataset.sidebarTitle) button.dataset.sidebarTitle = button.getAttribute('aria-label') || button.textContent.trim();
+    button.title = autoHide ? button.dataset.sidebarTitle : '';
+  });
+}
+function toggleSidebarMode() {
+  sidebarMode = sidebarMode === 'pinned' ? 'autohide' : 'pinned';
+  lsSet(SIDEBAR_MODE_KEY, sidebarMode);
+  applySidebarMode();
 }
 function toggleTheme() { appSettings.darkMode = !appSettings.darkMode; persistSettings(); applyTheme(); renderPage(); }
 function setSyncStatusState(state) {
@@ -469,7 +616,11 @@ function updateAutoSyncButton() {
   const button = document.getElementById('auto-sync-btn');
   if (!button) return;
   const enabled = appSettings.autoSyncEnabled !== false;
-  button.innerHTML = `${svgIcon('sync')} Auto-update: ${enabled ? 'On' : 'Off'}`;
+  const label = `Auto-update: ${enabled ? 'On' : 'Off'}`;
+  button.innerHTML = `${svgIcon('sync')}<span class="sidebar-item-label">${label}</span>`;
+  button.setAttribute?.('aria-label', label);
+  if (button.dataset) button.dataset.sidebarTitle = label;
+  if (sidebarMode === 'autohide') button.title = label;
 }
 function updateSyncButton() {
   const button = document.getElementById('sync-btn');
@@ -490,27 +641,211 @@ function applyAppName() {
 
 function openSettings() {
   document.getElementById('set-app-name').value = appSettings.appName;
-  document.getElementById('set-core-time').value = appSettings.coreWorkdayRange || '0730-1500';
-  document.getElementById('set-core-time').oninput = updateCoreHoursDisplayFromRangeInput;
-  document.getElementById('set-core-time').onchange = updateCoreHoursDisplayFromRangeInput;
-  updateCoreHoursDisplayFromRangeInput();
-  document.getElementById('set-light-max').value = String(appSettings.lightMax);
-  document.getElementById('set-normal-max').value = String(appSettings.normalMax);
-  document.getElementById('set-high-max').value = String(appSettings.highMax);
-  document.getElementById('set-jump-to-today').checked = appSettings.jumpToTodayOnGridChange !== false;
-  document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
-  document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
   const secLabel = normalizeSecurityLabel(appSettings.securityLabel);
   document.getElementById('set-security-label-enabled').checked = secLabel.enabled === true;
   document.getElementById('set-security-label-text').value = secLabel.text;
   document.getElementById('set-security-label-color').value = secLabel.color;
-  document.getElementById('set-admin-password').value = '';
-  document.getElementById('boss-session-status').textContent = bossSessionActive ? 'Boss view is unlocked.' : 'Boss view is locked.';
+  document.getElementById('set-workwheel-enabled').checked = appSettings.workwheelEnabled === true;
+  document.getElementById('set-workwheel-upcoming-days').value = String(appSettings.workwheelUpcomingDays || 14);
   renderHolidaySettings();
   updateDefaultJsonStatus();
   const about = document.getElementById('set-about-version');
-  if (about) about.textContent = `Team Manager v${APP_VERSION} · Data format v${DATA_VERSION} · by rSoft`;
+  if (about) about.textContent = `ATLAS v${APP_VERSION} · Adaptive Timeline, Load & Allocation System · Data format v${DATA_VERSION}`;
   document.getElementById('settings-modal').classList.add('open');
+}
+function openAdministrationSettings() {
+  closeModal('settings-modal');
+  document.getElementById('set-admin-password').value = '';
+  document.getElementById('boss-session-status').textContent = bossSessionActive ? 'Boss View is unlocked.' : 'Boss View is locked.';
+  const info = document.getElementById('admin-audit-info');
+  if (info) info.innerHTML = `Active file: <b>${esc(activeFileName || 'None')}</b><br>Source: <b>${esc(remoteUpdateSource)}</b><br>Status: <b>${hasUnsavedChanges ? 'Unsaved changes' : 'Saved'}</b><br>App version: <b>${esc(APP_VERSION)}</b><br>Data format: <b>v${DATA_VERSION}</b>`;
+  document.getElementById('administration-settings-modal').classList.add('open');
+}
+function openScheduleSettings() {
+  closeModal('settings-modal');
+  document.getElementById('set-core-time').value = appSettings.coreWorkdayRange || '0730-1500';
+  document.getElementById('set-jump-to-today').checked = appSettings.jumpToTodayOnGridChange !== false;
+  document.getElementById('set-show-level-rank').checked = appSettings.showLevelRankInSchedule !== false;
+  document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
+  document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
+  document.getElementById('set-core-time').oninput = updateCoreHoursDisplayFromRangeInput;
+  updateCoreHoursDisplayFromRangeInput();
+  document.getElementById('schedule-settings-modal').classList.add('open');
+}
+function openDataBackupSettings() {
+  closeModal('settings-modal');
+  updateDefaultJsonStatus();
+  document.getElementById('data-backup-settings-modal').classList.add('open');
+}
+function openOrganisationStructure() {
+  closeModal('settings-modal');
+  renderOrganisationStructure();
+  document.getElementById('organisation-structure-modal').classList.add('open');
+}
+function openPersonnelSettings() {
+  closeModal('settings-modal');
+  document.getElementById('personnel-light-max').value = String(appSettings.lightMax);
+  document.getElementById('personnel-normal-max').value = String(appSettings.normalMax);
+  document.getElementById('personnel-high-max').value = String(appSettings.highMax);
+  document.getElementById('personnel-settings-modal').classList.add('open');
+}
+async function savePersonnelSettings() {
+  const lightMax = parseFloat(document.getElementById('personnel-light-max').value);
+  const normalMax = parseFloat(document.getElementById('personnel-normal-max').value);
+  const highMax = parseFloat(document.getElementById('personnel-high-max').value);
+  if (![lightMax, normalMax, highMax].every(Number.isFinite) || !(lightMax < normalMax && normalMax < highMax)) {
+    alert('Staffing-load thresholds must increase from Light to High.');
+    return;
+  }
+  await mutateState('savePersonnelSettings', () => {
+    appSettings.lightMax = lightMax;
+    appSettings.normalMax = normalMax;
+    appSettings.highMax = highMax;
+    persistSettings();
+  });
+  closeModal('personnel-settings-modal');
+  renderPage();
+}
+function renderOrganisationStructure() {
+  const list = document.getElementById('organisation-structure-list');
+  if (!list) return;
+  const nodeKey = (level, parent, value) => JSON.stringify({ level, parent, value });
+  const valuesFor = (level, parent) => {
+    const members = employees.filter(employee => {
+      const path = hierarchyParentPath(employee, level);
+      return path.slice(0, -1).join('\u0000') === parent.join('\u0000');
+    });
+    return [...new Set(members.map(employee => hierarchyValue(employee, level)))].filter(value => level !== 'team' || value !== 'Unassigned team').sort((a, b) => hierarchyOrderFor(level, parent, a) - hierarchyOrderFor(level, parent, b) || a.localeCompare(b, 'nb', { sensitivity: 'base' }));
+  };
+  const membersFor = (level, parent, value) => employees.filter(employee => hierarchyParentPath(employee, level).slice(0, -1).join('\u0000') === parent.join('\u0000') && hierarchyValue(employee, level) === value);
+  const children = (level, parent) => {
+    const next = { department: 'section', section: 'process', process: 'team' }[level];
+    return next ? valuesFor(next, [...parent]) : [];
+  };
+  const renderNode = (level, parent, value, depth) => {
+    const members = membersFor(level, parent, value);
+    const next = { department: 'section', section: 'process', process: 'team' }[level];
+    const key = nodeKey(level, parent, value);
+    const color = level === 'department' ? (resolveDeptColor(value) || '#64748b') : level === 'section' ? (resolveSectionColor(parent[1], value) || '#64748b') : level === 'process' ? (resolveProcessColor(parent[1], parent[2], value) || '#64748b') : (resolveSubdepartmentColor(parent[1], value) || '#64748b');
+    const childMarkup = next ? valuesFor(next, [...parent, value]).map(child => renderNode(next, [...parent, value], child, depth + 1)).join('') : '';
+    const siblingValues = valuesFor(level, parent);
+    const index = siblingValues.indexOf(value);
+    const moveButton = (direction, icon, label) => `<button class="org-tree-action" type="button" aria-label="${label} ${esc(value)}" title="${label}" ${direction < 0 && index === 0 || direction > 0 && index === siblingValues.length - 1 ? 'disabled' : ''} onclick="moveStructureNode(${esc(JSON.stringify(key))},${direction})">${svgIcon(icon)}</button>`;
+    return `<div class="org-tree-node" data-depth="${depth}" data-node='${esc(key)}' ondragover="allowStructureDrop(event)" ondrop="dropStructure(event)" ondragleave="clearStructureDrop(event)">
+      <div class="org-tree-row" draggable="true" ondragstart="startStructureDrag(event)" ondragend="endStructureDrag(event)">
+        <button class="org-tree-handle" type="button" draggable="true" aria-label="Drag ${esc(value)}" title="Drag to reorder">⋮⋮</button>
+        <span class="org-tree-swatch" style="background:${color}"></span><span class="org-tree-label">${esc(value)}</span><span class="org-tree-level">${level}</span><span class="org-tree-count">${members.length}</span>
+        <span class="org-tree-actions">${moveButton(-1, 'chevronUp', 'Move up')}${moveButton(1, 'chevronDown', 'Move down')}</span>
+      </div>${childMarkup ? `<div class="org-tree-children">${childMarkup}</div>` : ''}
+    </div>`;
+  };
+  const organisations = [...new Set(employees.map(employee => employee.organisation || 'Unassigned organisation'))].sort((a, b) => a.localeCompare(b, 'nb', { sensitivity: 'base' }));
+  list.innerHTML = `<div class="org-tree-intro"><span class="org-tree-intro-icon">↕</span><div><strong>Drag the handle to reorder</strong><span>Only items with the same parent can be reordered. Use the arrow buttons for precise keyboard control.</span></div></div>${organisations.map(organisation => `<section class="org-tree-organisation"><header><span>${esc(organisation)}</span><span>${employees.filter(employee => (employee.organisation || 'Unassigned organisation') === organisation).length} people</span></header>${valuesFor('department', [organisation]).map(department => renderNode('department', [organisation], department, 0)).join('')}</section>`).join('') || '<div class="empty-note">No personnel hierarchy data yet.</div>'}`;
+}
+let structureDrag = null;
+function startStructureDrag(event) {
+  const node = event.currentTarget.closest('.org-tree-node');
+  if (!node) return;
+  structureDrag = JSON.parse(node.dataset.node);
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', JSON.stringify(structureDrag));
+  node.classList.add('org-tree-dragging');
+}
+function allowStructureDrop(event) {
+  event.preventDefault();
+  const node = event.currentTarget.closest('.org-tree-node');
+  const target = node ? JSON.parse(node.dataset.node) : null;
+  if (!structureDrag || !target || structureDrag.level !== target.level || JSON.stringify(structureDrag.parent) !== JSON.stringify(target.parent) || JSON.stringify(structureDrag) === JSON.stringify(target)) return;
+  event.dataTransfer.dropEffect = 'move';
+  node.classList.add('org-tree-drop-target');
+}
+function clearStructureDrop(event) { event.currentTarget.closest('.org-tree-node')?.classList.remove('org-tree-drop-target'); }
+function endStructureDrag() { document.querySelectorAll('.org-tree-dragging,.org-tree-drop-target').forEach(node => node.classList.remove('org-tree-dragging', 'org-tree-drop-target')); structureDrag = null; }
+async function dropStructure(event) {
+  event.preventDefault();
+  const targetNode = event.currentTarget.closest('.org-tree-node');
+  const target = targetNode ? JSON.parse(targetNode.dataset.node) : null;
+  if (!structureDrag || !target || structureDrag.level !== target.level || JSON.stringify(structureDrag.parent) !== JSON.stringify(target.parent) || structureDrag.value === target.value) return endStructureDrag();
+  await reorderStructureNodes(structureDrag, target, false);
+  endStructureDrag();
+  renderOrganisationStructure();
+}
+async function reorderStructureNodes(source, target, after = false) {
+  const values = [...new Set(employees.filter(employee => hierarchyParentPath(employee, source.level).slice(0, -1).join('\u0000') === source.parent.join('\u0000')).map(employee => hierarchyValue(employee, source.level)))].sort((a, b) => hierarchyOrderFor(source.level, source.parent, a) - hierarchyOrderFor(source.level, source.parent, b) || a.localeCompare(b, 'nb', { sensitivity: 'base' }));
+  const sourceIndex = values.indexOf(source.value), targetIndex = values.indexOf(target.value);
+  if (sourceIndex < 0 || targetIndex < 0) return;
+  values.splice(sourceIndex, 1); values.splice(values.indexOf(target.value) + (after ? 1 : 0), 0, source.value);
+  await mutateState('reorderStructure', () => { values.forEach((value, index) => { hierarchyOrder[source.level][hierarchyOrderKey(...source.parent, value)] = (index + 1) * 10; }); }, { saveDisk: true });
+  showToast(`${source.level[0].toUpperCase() + source.level.slice(1)} order updated.`, 2500);
+}
+async function moveStructureNode(nodeJson, direction) {
+  const source = typeof nodeJson === 'string' ? JSON.parse(nodeJson) : nodeJson;
+  const values = [...new Set(employees.filter(employee => hierarchyParentPath(employee, source.level).slice(0, -1).join('\u0000') === source.parent.join('\u0000')).map(employee => hierarchyValue(employee, source.level)))].sort((a, b) => hierarchyOrderFor(source.level, source.parent, a) - hierarchyOrderFor(source.level, source.parent, b) || a.localeCompare(b, 'nb', { sensitivity: 'base' }));
+  const index = values.indexOf(source.value), targetValue = values[index + Number(direction)];
+  if (!targetValue) return;
+  await reorderStructureNodes(source, { ...source, value: targetValue }, direction > 0);
+  renderOrganisationStructure();
+}
+function openShiftRotationSettings() {
+  const enabled = document.getElementById('set-shift-rotation-enabled');
+  if (enabled) enabled.checked = appSettings.shiftRotationEnabled === true;
+  const ranges = normalizeShiftRotationRanges(appSettings.shiftRotationRanges);
+  ['normal', 'day', 'evening', 'night'].forEach(key => {
+    const input = document.getElementById(`set-rotation-${key}`);
+    if (input) input.value = ranges[key];
+  });
+  const colors = normalizeShiftRotationColors(appSettings.shiftRotationColors);
+  ['normal', 'day', 'evening', 'night', 'turn', 'leave', 'overtime'].forEach(key => {
+    const input = document.getElementById(`set-rotation-color-${key}`);
+    if (input) input.value = colors[key];
+  });
+  document.getElementById('shift-rotation-settings-modal').classList.add('open');
+  renderShiftTeamSettings();
+}
+function renderShiftTeamSettings() {
+  const list = document.getElementById('set-shift-team-list');
+  if (!list) return;
+  const teams = normalizeShiftTeams(appSettings.shiftTeams);
+  list.innerHTML = teams.length ? teams.map(team => `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:8px"><span class="chip-dot" style="background:${team.color};width:9px;height:9px;border-radius:50%"></span><span style="flex:1">${esc(team.name)}</span><button class="icon-btn danger" type="button" onclick="removeShiftTeamSetting('${esc(team.id)}')">${svgIcon('trash')}</button></div>`).join('') : '<div class="form-hint">No Shift Teams configured.</div>';
+}
+function addShiftTeamSetting() {
+  const name = document.getElementById('set-shift-team-name').value.trim();
+  if (!name) return;
+  const teams = normalizeShiftTeams(appSettings.shiftTeams);
+  if (teams.some(team => team.name.toLowerCase() === name.toLowerCase())) { alert('A Shift Team with that name already exists.'); return; }
+  teams.push({ id: `shift-team-${Date.now()}`, name, color: document.getElementById('set-shift-team-color').value, order: (teams.length + 1) * 10 });
+  appSettings.shiftTeams = teams;
+  document.getElementById('set-shift-team-name').value = '';
+  renderShiftTeamSettings();
+}
+function removeShiftTeamSetting(id) {
+  appSettings.shiftTeams = normalizeShiftTeams(appSettings.shiftTeams).filter(team => team.id !== id);
+  employees.forEach(employee => { if (employee.shiftTeamId === id) employee.shiftTeamId = ''; });
+  renderShiftTeamSettings();
+}
+async function saveShiftRotationSettings() {
+  const rotationRanges = {};
+  for (const key of ['normal', 'day', 'evening', 'night']) {
+    const value = normalizeShiftRotationRange(document.getElementById(`set-rotation-${key}`)?.value, '');
+    if (!value) { alert('Shift Rotation ranges must be valid, for example 0730-1500.'); return; }
+    rotationRanges[key] = value;
+  }
+  const shiftRotationColors = normalizeShiftRotationColors(Object.fromEntries(
+    ['normal', 'day', 'evening', 'night', 'turn', 'leave', 'overtime']
+      .map(key => [key, document.getElementById(`set-rotation-color-${key}`)?.value]),
+  ));
+  const shiftRotationEnabled = document.getElementById('set-shift-rotation-enabled')?.checked === true;
+  await mutateState('saveShiftRotationSettings', () => {
+    appSettings.shiftRotationEnabled = shiftRotationEnabled;
+    appSettings.shiftRotationRanges = rotationRanges;
+    appSettings.shiftRotationColors = shiftRotationColors;
+    appSettings.shiftTeams = normalizeShiftTeams(appSettings.shiftTeams);
+    persistSettings();
+  });
+  closeModal('shift-rotation-settings-modal');
+  updateSaveButton();
+  updateSbStatus();
+  renderPage();
 }
 async function hashAdminPassword(password) {
   if (globalThis.crypto?.subtle) {
@@ -716,9 +1051,12 @@ function holidayFor(date) {
   return holiday || specialDayFor(date);
 }
 function displayedHolidayFor(date) {
-  if (!showHolidays) return null;
-  const holiday = holidayFor(date);
-  return holiday?.isSpecialDay && appSettings.specialDaysVisible === false ? null : holiday;
+  if (!showHolidays) return displayedSpecialDayFor(date);
+  const holiday = appSettings.holidays.find(item => {
+    if (item.startDate && item.endDate) return date >= item.startDate && date <= item.endDate;
+    return item.date === date;
+  });
+  return holiday || displayedSpecialDayFor(date);
 }
 function holidayPeriodsForYear(year) {
   const periods = [];
@@ -737,6 +1075,11 @@ function holidayPeriodsForYear(year) {
     } else periods.push({ ...record, sourceIndexes: [record.sourceIndex] });
   });
   return periods.filter(period => period.endDate >= `${year}-01-01` && period.startDate <= `${year}-12-31`);
+}
+function holidayPeriodsForRange(start, end) {
+  return holidayPeriodsForYear(new Date(`${start}T00:00:00`).getFullYear())
+    .concat(holidayPeriodsForYear(new Date(`${end}T00:00:00`).getFullYear()))
+    .filter((period, index, all) => period.endDate >= start && period.startDate <= end && all.findIndex(item => item.sourceIndexes?.join(',') === period.sourceIndexes?.join(',')) === index);
 }
 let editingHolidayIndex = null;
 let editingHolidayIndexes = [];
@@ -933,7 +1276,7 @@ window.addEventListener('resize', () => {
   if (nextActivityPageSize !== activityPageSize) {
     activityPageSize = nextActivityPageSize;
     activityPageOffset = Math.floor(activityPageOffset / activityPageSize) * activityPageSize;
-    if (currentPage === 'grid' && document.getElementById('gtbody')) renderGridBody(daysOfYear(gridYear), todayStr());
+    if (currentPage === 'grid' && document.getElementById('gtbody')) renderGridBody(scheduleDays(), todayStr());
   }
   const popover = document.getElementById('holiday-add-popover');
   if (!popover || !popover.classList.contains('open')) return;
@@ -994,44 +1337,20 @@ async function confirmHolidayImport() {
 }
 async function saveSettings() {
   const name = document.getElementById('set-app-name').value.trim();
-  const coreTime = normalizeCoreWorkdayRange(document.getElementById('set-core-time').value, '');
-  if (!coreTime) {
-    alert('Core workday time range must be valid, for example 0730-1500 or 08:00-16:00.');
-    return;
-  }
-  const lightMax = parseFloat(document.getElementById('set-light-max').value);
-  const normalMax = parseFloat(document.getElementById('set-normal-max').value);
-  const highMax = parseFloat(document.getElementById('set-high-max').value);
-  if (![lightMax, normalMax, highMax].every(Number.isFinite) || !(lightMax < normalMax && normalMax < highMax)) {
-    alert('Staffing-load thresholds must increase from Light to High.');
-    return;
-  }
-  const jumpToTodayOnGridChange = document.getElementById('set-jump-to-today').checked;
-  const planningHorizonDays = Number(document.getElementById('set-planning-horizon-days').value);
-  if (!Number.isInteger(planningHorizonDays) || planningHorizonDays < 0 || planningHorizonDays > 365) {
-    alert('Activity discussion deadline must be a whole number from 0 to 365 days.');
-    return;
-  }
-  const planningHorizonColor = normalizeHexColor(document.getElementById('set-planning-horizon-color').value, '#ef4444');
   const securityLabel = normalizeSecurityLabel({
     enabled: document.getElementById('set-security-label-enabled').checked,
     text: document.getElementById('set-security-label-text').value,
     color: document.getElementById('set-security-label-color').value,
   });
-  const adminPassword = document.getElementById('set-admin-password').value;
-  const adminPasswordHash = adminPassword ? await hashAdminPassword(adminPassword) : '';
+  const showRank = document.getElementById('set-show-level-rank')?.checked;
+  const workwheelEnabled = document.getElementById('set-workwheel-enabled')?.checked === true;
+  const workwheelUpcomingDays = Math.max(1, Math.min(365, Math.round(Number(document.getElementById('set-workwheel-upcoming-days')?.value) || 14)));
   await mutateState('saveSettings', () => {
     if (name) appSettings.appName = name;
-    appSettings.coreWorkdayRange = coreTime;
-    appSettings.coreHoursPerDay = timeRangeHours(coreTime) || appSettings.coreHoursPerDay;
-    appSettings.lightMax = lightMax;
-    appSettings.normalMax = normalMax;
-    appSettings.highMax = highMax;
-    appSettings.jumpToTodayOnGridChange = jumpToTodayOnGridChange;
-    appSettings.planningHorizonDays = planningHorizonDays;
-    appSettings.planningHorizonColor = planningHorizonColor;
     appSettings.securityLabel = securityLabel;
-    if (adminPasswordHash) appSettings.adminPasswordHash = adminPasswordHash;
+    if (typeof showRank === 'boolean') appSettings.showLevelRankInSchedule = showRank;
+    appSettings.workwheelEnabled = workwheelEnabled;
+    appSettings.workwheelUpcomingDays = workwheelUpcomingDays;
     persistSettings();
   });
   applyAppName();
@@ -1068,7 +1387,7 @@ function toggleGridSection(section) {
   if (!Object.prototype.hasOwnProperty.call(collapsedGridSections, section)) return;
   collapsedGridSections[section] = !collapsedGridSections[section];
   saveGridPreferences();
-  renderGridBody(daysOfYear(gridYear), todayStr());
+  renderGridBody(scheduleDays(), todayStr());
   if (appSettings.jumpToTodayOnGridChange !== false) setTimeout(scrollToToday, 60);
 }
 function jumpToFirstVisibleActivity() {
@@ -1078,7 +1397,8 @@ function jumpToFirstVisibleActivity() {
     const filter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
     if (filter === 'all' || pastActivitiesExpanded) return;
     const today = todayStr();
-    const yearActs = activities.filter(activity => activity.startDate <= `${gridYear}-12-31` && activity.endDate >= `${gridYear}-01-01`);
+    const { start, end } = scheduleRange();
+    const yearActs = activities.filter(activity => activity.startDate <= end && activity.endDate >= start);
     const pastMatches = yearActs
       .filter(activity => activityStatus(activity) === filter && activity.endDate < today)
       .sort((left, right) => left.endDate.localeCompare(right.endDate) || left.startDate.localeCompare(right.startDate));
@@ -1099,7 +1419,7 @@ function jumpToFirstVisibleActivity() {
 }
 
 function downloadDataFile() {
-  const payload = JSON.stringify(snapshotData(), null, 2);
+  const payload = JSON.stringify(persistableSnapshotData(), null, 2);
   validatePlannerData(JSON.parse(payload));
   const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -1117,6 +1437,10 @@ function downloadDataFile() {
 
 function canUseFileSystemSave() {
   return typeof window.showSaveFilePicker === 'function';
+}
+
+function isDownloadFallbackResult(value) {
+  return typeof value === 'string' && value.toLowerCase().includes('.json');
 }
 
 function openLocalBackupHandleDb() {
@@ -1443,6 +1767,7 @@ async function checkForRemoteFileUpdate(options = {}) {
     const diskEntriesMap = isObjectMap(parsedDiskData.entriesMap);
     const diskOvertimeMap = isObjectMap(parsedDiskData.overtimeMap);
     const diskActivityShiftsMap = isObjectMap(parsedDiskData.activityShiftsMap);
+    let diskShiftRotationMap = isObjectMap(parsedDiskData.shiftRotationMap);
     const mergedEntriesMap = { ...diskEntriesMap, ...isObjectMap(entriesMap) };
     const mergedOvertimeMap = { ...diskOvertimeMap, ...isObjectMap(overtimeMap) };
     const mergedActivityShiftsMap = { ...diskActivityShiftsMap, ...isObjectMap(activityShiftsMap) };
@@ -1453,9 +1778,11 @@ async function checkForRemoteFileUpdate(options = {}) {
     const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
     const employeeMerge = mergeEntityArray(baseSnapshot?.employees, employees, parsedDiskData.employees, 'id', allocateId);
     const activityMerge = mergeEntityArray(baseSnapshot?.activities, activities, parsedDiskData.activities, 'id', allocateId);
+    diskShiftRotationMap = remapLeadingRelationIds(diskShiftRotationMap, employeeMerge.theirsIdRemap);
+    const mergedShiftRotationMap = { ...diskShiftRotationMap, ...isObjectMap(shiftRotationMap) };
 
-    const before = stableJson({ entriesMap: isObjectMap(entriesMap), overtimeMap: isObjectMap(overtimeMap), activityShiftsMap: isObjectMap(activityShiftsMap), employees, activities });
-    const after = stableJson({ entriesMap: mergedEntriesMap, overtimeMap: mergedOvertimeMap, activityShiftsMap: mergedActivityShiftsMap, employees: employeeMerge.merged, activities: activityMerge.merged });
+    const before = stableJson({ entriesMap: isObjectMap(entriesMap), overtimeMap: isObjectMap(overtimeMap), activityShiftsMap: isObjectMap(activityShiftsMap), shiftRotationMap: isObjectMap(shiftRotationMap), employees, activities });
+    const after = stableJson({ entriesMap: mergedEntriesMap, overtimeMap: mergedOvertimeMap, activityShiftsMap: mergedActivityShiftsMap, shiftRotationMap: mergedShiftRotationMap, employees: employeeMerge.merged, activities: activityMerge.merged });
     if (before === after) {
       lastSyncTime = parsedDiskData.savedAt;
       setSyncStatusState('updated');
@@ -1465,6 +1792,7 @@ async function checkForRemoteFileUpdate(options = {}) {
     entriesMap = mergedEntriesMap;
     overtimeMap = mergedOvertimeMap;
     activityShiftsMap = mergedActivityShiftsMap;
+    shiftRotationMap = mergedShiftRotationMap;
     employees = employeeMerge.merged.sort((a, b) => a.name.localeCompare(b.name));
     activities = activityMerge.merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
     nextEmpId = Math.max(nextEmpId, ...employees.map(e => e.id || 0)) + 1;
@@ -1570,6 +1898,9 @@ async function importDataWithPicker(options = {}) {
 function isObjectMap(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
+function withoutNullMap(value) {
+  return Object.fromEntries(Object.entries(isObjectMap(value)).filter(([, entry]) => entry !== null));
+}
 
 function stableJson(value) {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -1593,6 +1924,7 @@ function mergeEntityArray(base, mine, theirs, idKey, allocateId) {
   const ids = [...new Set([...Object.keys(mineById), ...Object.keys(theirsById)])];
   const merged = [];
   const conflicts = [];
+  const theirsIdRemap = {};
   for (const id of ids) {
     const b = baseById[id], m = mineById[id], t = theirsById[id];
     const label = (m || t)?.name || (m || t)?.label || String(id);
@@ -1600,6 +1932,7 @@ function mergeEntityArray(base, mine, theirs, idKey, allocateId) {
       if (m && t && stableJson(m) !== stableJson(t)) {
         const newId = allocateId();
         merged.push(m, { ...t, [idKey]: newId });
+        theirsIdRemap[id] = newId;
         conflicts.push({ label, type: 'duplicate-id', detail: `A colleague also added a new record with the same id; it was kept and reassigned id ${newId}.` });
       } else {
         merged.push(m || t);
@@ -1620,7 +1953,16 @@ function mergeEntityArray(base, mine, theirs, idKey, allocateId) {
     if (!m) { if (tChanged) { merged.push(t); conflicts.push({ label, type: 'delete-edit', detail: 'You deleted this, but a colleague edited it; their edit was kept.' }); } continue; }
     if (!t) { if (mChanged) { merged.push(m); conflicts.push({ label, type: 'edit-delete', detail: 'A colleague deleted this, but you edited it; your edit was kept.' }); } continue; }
   }
-  return { merged, conflicts };
+  return { merged, conflicts, theirsIdRemap };
+}
+function remapLeadingRelationIds(map, idRemap) {
+  if (!idRemap || !Object.keys(idRemap).length) return map;
+  return Object.fromEntries(Object.entries(map).map(([key, value]) => {
+    const separator = key.indexOf('_');
+    if (separator < 1) return [key, value];
+    const oldId = key.slice(0, separator);
+    return [`${idRemap[oldId] || oldId}${key.slice(separator)}`, value];
+  }));
 }
 
 async function writeLocalBackupFile(handle) {
@@ -1637,6 +1979,7 @@ async function writeLocalBackupFile(handle) {
         const diskEntriesMap = isObjectMap(parsedDiskData.entriesMap);
         const diskOvertimeMap = isObjectMap(parsedDiskData.overtimeMap);
         const diskActivityShiftsMap = isObjectMap(parsedDiskData.activityShiftsMap);
+        let diskShiftRotationMap = isObjectMap(parsedDiskData.shiftRotationMap);
 
         const mergedEntriesMap = { ...diskEntriesMap, ...isObjectMap(entriesMap) };
         const mergedOvertimeMap = { ...diskOvertimeMap, ...isObjectMap(overtimeMap) };
@@ -1648,18 +1991,22 @@ async function writeLocalBackupFile(handle) {
         const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
         const employeeMerge = mergeEntityArray(baseSnapshot?.employees, employees, parsedDiskData.employees, 'id', allocateId);
         const activityMerge = mergeEntityArray(baseSnapshot?.activities, activities, parsedDiskData.activities, 'id', allocateId);
+        diskShiftRotationMap = remapLeadingRelationIds(diskShiftRotationMap, employeeMerge.theirsIdRemap);
+        const mergedShiftRotationMap = { ...diskShiftRotationMap, ...isObjectMap(shiftRotationMap) };
         entityConflicts = [...employeeMerge.conflicts, ...activityMerge.conflicts];
 
         const localBeforeMerge = {
           entriesMap: isObjectMap(entriesMap),
           overtimeMap: isObjectMap(overtimeMap),
           activityShiftsMap: isObjectMap(activityShiftsMap),
+          shiftRotationMap: isObjectMap(shiftRotationMap),
           employees, activities,
         };
         const localAfterMerge = {
           entriesMap: mergedEntriesMap,
           overtimeMap: mergedOvertimeMap,
           activityShiftsMap: mergedActivityShiftsMap,
+          shiftRotationMap: mergedShiftRotationMap,
           employees: employeeMerge.merged, activities: activityMerge.merged,
         };
         mergedWithDisk = stableJson(localBeforeMerge) !== stableJson(localAfterMerge);
@@ -1667,6 +2014,7 @@ async function writeLocalBackupFile(handle) {
           entriesMap = mergedEntriesMap;
           overtimeMap = mergedOvertimeMap;
           activityShiftsMap = mergedActivityShiftsMap;
+          shiftRotationMap = mergedShiftRotationMap;
           employees = employeeMerge.merged.sort((a, b) => a.name.localeCompare(b.name));
           activities = activityMerge.merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
           nextEmpId = Math.max(nextEmpId, ...employees.map(e => e.id || 0)) + 1;
@@ -1680,6 +2028,7 @@ async function writeLocalBackupFile(handle) {
   for (const key of Object.keys(entriesMap)) if (entriesMap[key] === null) delete entriesMap[key];
   for (const key of Object.keys(overtimeMap)) if (overtimeMap[key] === null) delete overtimeMap[key];
   for (const key of Object.keys(activityShiftsMap)) if (activityShiftsMap[key] === null) delete activityShiftsMap[key];
+  const persistedShiftRotationMap = withoutNullMap(shiftRotationMap);
 
   lastSyncTime = new Date().toISOString();
   localSnapshot.savedAt = lastSyncTime;
@@ -1689,6 +2038,7 @@ async function writeLocalBackupFile(handle) {
     entriesMap: isObjectMap(entriesMap),
     overtimeMap: isObjectMap(overtimeMap),
     activityShiftsMap: isObjectMap(activityShiftsMap),
+    shiftRotationMap: persistedShiftRotationMap,
   };
   const payload = JSON.stringify(payloadData, null, 2);
   validatePlannerData(payloadData);
@@ -1696,6 +2046,7 @@ async function writeLocalBackupFile(handle) {
   try {
     await writable.write(payload);
     await writable.close();
+    for (const key of Object.keys(shiftRotationMap)) if (shiftRotationMap[key] === null) delete shiftRotationMap[key];
     baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
     if (mergedWithDisk) {
       renderPage();
@@ -1743,7 +2094,7 @@ async function saveLocalBackupFile(forcePrompt = false) {
         localBackupFileHandle = null;
         if (remoteUpdateSource === 'file-handle') setRemoteUpdateSource('none');
         const downloadedFileName = downloadDataFile();
-        showToast(`Write permission was unavailable. Downloaded ${downloadedFileName} instead.`, 7000);
+        showToast(`Saved a downloaded copy as ${downloadedFileName}. The selected file could not be updated directly.`, 7000);
         return downloadedFileName;
       }
     } catch (err) {
@@ -1751,7 +2102,7 @@ async function saveLocalBackupFile(forcePrompt = false) {
       if (remoteUpdateSource === 'file-handle') setRemoteUpdateSource('none');
       if (['NotAllowedError', 'NoModificationAllowedError', 'SecurityError'].includes(err?.name)) {
         const downloadedFileName = downloadDataFile();
-        showToast(`Write permission was unavailable. Downloaded ${downloadedFileName} instead.`, 7000);
+        showToast(`Saved a downloaded copy as ${downloadedFileName}. The selected file could not be updated directly.`, 7000);
         return downloadedFileName;
       }
       throw err;
@@ -1773,7 +2124,7 @@ async function saveLocalBackupFile(forcePrompt = false) {
       localBackupFileHandle = null;
       if (remoteUpdateSource === 'file-handle') setRemoteUpdateSource('none');
       const downloadedFileName = downloadDataFile();
-      showToast(`Write permission was unavailable. Downloaded ${downloadedFileName} instead.`, 7000);
+      showToast(`Saved a downloaded copy as ${downloadedFileName}. The selected file could not be updated directly.`, 7000);
       return downloadedFileName;
     }
     throw err;
@@ -1921,37 +2272,63 @@ function validatePlannerData(data) {
     }
   });
   if (data.entriesMap != null && (typeof data.entriesMap !== 'object' || Array.isArray(data.entriesMap))) throw new Error('Invalid daily entries');
-  Object.entries(data.entriesMap || {}).forEach(([key, value]) => {
-    const separator = key.indexOf('_');
-    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator)))) throw new Error('Daily entry contains an unknown employee');
-    if (value === null) return;
-    if (typeof value === 'string') {
-      if (!validEntryStatuses.has(value)) throw new Error('Daily entry contains an unknown status');
-      return;
-    }
-    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Daily entry contains invalid data');
-    const statusKey = String(value.status || 'at_work').trim() || 'at_work';
-    if (!validEntryStatuses.has(statusKey)) throw new Error('Daily entry contains an unknown status');
-    if (value.durationType != null && !['fullday', '24hours', 'time'].includes(value.durationType)) throw new Error('Daily entry contains an invalid duration');
-    if (value.durationType === 'time' && (typeof value.time !== 'string' || !timeRangeHours(value.time))) throw new Error('Daily entry contains an invalid time range');
-  });
+  // Auto-clean orphaned daily entries (employee no longer exists)
+  if (data.entriesMap) {
+    Object.entries(data.entriesMap).forEach(([key, value]) => {
+      const separator = key.indexOf('_');
+      if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator)))) {
+        data.entriesMap[key] = null;
+        return;
+      }
+      if (value === null) return;
+      if (typeof value === 'string') {
+        if (!validEntryStatuses.has(value)) data.entriesMap[key] = null;
+        return;
+      }
+      if (!value || typeof value !== 'object' || Array.isArray(value)) { data.entriesMap[key] = null; return; }
+      const statusKey = String(value.status || 'at_work').trim() || 'at_work';
+      if (!validEntryStatuses.has(statusKey)) data.entriesMap[key] = null;
+      else if (value.durationType != null && !['fullday', '24hours', 'time'].includes(value.durationType)) data.entriesMap[key] = null;
+      else if (value.durationType === 'time' && (typeof value.time !== 'string' || !timeRangeHours(value.time))) data.entriesMap[key] = null;
+    });
+  }
   if (data.overtimeMap != null && (typeof data.overtimeMap !== 'object' || Array.isArray(data.overtimeMap))) throw new Error('Invalid overtime entries');
-  Object.entries(data.overtimeMap || {}).forEach(([key, value]) => {
-    if (value === null) return;
-    const separator = key.indexOf('_');
-    const date = key.slice(separator + 1);
-    const hours = Number(value?.hours);
-    if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(hours) || hours < 0 || hours > 24) {
-      throw new Error('Overtime entry contains invalid data');
-    }
-  });
+  // Auto-clean orphaned overtime entries (employee no longer exists)
+  if (data.overtimeMap) {
+    Object.entries(data.overtimeMap).forEach(([key, value]) => {
+      if (value === null) return;
+      const separator = key.indexOf('_');
+      const date = key.slice(separator + 1);
+      const hours = Number(value?.hours);
+      if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(hours) || hours < 0 || hours > 24) {
+        data.overtimeMap[key] = null;
+      }
+    });
+  }
   if (data.activityShiftsMap != null && (typeof data.activityShiftsMap !== 'object' || Array.isArray(data.activityShiftsMap))) throw new Error('Invalid activity assignments');
-  Object.keys(data.activityShiftsMap || {}).forEach(key => {
-    const parts = key.split('_');
-    if (parts.length !== 3 || !employeeIds.has(Number(parts[0])) || !activityIds.has(Number(parts[2])) || !/^\d{4}-\d{2}-\d{2}$/.test(parts[1])) {
-      throw new Error('Activity assignment contains an invalid relation');
-    }
-  });
+  // Auto-clean orphaned activity assignments (employee or activity no longer exists)
+  if (data.activityShiftsMap) {
+    Object.keys(data.activityShiftsMap).forEach(key => {
+      const parts = key.split('_');
+      if (parts.length !== 3 || !employeeIds.has(Number(parts[0])) || !activityIds.has(Number(parts[2])) || !/^\d{4}-\d{2}-\d{2}$/.test(parts[1])) {
+        delete data.activityShiftsMap[key];
+      }
+    });
+  }
+  if (data.shiftRotationMap != null && (typeof data.shiftRotationMap !== 'object' || Array.isArray(data.shiftRotationMap))) throw new Error('Invalid shift rotation assignments');
+  // Auto-clean orphaned shift rotation assignments (employee no longer exists)
+  if (data.shiftRotationMap) {
+    Object.entries(data.shiftRotationMap).forEach(([key, value]) => {
+      const parts = key.split('_');
+      if (parts.length !== 2 || !employeeIds.has(Number(parts[0])) || !isValidIsoDate(parts[1])) {
+        data.shiftRotationMap[key] = null;
+      } else if (value !== null && !['normal', 'day', 'evening', 'night', 'turn', 'leave', 'overtime'].includes(typeof value === 'string' ? value : value?.shift)) {
+        data.shiftRotationMap[key] = null;
+      } else if (value?.shift === 'overtime' && !timeRangeHours(value.time)) {
+        data.shiftRotationMap[key] = null;
+      }
+    });
+  }
 }
 
 // ═══ DATA STATE ══════════════════════════════════════════════════════════════
@@ -1966,19 +2343,33 @@ let workloadAnchorDate = fmt(new Date());
 let boardYear = new Date().getFullYear();
 let boardFilters = { dept: '', status: 'all', search: '' };
 let summarySortKey = 'people', summarySortDir = 'asc';
+let summaryViewMode = 'table';
+let summaryGraphMetric = 'total';
+let summaryGraphMeasure = 'hours';
+let summaryGraphDir = 'desc';
 let summaryColumnsDraft = null;
 let empSearch = '', empFilterDept = '', empFilterCatId = null;
 let deptColorsExpanded = false;
+let collapsedPersonnelSections = new Set();
+let collapsedPersonnelDepartments = new Set();
+let openPersonnelColorGroups = new Set();
+let draggedPersonnelId = null;
+let hierarchyOrderExpanded = false;
 let hiddenEmployees = new Set();
 let hiddenEmployeesDraft = null;
 let pastActivitiesExpanded = false;
 let gridViewMode = 'all';
+let gridPeriod = 'year';
+let scheduleAnchorDate = todayStr();
+let appZoom = 100;
 let collapsedGridSections = { activities: false, holidays: false, employees: false };
 let activityPageOffset = 0;
 let activityPageSize = activityPageCapacity();
 
 let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, requirements = [], requirementRecords = {};
-let entriesMap = {}, activityShiftsMap = {}, overtimeMap = {}, cellNotesMap = {}, workScheduleChecksMap = {};
+let departmentOrder = {}, subdepartmentOrder = {}, hierarchyOrder = normalizeHierarchyOrderTree();
+let entriesMap = {}, activityShiftsMap = {}, shiftRotationMap = {}, overtimeMap = {}, cellNotesMap = {}, workScheduleChecksMap = {};
+let rotationDragSelection = null;
 let nextEmpId = 1, nextActId = 1, nextStatusId = 1, nextCatId = 1;
 
 let pickerEmpId = null, pickerDate = null, pickerSelectedStatus = null;
@@ -2041,7 +2432,7 @@ function updateUndoButton() {
 function recordUndo() {
   undoStack.push(JSON.parse(JSON.stringify({
     appSettings: { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } },
-    employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap, cellNotesMap, workScheduleChecksMap,
+    employees, departmentOrder, subdepartmentOrder, hierarchyOrder, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, shiftRotationMap, overtimeMap, cellNotesMap, workScheduleChecksMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   })));
   if (undoStack.length > 20) undoStack.shift();
@@ -2050,7 +2441,8 @@ function recordUndo() {
 async function undoLastChange() {
   const previous = undoStack.pop();
   if (!previous) return;
-  ({ appSettings, employees, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap, cellNotesMap, workScheduleChecksMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
+  ({ appSettings, employees, departmentOrder = {}, subdepartmentOrder = {}, hierarchyOrder = normalizeHierarchyOrderTree(), categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, shiftRotationMap, overtimeMap, cellNotesMap, workScheduleChecksMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
+  shiftRotationMap ||= {};
   overtimeMap ||= {};
   if (appSettings && typeof appSettings === 'object') {
     const merged = { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } };
@@ -2076,7 +2468,11 @@ function updateSaveButton() {
   if (!button) return;
   button.style.display = '';
   button.disabled = startupFileSelectionRequired || (!hasUnsavedChanges && !!activeFileName);
-  button.innerHTML = `${svgIcon('save')} ${hasUnsavedChanges ? 'Save Changes' : 'Save'}`;
+  const label = hasUnsavedChanges ? 'Save Changes' : 'Save';
+  button.innerHTML = `${svgIcon('save')}<span class="sidebar-item-label">${label}</span>`;
+  button.setAttribute?.('aria-label', label);
+  if (button.dataset) button.dataset.sidebarTitle = label;
+  if (sidebarMode === 'autohide') button.title = label;
   button.classList.toggle('unsaved-action', hasUnsavedChanges && !startupFileSelectionRequired);
   updateSyncButton();
 }
@@ -2111,8 +2507,11 @@ function loadFromData(data) {
   if (normalized.appSettings) {
     const localSettings = Object.fromEntries(LOCAL_ONLY_APP_SETTING_KEYS.map(key => [key, appSettings[key]]));
     appSettings = { ...appSettings, ...normalized.appSettings, ...localSettings };
+    if (appSettings.appName === 'Team Manager') appSettings.appName = 'ATLAS';
     appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(appSettings.coreWorkdayRange, '0730-1500');
     appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || 7.5;
+    appSettings.shiftRotationEnabled = appSettings.shiftRotationEnabled === true;
+    appSettings.shiftRotationRanges = normalizeShiftRotationRanges(appSettings.shiftRotationRanges);
     appSettings.holidays = Array.isArray(appSettings.holidays) ? appSettings.holidays : [];
     appSettings.specialDays = normalizeSpecialDays(appSettings.specialDays);
   }
@@ -2122,6 +2521,16 @@ function loadFromData(data) {
   appSettings.subdepartmentColors = normalized.subdepartmentColors && typeof normalized.subdepartmentColors === 'object'
     ? Object.fromEntries(Object.entries(normalized.subdepartmentColors).map(([key, value]) => [String(key), normalizeHexColor(value)]))
     : {};
+  appSettings.sectionColors = normalized.sectionColors && typeof normalized.sectionColors === 'object'
+    ? Object.fromEntries(Object.entries(normalized.sectionColors).map(([key, value]) => [String(key), normalizeHexColor(value)]))
+    : {};
+  appSettings.processColors = normalized.processColors && typeof normalized.processColors === 'object'
+    ? Object.fromEntries(Object.entries(normalized.processColors).map(([key, value]) => [String(key), normalizeHexColor(value)]))
+    : {};
+  departmentOrder = normalizeHierarchyOrder(normalized.departmentOrder);
+  subdepartmentOrder = normalizeHierarchyOrder(normalized.subdepartmentOrder);
+  hierarchyOrder = normalizeHierarchyOrderTree(normalized.hierarchyOrder);
+  migrateHierarchyOrderTree();
   appSettings.workCodes = normalizeWorkCodes(normalized.workCodes);
   appSettings.shiftTemplates = normalizeShiftTemplates(normalized.shiftTemplates);
   appSettings.summaryColumns = normalizeSummaryColumns(normalized.summaryColumns ?? appSettings.summaryColumns);
@@ -2139,6 +2548,11 @@ function loadFromData(data) {
   employees = (normalized.employees || []).map(e => ({
     ...e,
     id: +e.id,
+    organisation: String(e.organisation || e.organization || '').trim(),
+    section: String(e.section || e.subdepartment || '').trim(),
+    process: String(e.process || '').trim(),
+    team: String(e.team || '').trim(),
+    shiftTeamId: String(e.shiftTeamId || '').trim(),
     email: e.email || '',
     phoneWork: e.phoneWork || '',
     phonePrivate: e.phonePrivate || '',
@@ -2148,8 +2562,11 @@ function loadFromData(data) {
     categoryIds: Array.isArray(e.categoryIds) && e.categoryIds.length
       ? e.categoryIds.map(Number).filter(Number.isFinite)
       : (joinCatIds[+e.id] || []),
-    sortOrder: Number.isFinite(e.sortOrder) ? e.sortOrder : undefined,
+    sortOrder: normalizeEmployeeSortOrder(e.sortOrder),
   }));
+  ensureEmployeeSortOrders(employees);
+  ensureDepartmentOrders();
+  ensureSubdepartmentOrders();
   categories = (normalized.categories || []).map(c => ({ ...c, id: +c.id, color: safeColor(c.color) }));
   activities = (normalized.activities || normalized.projects || []).map(act => {
     const a = { ...act, id: +act.id, color: safeColor(act.color) };
@@ -2162,6 +2579,7 @@ function loadFromData(data) {
     a.order = a.order || '';
     a.billing = a.billing || '';
     a.type = a.type || '';
+    a.eveningShift = a.eveningShift || '1200-2000';
     a.status = activityStatus(a);
     return a;
   });
@@ -2202,6 +2620,7 @@ function loadFromData(data) {
       if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: s.workCodeId || null, administrativeTime: String(s.administrativeTime || ''), staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
     });
   } else activityShiftsMap = {};
+  shiftRotationMap = cleanShiftRotationMap(normalized.shiftRotationMap, employees);
   const rawStatuses = Array.isArray(normalized.statuses) && normalized.statuses.length
     ? normalized.statuses
     : (Array.isArray(normalized.statusTypes) ? normalized.statusTypes.map(st => ({
@@ -2278,13 +2697,23 @@ function snapshotData() {
     appSettings: plannerAppSettingsSnapshot(),
     departmentColors: appSettings.departmentColors || {},
     subdepartmentColors: appSettings.subdepartmentColors || {},
+    sectionColors: appSettings.sectionColors || {},
+    processColors: appSettings.processColors || {},
+    departmentOrder,
+    subdepartmentOrder,
+    hierarchyOrder,
     activityTypes: appSettings.activityTypes || [],
     workCodes: appSettings.workCodes || [],
     shiftTemplates: appSettings.shiftTemplates || [],
     summaryColumns: appSettings.summaryColumns,
-    employees, categories, statuses: snapshotStatuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, overtimeMap, cellNotesMap, workScheduleChecksMap,
+    employees, categories, statuses: snapshotStatuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, shiftRotationMap, overtimeMap, cellNotesMap, workScheduleChecksMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   };
+}
+function persistableSnapshotData() {
+  const snapshot = snapshotData();
+  snapshot.shiftRotationMap = withoutNullMap(snapshot.shiftRotationMap);
+  return snapshot;
 }
 
 async function saveState(force = false) {
@@ -2318,13 +2747,14 @@ async function saveData() {
   try {
     if (btn) btn.innerHTML = 'Saving...';
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
-    await saveLocalBackupFile(false);
+    const saveResult = await saveLocalBackupFile(false);
     try {
       await saveState(true);
     } catch (recoveryError) {
       console.warn('Browser recovery error:', recoveryError);
     }
     markFileSaved();
+    if (isDownloadFallbackResult(saveResult)) showToast(`Saved downloaded copy: ${saveResult}.`, 5000);
     updateSaveButton();
     updateSbStatus();
   } catch (err) {
@@ -2363,7 +2793,7 @@ function plannerDataHasContent(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
   const listFields = ['employees', 'activities', 'projects', 'statuses', 'statusTypes', 'categories', 'courses', 'requirements'];
   if (listFields.some(field => Array.isArray(data[field]) && data[field].length > 0)) return true;
-  const mapFields = ['entriesMap', 'overtimeMap', 'activityShiftsMap', 'requirementRecords', 'courseStatuses'];
+  const mapFields = ['entriesMap', 'overtimeMap', 'activityShiftsMap', 'shiftRotationMap', 'requirementRecords', 'courseStatuses'];
   return mapFields.some(field => {
     const value = data[field];
     return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0;
@@ -2444,7 +2874,7 @@ async function createBackupIfNeeded(options = {}) {
     });
     return false;
   }
-  const payloadData = snapshotData();
+  const payloadData = persistableSnapshotData();
   payloadData.savedAt = new Date().toISOString();
   validatePlannerData(payloadData);
   const payload = JSON.stringify(payloadData, null, 2);
@@ -2482,6 +2912,11 @@ function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;'
 function cleanHtml(markup) { return String(markup).replace(/\u00a0/g, ' '); }
 function fmt(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function todayStr() { return fmt(new Date()); }
+function isValidIsoDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
+  const date = new Date(`${value}T00:00:00`);
+  return !Number.isNaN(date.getTime()) && fmt(date) === value;
+}
 function dateBeforeIso(dateString) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateString || ''))) return '';
   const date = new Date(`${dateString}T00:00:00`);
@@ -2491,6 +2926,24 @@ function dateBeforeIso(dateString) {
 function fmtShort(ds) { return new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
 function fmtMed(ds) { return new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 function daysOfYear(y) { const days = [], d = new Date(y, 0, 1); while (d.getFullYear() === y) { days.push(new Date(d)); d.setDate(d.getDate()+1); } return days; }
+function scheduleRange() {
+  const anchor = new Date();
+  if (gridPeriod === 'year') return { start: `${gridYear}-01-01`, end: `${gridYear}-12-31`, days: daysOfYear(gridYear), label: String(gridYear) };
+  const stored = new Date(`${scheduleAnchorDate}T00:00:00`);
+  if (gridPeriod === 'month') {
+    const startDate = new Date(stored.getFullYear(), stored.getMonth(), 1);
+    const endDate = new Date(stored.getFullYear(), stored.getMonth() + 1, 0);
+    return { start: fmt(startDate), end: fmt(endDate), days: datesBetween(fmt(startDate), fmt(endDate)).map(ds => new Date(`${ds}T00:00:00`)), label: startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
+  }
+  const startDate = new Date(stored);
+  const day = (startDate.getDay() + 6) % 7;
+  startDate.setDate(startDate.getDate() - day);
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 6);
+  return { start: fmt(startDate), end: fmt(endDate), days: datesBetween(fmt(startDate), fmt(endDate)).map(ds => new Date(`${ds}T00:00:00`)), label: `Week ${isoWeek(startDate)}, ${startDate.getFullYear()}` };
+}
+function scheduleDays() { return scheduleRange().days; }
+function scheduleStartEnd() { const range = scheduleRange(); return { start: range.start, end: range.end }; }
 function isWknd(d) { const g = d.getDay(); return g === 0 || g === 6; }
 function isoWeekInfo(d) {
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -2588,7 +3041,9 @@ function shiftHours(shift) {
 }
 function activityDefaultShift(shiftType, act = null) {
   if (shiftType === 'normal') return act?.normalShift || appSettings.coreWorkdayRange || '0730-1500';
-  return shiftType === 'night' ? (act?.nightShift || '0000-0730') : (act?.dayShift || '0730-2400');
+  if (shiftType === 'night') return act?.nightShift || '0000-0730';
+  if (shiftType === 'evening') return act?.eveningShift || '1200-2000';
+  return act?.dayShift || '0730-2400';
 }
 function activityShiftHours(act, empId, date) {
   if (activityStatus(act) !== 'confirmed') return 0;
@@ -2596,7 +3051,7 @@ function activityShiftHours(act, empId, date) {
   if (!assignment.assigned || assignment.excluded || !assignment.shift) return 0;
   const shiftStr = assignment.shift || 'normal';
   if (shiftStr === 'turn') return 0;
-  if (['normal', 'day', 'night'].includes(shiftStr)) {
+  if (['normal', 'day', 'evening', 'night'].includes(shiftStr)) {
     return timeRangeHours(activityDefaultShift(shiftStr, act)) ?? 0;
   }
   return timeRangeHours(shiftStr) ?? 0;
@@ -2605,6 +3060,7 @@ function activityShiftMeta(act, shift) {
   if (shift === 'normal') return { key: 'normal', label: 'Normal Working Hours', range: activityDefaultShift('normal', act), icon: '' };
   if (shift === 'day') return { key: 'day', label: 'Day', range: activityDefaultShift('day', act), icon: svgIcon('sun', 'Day') };
   if (shift === 'night') return { key: 'night', label: 'Night', range: activityDefaultShift('night', act), icon: svgIcon('moon', 'Night') };
+  if (shift === 'evening') return { key: 'evening', label: 'Mid-day / Evening', range: activityDefaultShift('evening', act), icon: svgIcon('evening', 'Mid-day / Evening') };
   if (shift === 'turn') return { key: 'turn', label: 'Turnaround', range: '', icon: shiftChangeIcon('Turnaround') };
   return shift ? { key: shift, label: 'Custom', range: shift, icon: '' } : null;
 }
@@ -2615,7 +3071,7 @@ function activityAssignmentInfo(act, empId, date) {
     || (assignment.shift === 'normal' ? { id: null, name: 'Normal Working Hours', abbreviation: 'NA', color: act.color } : null);
   if (!assignment.assigned || assignment.excluded || !assignment.shift || !workCode) return null;
   const shiftMeta = activityShiftMeta(act, assignment.shift);
-  const physicalShift = ['normal', 'day', 'night'].includes(assignment.shift)
+  const physicalShift = ['normal', 'day', 'evening', 'night'].includes(assignment.shift)
     ? `${shiftMeta.label} (${shiftMeta.range})`
     : (assignment.shift === 'turn' ? shiftMeta.label : (assignment.shift || 'Not specified'));
   const administrativeMeasure = activityAdministrativeMeasure(act, empId, date);
@@ -2623,8 +3079,8 @@ function activityAssignmentInfo(act, empId, date) {
   return { assignment, workCode, physicalShift, physicalHours: activityShiftHours(act, empId, date), administrativeMeasure, administrativeValue };
 }
 function assignmentShiftType(shift, participant = null) {
-  if (shift === 'normal' || shift === 'day' || shift === 'night' || shift === 'turn') return shift;
-  return participant?.shiftType === 'night' ? 'night' : (participant?.shiftType === 'normal' ? 'normal' : 'day');
+  if (shift === 'normal' || shift === 'day' || shift === 'evening' || shift === 'night' || shift === 'turn') return shift;
+  return participant?.shiftType === 'night' ? 'night' : (participant?.shiftType === 'evening' ? 'evening' : (participant?.shiftType === 'normal' ? 'normal' : 'day'));
 }
 function activityCountsTowardLoad(act) {
   return act?.countsTowardLoad !== false;
@@ -2740,11 +3196,210 @@ function resolveDeptColor(dept) {
   return PALETTE[index % PALETTE.length];
 }
 function subdepartmentColorKey(dept, subdept) { return `${dept}\u0000${subdept}`; }
+function sectionColorKey(dept, section) { return `${dept}\u0000${section}`; }
+function processColorKey(dept, section, process) { return `${dept}\u0000${section}\u0000${process}`; }
+function subdepartmentOrderKey(dept, subdept) { return `${dept}\u0000${subdept}`; }
+function hierarchyOrderKey(...parts) { return parts.map(value => String(value || '')).join('\u0000'); }
+function hierarchyValue(employee, level) {
+  if (level === 'department') return employee.department || 'Unassigned department';
+  if (level === 'section') return employee.section || employee.subdepartment || 'Unassigned section';
+  if (level === 'process') return employee.process || 'Unassigned process';
+  return employee.team || 'Unassigned team';
+}
+function hierarchyParentPath(employee, level) {
+  const organisation = employee.organisation || 'Unassigned organisation';
+  const department = hierarchyValue(employee, 'department');
+  const section = hierarchyValue(employee, 'section');
+  const process = hierarchyValue(employee, 'process');
+  if (level === 'department') return [organisation, department];
+  if (level === 'section') return [organisation, department, section];
+  if (level === 'process') return [organisation, department, section, process];
+  return [organisation, department, section, process, hierarchyValue(employee, 'team')];
+}
+function hierarchyOrderFor(level, parentPath, value) {
+  return Number(hierarchyOrder[level]?.[hierarchyOrderKey(...parentPath, value)]) || 9999;
+}
+function migrateHierarchyOrderTree() {
+  hierarchyOrder = normalizeHierarchyOrderTree(hierarchyOrder);
+  const levels = ['department', 'section', 'process', 'team'];
+  for (const level of levels) {
+    const groups = new Map();
+    for (const employee of employees) {
+      const parent = hierarchyParentPath(employee, level).slice(0, -1);
+      const value = hierarchyValue(employee, level);
+      const key = hierarchyOrderKey(...parent);
+      if (!groups.has(key)) groups.set(key, { parent, values: new Set() });
+      groups.get(key).values.add(value);
+    }
+    for (const { parent, values } of groups.values()) {
+      const ordered = [...values].sort((a, b) => {
+        if (level === 'department' && !hierarchyOrder[level][hierarchyOrderKey(...parent, a)]) return (departmentOrder[a] ?? 9999) - (departmentOrder[b] ?? 9999);
+        if (level === 'section' && !hierarchyOrder[level][hierarchyOrderKey(...parent, a)]) return (subdepartmentOrder[subdepartmentOrderKey(parent[1], a)] ?? 9999) - (subdepartmentOrder[subdepartmentOrderKey(parent[1], b)] ?? 9999);
+        if (level === 'process') return (Math.min(...employees.filter(e => hierarchyValue(e, level) === a).map(e => Number(e.processOrder) || Number(e.sortOrder) || 9999))) - (Math.min(...employees.filter(e => hierarchyValue(e, level) === b).map(e => Number(e.processOrder) || Number(e.sortOrder) || 9999)));
+        return a.localeCompare(b, 'nb', { sensitivity: 'base' });
+      });
+      ordered.forEach((value, index) => {
+        const key = hierarchyOrderKey(...parent, value);
+        if (!hierarchyOrder[level][key]) hierarchyOrder[level][key] = (index + 1) * 10;
+      });
+    }
+  }
+}
+function normalizeEmployeeSortOrder(value) {
+  const order = Number(value);
+  return Number.isInteger(order) && order > 0 && order <= 9999 ? order : undefined;
+}
+function nextAvailableEmployeeSortOrder(list = employees, excludeId = null) {
+  const used = new Set(list
+    .filter(employee => employee.id !== excludeId)
+    .map(employee => normalizeEmployeeSortOrder(employee.sortOrder))
+    .filter(Boolean));
+  const maxOrder = Math.max(0, ...used);
+  const nextTen = Math.ceil((maxOrder + 1) / 10) * 10;
+  if (nextTen <= 9999 && !used.has(nextTen)) return nextTen;
+  for (let order = 1; order <= 9999; order++) {
+    if (!used.has(order)) return order;
+  }
+  return 9999;
+}
+function ensureEmployeeSortOrders(list = employees) {
+  for (const employee of list) {
+    const normalized = normalizeEmployeeSortOrder(employee.sortOrder);
+    employee.sortOrder = normalized ?? nextAvailableEmployeeSortOrder(list, employee.id);
+  }
+}
+function inferredDepartments() {
+  const minimumEmployeeOrder = new Map();
+  for (const employee of employees) {
+    const department = employee.department || 'Unassigned';
+    minimumEmployeeOrder.set(department, Math.min(
+      minimumEmployeeOrder.get(department) ?? Infinity,
+      normalizeEmployeeSortOrder(employee.sortOrder) ?? 9999,
+    ));
+  }
+  return [...minimumEmployeeOrder.keys()].sort((left, right) =>
+    ((minimumEmployeeOrder.get(left) ?? 9999) - (minimumEmployeeOrder.get(right) ?? 9999)) ||
+    left.localeCompare(right, 'nb', { sensitivity: 'base' }));
+}
+function orderedDepartments() {
+  return inferredDepartments().sort((left, right) =>
+    (hierarchyOrderFor('department', ['Unassigned organisation'], left) - hierarchyOrderFor('department', ['Unassigned organisation'], right)) ||
+    ((departmentOrder[left] ?? 9999) - (departmentOrder[right] ?? 9999)) ||
+    left.localeCompare(right, 'nb', { sensitivity: 'base' }));
+}
+function ensureDepartmentOrders() {
+  const departments = inferredDepartments();
+  let nextOrder = Math.max(0, ...departments.map(department => departmentOrder[department] || 0));
+  for (const department of departments) {
+    if (!departmentOrder[department]) {
+      nextOrder = Math.ceil((nextOrder + 1) / 10) * 10;
+      departmentOrder[department] = Math.min(nextOrder, 9999);
+    }
+  }
+}
+function compareDepartments(left, right) {
+  return (hierarchyOrderFor('department', ['Unassigned organisation'], left) - hierarchyOrderFor('department', ['Unassigned organisation'], right)) ||
+    ((departmentOrder[left] ?? 9999) - (departmentOrder[right] ?? 9999)) ||
+    left.localeCompare(right, 'nb', { sensitivity: 'base' });
+}
+function orderedSubdepartmentsFor(dept) {
+  return [...new Set(employees
+    .filter(employee => (employee.department || 'Unassigned') === dept && employee.subdepartment)
+    .map(employee => employee.subdepartment))]
+    .sort((left, right) =>
+      ((subdepartmentOrder[subdepartmentOrderKey(dept, left)] ?? 9999) -
+       (subdepartmentOrder[subdepartmentOrderKey(dept, right)] ?? 9999)) ||
+      left.localeCompare(right, 'nb', { sensitivity: 'base' }));
+}
+function ensureSubdepartmentOrders() {
+  const departments = [...new Set(employees.map(employee => employee.department || 'Unassigned'))];
+  for (const department of departments) {
+    const teams = [...new Set(employees
+      .filter(employee => (employee.department || 'Unassigned') === department && employee.subdepartment)
+      .map(employee => employee.subdepartment))]
+      .sort((left, right) => left.localeCompare(right, 'nb', { sensitivity: 'base' }));
+    let nextOrder = Math.max(0, ...teams.map(team => subdepartmentOrder[subdepartmentOrderKey(department, team)] || 0));
+    for (const team of teams) {
+      const key = subdepartmentOrderKey(department, team);
+      if (!subdepartmentOrder[key]) {
+        nextOrder = Math.ceil((nextOrder + 1) / 10) * 10;
+        subdepartmentOrder[key] = Math.min(nextOrder, 9999);
+      }
+    }
+  }
+}
+function compareSubdepartments(dept, left, right) {
+  if (!left && right) return -1;
+  if (left && !right) return 1;
+  return (hierarchyOrderFor('section', ['Unassigned organisation', dept], left) - hierarchyOrderFor('section', ['Unassigned organisation', dept], right)) ||
+    ((subdepartmentOrder[subdepartmentOrderKey(dept, left)] ?? 9999) -
+    (subdepartmentOrder[subdepartmentOrderKey(dept, right)] ?? 9999)) ||
+    left.localeCompare(right, 'nb', { sensitivity: 'base' });
+}
+function comparePersonnelGroupLeaves(dept, left, right) {
+  const leftParts = String(left || '').split(' / ');
+  const rightParts = String(right || '').split(' / ');
+  const sectionOrder = hierarchyOrderFor('section', ['Unassigned organisation', dept], leftParts[0]);
+  const rightSectionOrder = hierarchyOrderFor('section', ['Unassigned organisation', dept], rightParts[0]);
+  return (sectionOrder - rightSectionOrder) ||
+    leftParts.slice(1).join(' / ').localeCompare(rightParts.slice(1).join(' / '), 'nb', { sensitivity: 'base' }) ||
+    String(left || '').localeCompare(String(right || ''), 'nb', { sensitivity: 'base' });
+}
+function compareScheduleGroups(left, right) {
+  const leftEmp = left.emps?.[0] || {};
+  const rightEmp = right.emps?.[0] || {};
+  const organisationComparison = String(leftEmp.organisation || '').localeCompare(String(rightEmp.organisation || ''), 'nb', { sensitivity: 'base' });
+  if (organisationComparison) return organisationComparison;
+  const departmentComparison = hierarchyOrderFor('department', [leftEmp.organisation || 'Unassigned organisation'], leftEmp.department || 'Unassigned department') - hierarchyOrderFor('department', [rightEmp.organisation || 'Unassigned organisation'], rightEmp.department || 'Unassigned department');
+  if (departmentComparison) return departmentComparison;
+  const leftSection = leftEmp.section || leftEmp.subdepartment || '';
+  const rightSection = rightEmp.section || rightEmp.subdepartment || '';
+  const sectionComparison = hierarchyOrderFor('section', [leftEmp.organisation || 'Unassigned organisation', leftEmp.department || 'Unassigned department'], leftSection) - hierarchyOrderFor('section', [rightEmp.organisation || 'Unassigned organisation', rightEmp.department || 'Unassigned department'], rightSection);
+  if (sectionComparison) return sectionComparison;
+  const leftProcessOrder = hierarchyOrderFor('process', [leftEmp.organisation || 'Unassigned organisation', leftEmp.department || 'Unassigned department', leftSection], leftEmp.process || 'Unassigned process');
+  const rightProcessOrder = hierarchyOrderFor('process', [rightEmp.organisation || 'Unassigned organisation', rightEmp.department || 'Unassigned department', rightSection], rightEmp.process || 'Unassigned process');
+  const processComparison = leftProcessOrder - rightProcessOrder || String(leftEmp.process || '').localeCompare(String(rightEmp.process || ''), 'nb', { sensitivity: 'base' });
+  if (processComparison) return processComparison;
+  const leftPersonnelOrder = Math.min(...(left.emps || []).map(employee => Number(employee.sortOrder) || 9999));
+  const rightPersonnelOrder = Math.min(...(right.emps || []).map(employee => Number(employee.sortOrder) || 9999));
+  const leftTeamOrder = hierarchyOrderFor('team', [leftEmp.organisation || 'Unassigned organisation', leftEmp.department || 'Unassigned department', leftSection, leftEmp.process || 'Unassigned process'], leftEmp.team || 'Unassigned team');
+  const rightTeamOrder = hierarchyOrderFor('team', [rightEmp.organisation || 'Unassigned organisation', rightEmp.department || 'Unassigned department', rightSection, rightEmp.process || 'Unassigned process'], rightEmp.team || 'Unassigned team');
+  return leftTeamOrder - rightTeamOrder || leftPersonnelOrder - rightPersonnelOrder || String(leftEmp.team || '').localeCompare(String(rightEmp.team || ''), 'nb', { sensitivity: 'base' });
+}
 function resolveSubdepartmentColor(dept, subdept) {
   const key = subdepartmentColorKey(dept, subdept);
   return appSettings.subdepartmentColors?.[key]
     ? normalizeHexColor(appSettings.subdepartmentColors[key])
     : null;
+}
+function resolveSectionColor(dept, section) {
+  if (!section) return null;
+  const key = sectionColorKey(dept, section);
+  return appSettings.sectionColors?.[key] ? normalizeHexColor(appSettings.sectionColors[key]) : null;
+}
+async function setSectionColor(dept, section, color) {
+  if (!section) return;
+  await mutateState('setSectionColor', () => {
+    appSettings.sectionColors = appSettings.sectionColors || {};
+    appSettings.sectionColors[sectionColorKey(dept, section)] = normalizeHexColor(color);
+    persistSettings();
+  }, { saveDisk: true });
+  renderPage();
+}
+function resolveProcessColor(dept, section, process) {
+  if (!process) return null;
+  const key = processColorKey(dept, section, process);
+  return appSettings.processColors?.[key] ? normalizeHexColor(appSettings.processColors[key]) : null;
+}
+async function setProcessColor(dept, section, process, color) {
+  if (!process) return;
+  const safe = normalizeHexColor(color);
+  await mutateState('setProcessColor', () => {
+    appSettings.processColors = appSettings.processColors || {};
+    appSettings.processColors[processColorKey(dept, section, process)] = safe;
+    persistSettings();
+  }, { saveDisk: true });
+  renderPage();
 }
 function deptColorMap() {
   const { bg, accent } = deptPalettes();
@@ -2766,25 +3421,89 @@ function groupColorsFor(dept, subdept, deptColors) {
   if (!teamColor) return deptColors;
   return { bg: `${teamColor}22`, accent: teamColor };
 }
+function employeeGroupColor(employee, deptColors) {
+  const dept = employee.department || 'Unassigned';
+  const section = employee.section || employee.subdepartment || '';
+  const process = resolveProcessColor(dept, section, employee.process);
+  const sectionColor = resolveSubdepartmentColor(dept, section);
+  const color = process || sectionColor;
+  return color ? { bg: `${color}22`, accent: color } : deptColors;
+}
+function sectionGroupColor(group, deptColors) {
+  const employee = group.emps?.[0];
+  const section = employee?.section || employee?.subdepartment || '';
+  const sectionColor = resolveSectionColor(group.dept, section) || resolveDeptColor(group.dept);
+  return sectionColor ? { bg: `${sectionColor}22`, accent: sectionColor } : deptColors;
+}
+function employeeHierarchyPath(employee, options = {}) {
+  const includeDepartment = options.includeDepartment !== false;
+  return [
+    employee?.organisation,
+    includeDepartment ? employee?.department : '',
+    employee?.section || employee?.subdepartment,
+    employee?.process,
+    employee?.team,
+  ].filter(Boolean).join(' / ');
+}
+function employeeProcessPath(employee) {
+  return [employee?.organisation, employee?.department, employee?.section || employee?.subdepartment, employee?.process].filter(Boolean).join('\u0000');
+}
+function displayEmployeeName(employee) {
+  const rank = appSettings.showLevelRankInSchedule !== false ? String(employee?.level || '').trim() : '';
+  return [rank, employee?.name || ''].filter(Boolean).join(' ');
+}
+function displayEmployeeNameMarkup(employee) {
+  const name = esc(employee?.name || '');
+  const rank = appSettings.showLevelRankInSchedule !== false ? String(employee?.level || '').trim() : '';
+  return rank ? `<strong class="employee-rank">${esc(rank)}</strong> ${name}` : name;
+}
+function employeeHierarchyLeaf(employee) {
+  return [employee?.section || employee?.subdepartment, employee?.process, employee?.team].filter(Boolean).join(' / ');
+}
+function comparePersonnelHierarchy(left, right) {
+  const organisationComparison = String(left?.organisation || '').localeCompare(String(right?.organisation || ''), 'nb', { sensitivity: 'base' });
+  if (organisationComparison) return organisationComparison;
+  const leftDepartment = left?.department || 'Unassigned department';
+  const rightDepartment = right?.department || 'Unassigned department';
+  const departmentComparison = hierarchyOrderFor('department', [left?.organisation || 'Unassigned organisation'], leftDepartment) - hierarchyOrderFor('department', [right?.organisation || 'Unassigned organisation'], rightDepartment);
+  if (departmentComparison) return departmentComparison;
+  const leftSection = left?.section || left?.subdepartment || 'Unassigned section';
+  const rightSection = right?.section || right?.subdepartment || 'Unassigned section';
+  const sectionComparison = hierarchyOrderFor('section', [left?.organisation || 'Unassigned organisation', leftDepartment], leftSection) - hierarchyOrderFor('section', [right?.organisation || 'Unassigned organisation', rightDepartment], rightSection);
+  if (sectionComparison) return sectionComparison;
+  const processComparison = hierarchyOrderFor('process', [left?.organisation || 'Unassigned organisation', leftDepartment, leftSection], left?.process || 'Unassigned process') - hierarchyOrderFor('process', [right?.organisation || 'Unassigned organisation', rightDepartment, rightSection], right?.process || 'Unassigned process');
+  if (processComparison) return processComparison;
+  const teamComparison = hierarchyOrderFor('team', [left?.organisation || 'Unassigned organisation', leftDepartment, leftSection, left?.process || 'Unassigned process'], left?.team || 'Unassigned team') - hierarchyOrderFor('team', [right?.organisation || 'Unassigned organisation', rightDepartment, rightSection, right?.process || 'Unassigned process'], right?.team || 'Unassigned team');
+  if (teamComparison) return teamComparison;
+  return ((left?.sortOrder ?? 9999) - (right?.sortOrder ?? 9999)) ||
+    String(left?.name || '').localeCompare(String(right?.name || ''), 'nb', { sensitivity: 'base' });
+}
 function sortedEmployees() {
-  return [...employees].sort((a, b) =>
-    ((a.sortOrder ?? 99) - (b.sortOrder ?? 99)) ||
-    a.department.localeCompare(b.department) ||
-    (a.subdepartment || '').localeCompare(b.subdepartment || '') ||
-    a.name.localeCompare(b.name));
+  return [...employees].sort(comparePersonnelHierarchy);
 }
 function deptGroups() {
-  const sorted = sortedEmployees();
-  const order = [], byDept = new Map();
-  for (const emp of sorted) {
+  const byDept = new Map();
+  for (const emp of employees) {
     if (hiddenEmployees.has(emp.id)) continue;
     const department = emp.department || 'Unassigned';
-    const subdepartment = emp.subdepartment || 'General';
+    const subdepartment = employeeHierarchyLeaf(emp);
     const key = `${department}\u0000${subdepartment}`;
-    if (!byDept.has(key)) { byDept.set(key, { department, subdepartment, emps: [] }); order.push(key); }
+    if (!byDept.has(key)) byDept.set(key, { department, subdepartment, emps: [] });
     byDept.get(key).emps.push(emp);
   }
-  return order.map(key => { const group = byDept.get(key); return { dept: group.department, subdept: group.subdepartment, emps: group.emps }; });
+  return [...byDept.values()]
+    .map(group => ({ ...group, groupOrder: Math.min(...group.emps.map(employee => Number(employee.sortOrder) || 9999)) }))
+    .sort((left, right) =>
+      compareDepartments(left.department, right.department) ||
+      comparePersonnelGroupLeaves(left.department, left.subdepartment, right.subdepartment) ||
+      (left.groupOrder - right.groupOrder))
+    .map(group => ({
+      dept: group.department,
+      subdept: group.subdepartment,
+      emps: group.emps.sort((left, right) =>
+        ((left.sortOrder ?? 9999) - (right.sortOrder ?? 9999)) ||
+        left.name.localeCompare(right.name)),
+    }));
 }
 function normalizeDepartmentName(value) {
   return String(value || '').trim().toLowerCase();
@@ -2830,7 +3549,7 @@ function setEmployeeDepartmentVisibility(deptName, shouldShow) {
 function toggleEmployeeSubdepartment(subdeptKey, shouldShow) {
   const [deptName, subdeptName] = String(subdeptKey).split('\u0000');
   const targetSet = hiddenEmployeesDraft || hiddenEmployees;
-  employees.filter(emp => normalizeDepartmentName(emp.department) === normalizeDepartmentName(deptName) && (emp.subdepartment || 'General') === subdeptName)
+  employees.filter(emp => normalizeDepartmentName(emp.department) === normalizeDepartmentName(deptName) && (emp.section || emp.subdepartment || '') === subdeptName)
     .forEach(emp => shouldShow ? targetSet.delete(emp.id) : targetSet.add(emp.id));
   if (hiddenEmployeesDraft) rebuildEmployeePicker(); else { saveGridPreferences(); renderPage(); }
 }
@@ -2844,22 +3563,38 @@ function rebuildEmployeePicker() {
     if (!key) return;
     if (!departmentMap.has(key)) departmentMap.set(key, String(emp.department || '').trim());
   });
-  const departments = [...departmentMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const departments = [...departmentMap.entries()].sort((a, b) => compareDepartments(a[1], b[1]));
   const deptMarkup = departments.length ? departments.map(([deptKey, deptLabel]) => {
     const deptEmployees = employees.filter(emp => normalizeDepartmentName(emp.department) === deptKey);
     const visible = deptEmployees.filter(emp => !hiddenSet.has(emp.id)).length;
     const allChecked = deptEmployees.length && visible === deptEmployees.length;
     const someChecked = visible > 0 && visible < deptEmployees.length;
-    const subgroups = [...new Set(deptEmployees.map(emp => emp.subdepartment || 'General'))].sort((a, b) => a.localeCompare(b));
+    const subgroups = [...new Set(deptEmployees.map(emp => emp.section || emp.subdepartment || ''))].sort((a, b) => compareSubdepartments(deptLabel, a, b));
     const employeeMarkup = subgroups.map(subdept => {
-      const teamEmployees = deptEmployees.filter(emp => (emp.subdepartment || 'General') === subdept).sort((a, b) => a.name.localeCompare(b.name));
-      const teamKey = `${deptLabel}\u0000${subdept}`;
-      const teamVisible = teamEmployees.filter(emp => !hiddenSet.has(emp.id)).length;
-      return `<div style="margin:4px 0 2px 18px;font-weight:600;color:var(--muted)"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" ${teamVisible === teamEmployees.length ? 'checked' : ''} onchange="toggleEmployeeSubdepartment(${esc(JSON.stringify(teamKey))}, this.checked); return false;"><span>${esc(subdept)}</span></label></div>` + teamEmployees.map(emp => `
+      const sectionEmployees = deptEmployees.filter(emp => (emp.section || emp.subdepartment || '') === subdept);
+      const sectionKey = `${deptLabel}\u0000${subdept}`;
+      const sectionVisible = sectionEmployees.filter(emp => !hiddenSet.has(emp.id)).length;
+      const processMap = new Map();
+      sectionEmployees.forEach(emp => {
+        const process = emp.process || '';
+        if (!processMap.has(process)) processMap.set(process, []);
+        processMap.get(process).push(emp);
+      });
+      const processMarkup = [...processMap.entries()].sort((a, b) => {
+        const left = a[1][0], right = b[1][0];
+        return hierarchyOrderFor('process', [left.organisation || 'Unassigned organisation', left.department || 'Unassigned department', left.section || left.subdepartment || 'Unassigned section'], a[0] || 'Unassigned process') - hierarchyOrderFor('process', [right.organisation || 'Unassigned organisation', right.department || 'Unassigned department', right.section || right.subdepartment || 'Unassigned section'], b[0] || 'Unassigned process') || String(a[0]).localeCompare(String(b[0]), 'nb', { sensitivity: 'base' });
+      }).map(([process, processEmployees]) => {
+        const sortedProcessEmployees = processEmployees.slice().sort(comparePersonnelHierarchy);
+        const teamMap = new Map();
+        sortedProcessEmployees.forEach(emp => { const team = emp.team || ''; if (!teamMap.has(team)) teamMap.set(team, []); teamMap.get(team).push(emp); });
+        const teamMarkup = [...teamMap.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'nb', { sensitivity: 'base' })).map(([team, teamEmployees]) => `${team ? `<div class="employee-picker-team-label">${esc(team)}</div>` : ''}${teamEmployees.sort(comparePersonnelHierarchy).map(emp => `
       <label class="picker-row" style="display:flex;align-items:center;gap:8px;padding:5px 0">
         <input type="checkbox" ${hiddenSet.has(emp.id) ? '' : 'checked'} onchange="toggleEmployeeVisibility(${emp.id}, this.checked); return false;">
         <span>${esc(emp.name)}</span>
-      </label>`).join('');
+      </label>`).join('')}`).join('');
+        return `<div class="employee-picker-process">${process ? `<div class="employee-picker-process-label">${esc(process)}</div>` : ''}${teamMarkup}</div>`;
+      }).join('');
+      return `${subdept ? `<div style="margin:4px 0 2px 18px;font-weight:600;color:var(--muted)"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" ${sectionVisible === sectionEmployees.length ? 'checked' : ''} onchange="toggleEmployeeSubdepartment(${esc(JSON.stringify(sectionKey))}, this.checked); return false;"><span>${esc(subdept)}</span></label></div>` : ''}${processMarkup}`;
     }).join('');
     return `
       <div style="border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface)">
@@ -2875,7 +3610,7 @@ function rebuildEmployeePicker() {
       <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">Select employees</strong>
       <button class="icon-btn" type="button" onclick="closeEmployeePicker()" aria-label="Close">&times;</button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px;max-height:330px;overflow:auto">${deptMarkup}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;max-height:min(68vh,620px);overflow:auto">${deptMarkup}</div>
     <div style="display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px;margin-top:12px">
       <button class="btn btn-sm" type="button" onclick="resetEmployeePickerSelection()">All</button>
       <button class="btn btn-sm" type="button" onclick="selectNoneEmployeePickerSelection()">None</button>
@@ -2916,12 +3651,19 @@ function openEmployeePicker(button) {
   picker.style.position = 'absolute';
   const desiredLeft = scroll.scrollLeft + (rect.left - scrollRect.left) + rect.width + gap;
   const maxLeft = scroll.scrollLeft + Math.max(0, scroll.clientWidth - 290);
-  const desiredTop = scroll.scrollTop + (rect.top - scrollRect.top) + rect.height + gap;
+  const pickerHeight = Math.min(620, Math.max(320, window.innerHeight * 0.68));
+  const triggerTop = scroll.scrollTop + (rect.top - scrollRect.top);
+  const spaceBelow = scroll.clientHeight - (rect.top - scrollRect.top) - rect.height;
+  const spaceAbove = rect.top - scrollRect.top;
+  const desiredTop = spaceBelow >= Math.min(pickerHeight, scroll.clientHeight * 0.72)
+    ? triggerTop + rect.height + gap
+    : Math.max(scroll.scrollTop + 8, triggerTop - pickerHeight - gap);
   picker.style.left = `${Math.min(maxLeft, Math.max(scroll.scrollLeft + 8, desiredLeft))}px`;
   picker.style.top = `${Math.max(scroll.scrollTop + 8, desiredTop)}px`;
   picker.style.zIndex = '120';
-  picker.style.width = '260px';
+  picker.style.width = 'min(520px, calc(100vw - 24px))';
   picker.style.maxWidth = 'calc(100vw - 24px)';
+  picker.style.maxHeight = 'min(68vh, 620px)';
   picker.style.background = 'var(--surface)';
   picker.style.border = '1px solid var(--border)';
   picker.style.borderRadius = '10px';
@@ -2990,6 +3732,9 @@ async function loadExampleTestData() {
   const empB = { id: nextEmpId++, name: 'Jamie Lee', email: '', role: 'Team Lead', department: 'Operations', level: '', birthday: '', homeAddress: '', phoneWork: '', phonePrivate: '', categoryIds: [] };
   const empC = { id: nextEmpId++, name: 'Taylor Smith', email: '', role: 'Specialist', department: 'Support', level: '', birthday: '', homeAddress: '', phoneWork: '', phonePrivate: '', categoryIds: [] };
   employees.push(empA, empB, empC);
+  ensureEmployeeSortOrders(employees);
+  ensureDepartmentOrders();
+  ensureSubdepartmentOrders();
   employees.sort((a, b) => a.name.localeCompare(b.name));
 
   const makeActivity = (name, abbr, startOffset, endOffset, color, status, participantIds) => {
@@ -3017,20 +3762,308 @@ async function loadExampleTestData() {
   showToast('Example test data added (3 employees, 3 activities).', 5000);
 }
 function nav(page) {
+  if (page === 'shift-rotation' && appSettings.shiftRotationEnabled !== true) page = 'grid';
+  if (page === 'workwheel' && appSettings.workwheelEnabled !== true) page = 'grid';
+  if (page === 'shift-rotation' && currentPage !== 'shift-rotation') shiftRotationInitialScrollPending = true;
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
   closePicker();
   renderPage();
 }
+function updateShiftRotationNavigation() {
+  document.querySelectorAll('.shift-rotation-nav').forEach(btn => {
+    btn.style.display = appSettings.shiftRotationEnabled === true ? '' : 'none';
+    btn.classList.toggle('active', currentPage === 'shift-rotation');
+  });
+}
+function updateWorkwheelNavigation() {
+  document.querySelectorAll('.workwheel-nav').forEach(btn => {
+    btn.style.display = appSettings.workwheelEnabled === true ? '' : 'none';
+    btn.classList.toggle('active', currentPage === 'workwheel');
+  });
+}
 function renderPage() {
   renderSbToday();
+  updateShiftRotationNavigation();
+  updateWorkwheelNavigation();
   const content = document.getElementById('content');
-  if (currentPage === 'grid') { content.style.cssText = 'padding:0;overflow:hidden;display:flex;flex-direction:column;height:100%'; renderGrid(); }
+  if (currentPage === 'grid' || currentPage === 'shift-rotation') {
+    content.style.cssText = 'padding:0;overflow:hidden;display:flex;flex-direction:column;height:100%';
+    if (currentPage === 'grid') renderGrid();
+  }
   else { content.style.cssText = 'flex:1;overflow:auto;padding:24px'; }
   if (currentPage === 'dashboard') renderDashboard();
   else if (currentPage === 'employees') renderEmployees();
   else if (currentPage === 'summary') renderSummary();
+  else if (currentPage === 'shift-rotation') renderShiftRotation();
+  else if (currentPage === 'workwheel') renderWorkwheel();
   else if (currentPage === 'status-board') renderStatusBoard();
+}
+
+function rotationShiftMeta(shift) {
+  const ranges = normalizeShiftRotationRanges(appSettings.shiftRotationRanges);
+  const colors = normalizeShiftRotationColors(appSettings.shiftRotationColors);
+  const defs = {
+    normal: { label: 'Normal Hours', range: ranges.normal, color: colors.normal, icon: svgIcon('sun', 'Normal Hours') },
+    day: { label: 'Day', range: ranges.day, color: colors.day, icon: svgIcon('sun', 'Day shift') },
+    evening: { label: 'Mid-day / Evening', range: ranges.evening, color: colors.evening, icon: svgIcon('evening', 'Mid-day / Evening shift') },
+    night: { label: 'Night', range: ranges.night, color: colors.night, icon: svgIcon('moon', 'Night shift') },
+    turn: { label: 'Turnaround', range: '', color: colors.turn, icon: shiftChangeIcon('Turnaround') },
+    leave: { label: 'Leave', range: 'Off work', color: colors.leave, icon: '<span class="rotation-leave-icon" aria-hidden="true">OFF</span>' },
+    overtime: { label: 'Overtime', range: 'Extra hours', color: colors.overtime, icon: '<span class="rotation-overtime-icon" aria-hidden="true">OT</span>' },
+  };
+  return defs[shift] || null;
+}
+function rotationRecord(empId, date) {
+  if (appSettings.shiftRotationEnabled !== true) return null;
+  const value = shiftRotationMap[`${empId}_${date}`];
+  return value ? (typeof value === 'string' ? { shift: value } : value) : null;
+}
+function rotationRecordRange(record) {
+  if (!record) return '';
+  if (record.shift === 'overtime') return record.time || 'Specific time not entered';
+  return rotationShiftMeta(record.shift)?.range || '';
+}
+async function setRotationFromPicker(shift) {
+  if (pickerEmpId == null || !pickerDates.length) return;
+  let time = '';
+  if (shift === 'overtime') {
+    time = prompt('Enter overtime time, for example 1000-1130:', '');
+    if (time === null) return;
+    time = time.trim().replace(/\s+/g, '').replace('–', '-');
+    if (!timeRangeHours(time)) { alert('Enter a valid overtime range, for example 1000-1130.'); return; }
+  }
+  await mutateState('setRotationFromPicker', () => {
+    pickerDates.forEach(date => {
+      const key = `${pickerEmpId}_${date}`;
+      shiftRotationMap[key] = shift ? { shift, ...(shift === 'overtime' ? { time } : {}) } : null;
+    });
+  });
+  closePicker();
+  renderPage();
+}
+function employeeHasRotation(empId, date) { return Boolean(rotationRecord(empId, date)?.shift); }
+function rotationConflictActivities(empId, date) {
+  return activities.filter(act => date >= act.startDate && date <= act.endDate && participantFor(act, empId))
+    .filter(act => {
+      const a = activityAssignment(`${empId}_${date}_${act.id}`);
+      return a.assigned === true && a.excluded !== true;
+    });
+}
+function excludeRotationConflicts(empId, date) {
+  rotationConflictActivities(empId, date).forEach(act => excludeActivityAssignment(`${empId}_${date}_${act.id}`));
+}
+function rotationDatesForEmployee(empId) {
+  return Object.keys(shiftRotationMap).filter(key => key.startsWith(`${empId}_`)).map(key => key.slice(String(empId).length + 1));
+}
+function removeEmployeeRotationRelations(empId) {
+  for (const key of Object.keys(shiftRotationMap)) {
+    if (key.startsWith(`${empId}_`)) shiftRotationMap[key] = null;
+  }
+}
+async function setShiftRotation(empId, date, shift) {
+  if (!appSettings.shiftRotationEnabled) return;
+  let time = '';
+  if (shift === 'overtime') {
+    time = prompt('Enter overtime time, for example 1000-1130:', '');
+    if (time === null) return;
+    time = time.trim().replace(/\s+/g, '').replace('–', '-');
+    if (!timeRangeHours(time)) {
+      alert('Enter a valid overtime range, for example 1000-1130.');
+      return;
+    }
+  }
+  const conflicts = rotationConflictActivities(empId, date);
+  if (shift && conflicts.length) {
+    const employee = empById(empId);
+    const detail = conflicts.map(act => act.name).join(', ');
+    if (!confirm(`${employee?.name || 'This employee'} has activity assignment(s) on ${fmtMed(date)}: ${detail}.\n\nReplace only those assignments with Shift Rotation?`)) return;
+  }
+  await mutateState('setShiftRotation', () => {
+    if (shift) {
+      excludeRotationConflicts(empId, date);
+      shiftRotationMap[`${empId}_${date}`] = { shift, ...(shift === 'overtime' ? { time } : {}) };
+    } else shiftRotationMap[`${empId}_${date}`] = null;
+  });
+  renderPage();
+}
+let rotationSelectedCells = new Set();
+let rotationSelectionAnchor = null;
+let suppressRotationCellClick = false;
+let shiftRotationInitialScrollPending = true;
+function rotationCellKey(empId, date) { return `${empId}_${date}`; }
+function updateRotationSelectionVisuals() {
+  document.querySelectorAll('.rotation-cell[data-empid][data-date]').forEach(cell => {
+    cell.classList.toggle('rotation-selected-cell', rotationSelectedCells.has(rotationCellKey(cell.dataset.empid, cell.dataset.date)));
+  });
+}
+function startRotationCellSelection(event, empId, date) {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  rotationSelectionAnchor = { empId: Number(empId), date };
+  rotationSelectedCells = new Set([rotationCellKey(empId, date)]);
+  document.querySelectorAll('.rotation-cell').forEach(cell => cell.classList.add('rotation-dragging'));
+  updateRotationSelectionVisuals();
+  document.addEventListener('pointermove', onRotationSelectionMove);
+  document.addEventListener('pointerup', finishRotationCellSelection, { once: true });
+  document.addEventListener('pointercancel', finishRotationCellSelection, { once: true });
+}
+function onRotationSelectionMove(event) {
+  if (!rotationSelectionAnchor) return;
+  const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('.rotation-cell[data-empid][data-date]');
+  if (!cell) return;
+  extendRotationCellSelection(cell.dataset.empid, cell.dataset.date);
+}
+function extendRotationCellSelection(empId, date) {
+  if (!rotationSelectionAnchor) return;
+  if (Number(empId) !== rotationSelectionAnchor.empId) return;
+  const start = new Date(`${rotationSelectionAnchor.date}T00:00:00`);
+  const end = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
+  const direction = start <= end ? 1 : -1;
+  const cursor = new Date(start);
+  rotationSelectedCells.clear();
+  while ((direction > 0 && cursor <= end) || (direction < 0 && cursor >= end)) {
+    rotationSelectedCells.add(rotationCellKey(empId, fmt(cursor)));
+    cursor.setDate(cursor.getDate() + direction);
+  }
+  updateRotationSelectionVisuals();
+}
+function finishRotationCellSelection() {
+  document.removeEventListener('pointermove', onRotationSelectionMove);
+  document.removeEventListener('pointercancel', finishRotationCellSelection);
+  rotationSelectionAnchor = null;
+  document.querySelectorAll('.rotation-cell').forEach(cell => cell.classList.remove('rotation-dragging'));
+  if (rotationSelectedCells.size >= 1) {
+    const cells = [...rotationSelectedCells].map(key => key.split('_'));
+    const empId = Number(cells[0][0]);
+    const dates = cells.filter(([id]) => Number(id) === empId).map(([, date]) => date).sort();
+    rotationSelectedCells.clear();
+    updateRotationSelectionVisuals();
+    suppressRotationCellClick = true;
+    _showPicker(event, empId, dates);
+  }
+}
+function openRotationCellPicker(event, empId, date) {
+  if (suppressRotationCellClick) {
+    suppressRotationCellClick = false;
+    event?.stopPropagation?.();
+    return;
+  }
+  event?.stopPropagation?.();
+  _showPicker(event, Number(empId), [date]);
+}
+async function applyRotationSelection(shift) {
+  const cells = [...rotationSelectedCells].map(key => key.split('_'));
+  if (!cells.length) return;
+  let time = '';
+  if (shift === 'overtime') {
+    time = prompt('Enter overtime time, for example 1000-1130:', '');
+    if (time === null) return;
+    time = time.trim().replace(/\s+/g, '').replace('–', '-');
+    if (!timeRangeHours(time)) { alert('Enter a valid overtime range, for example 1000-1130.'); return; }
+  }
+  await mutateState('applyRotationSelection', () => {
+    cells.forEach(([empId, date]) => {
+      if (shift) shiftRotationMap[`${empId}_${date}`] = { shift, ...(shift === 'overtime' ? { time } : {}) };
+      else shiftRotationMap[`${empId}_${date}`] = null;
+    });
+  });
+  renderPage();
+  rotationSelectedCells.clear();
+  updateRotationSelectionVisuals();
+}
+function rotationDateHeader(date) {
+  const d = date instanceof Date ? new Date(date) : new Date(`${date}T00:00:00`);
+  const dateValue = fmt(d);
+  const today = dateValue === todayStr();
+  return `<th class="rotation-day-head${isWknd(d) ? ' weekend' : ''}${today ? ' today-col' : ''}" data-date="${dateValue}" title="${today ? 'Today' : ''}"><span>${d.toLocaleDateString('en-US', { weekday: 'short' })}</span><b>${d.getDate()}</b></th>`;
+}
+function renderShiftRotation() {
+  if (appSettings.shiftRotationEnabled !== true) { nav('grid'); return; }
+  shiftRotationMap = cleanShiftRotationMap(shiftRotationMap);
+  const range = scheduleRange();
+  const days = range.days;
+  const rotationDayWidth = gridPeriod === 'week'
+    ? Math.min(180, Math.max(72, Math.floor((window.innerWidth - 300) / Math.max(1, days.length))))
+    : gridPeriod === 'month'
+      ? Math.min(96, Math.max(48, Math.floor((window.innerWidth - 300) / Math.max(1, days.length))))
+      : 36;
+  const shiftTeams = normalizeShiftTeams(appSettings.shiftTeams);
+  const shiftTeamById = new Map(shiftTeams.map(team => [team.id, team]));
+  const eligible = employees.filter(emp => emp.includeInShiftRotation === true).sort((a, b) => {
+    const left = shiftTeamById.get(a.shiftTeamId) || { order: 9999, name: 'Unassigned Shift Team' };
+    const right = shiftTeamById.get(b.shiftTeamId) || { order: 9999, name: 'Unassigned Shift Team' };
+    return left.order - right.order || left.name.localeCompare(right.name) || a.name.localeCompare(b.name);
+  });
+  const content = document.getElementById('content');
+  let renderedShiftTeamId = null;
+  let rows = eligible.map(emp => {
+    const shiftTeam = shiftTeamById.get(emp.shiftTeamId) || { id: '', name: 'Unassigned Shift Team', color: '#64748b' };
+    const shiftTeamHeader = shiftTeam.id !== renderedShiftTeamId ? (renderedShiftTeamId = shiftTeam.id, `<tr class="rotation-team-row"><th class="rotation-employee sticky-left" style="background:${shiftTeam.color}22;border-left:4px solid ${shiftTeam.color};color:${shiftTeam.color}">${esc(shiftTeam.name)}</th><td colspan="${days.length}" style="background:${shiftTeam.color}16;border-bottom:1px solid ${shiftTeam.color}"></td></tr>`) : '';
+    const teamColor = resolveSubdepartmentColor(emp.department || 'Unassigned', emp.team || '')
+      || resolveProcessColor(emp.department || 'Unassigned', emp.section || emp.subdepartment || '', emp.process || '')
+      || resolveSectionColor(emp.department || 'Unassigned', emp.section || emp.subdepartment || '')
+      || resolveDeptColor(emp.department || '')
+      || 'var(--muted)';
+    const cells = days.map(dateObj => {
+      const date = fmt(dateObj), rec = rotationRecord(emp.id, date), meta = rotationShiftMeta(rec?.shift), range = rotationRecordRange(rec);
+      const options = ['normal', 'day', 'evening', 'night', 'turn', 'leave', 'overtime'].map(shift => {
+        const m = rotationShiftMeta(shift);
+        return `<option value="${shift}" ${rec?.shift === shift ? 'selected' : ''}>${esc(m.label)}${shift === 'overtime' && rec?.shift === 'overtime' && rec.time ? ` (${esc(rec.time)})` : (m.range ? ` (${esc(m.range)})` : '')}</option>`;
+      }).join('');
+      const label = `${emp.name}, ${fmtMed(date)}: ${rec ? `${meta.label}${range ? ` (${range})` : ''}` : 'No rotation'}`;
+      return `<td class="rotation-cell${rec ? ' assigned' : ''}${isWknd(dateObj) ? ' weekend' : ''}${date === todayStr() ? ' today-col' : ''}" data-empid="${emp.id}" data-date="${date}" style="--rotation-day-width:${rotationDayWidth}px;--rotation-color:${meta?.color || 'var(--accent-blue)'}" title="${esc(label)}" onclick="openRotationCellPicker(event,${emp.id},'${date}')" onpointerdown="startRotationCellSelection(event,${emp.id},'${date}')">
+        <div class="rotation-cell-content">${rec ? meta.icon : '<span class="rotation-empty">+</span>'}</div>
+        <select class="rotation-cell-select" aria-label="${esc(label)}" tabindex="-1" onchange="setShiftRotation(${emp.id},'${date}',this.value); rotationSelectedCells.clear(); updateRotationSelectionVisuals();">
+          <option value="" ${rec ? '' : 'selected'}>Clear rotation</option>${options}
+        </select>
+      </td>`;
+    }).join('');
+    const organisationPath = [emp.department, emp.section || emp.subdepartment, emp.process, emp.team].filter(Boolean).join(' / ');
+    return `${shiftTeamHeader}<tr><th class="rotation-employee sticky-left" style="border-left:4px solid ${teamColor};background:color-mix(in srgb,${teamColor} 14%,var(--surface));"><b>${displayEmployeeNameMarkup(emp)}</b><small>${esc(emp.role || '')}</small></th>${cells}</tr>`;
+  }).join('');
+  content.innerHTML = `<div class="rotation-wrap" style="--rotation-day-width:${rotationDayWidth}px"><div class="rotation-topbar"><div><h1 class="page-title">Shift Rotation</h1><p class="page-sub">Plan eligible employees. Every rotation date counts as normal working hours.</p></div><div class="flex items-center gap-1"><button class="btn btn-sm${gridPeriod === 'week' ? ' btn-primary' : ''}" onclick="setGridPeriod('week')">Week</button><button class="btn btn-sm${gridPeriod === 'month' ? ' btn-primary' : ''}" onclick="setGridPeriod('month')">Month</button><button class="btn btn-sm${gridPeriod === 'year' ? ' btn-primary' : ''}" onclick="setGridPeriod('year')">Year</button><button class="btn btn-sm" onclick="changeGridPeriod(-1)" aria-label="Previous period">‹</button><strong class="rotation-year">${esc(range.label)}</strong><button class="btn btn-sm" onclick="changeGridPeriod(1)" aria-label="Next period">›</button><button class="btn btn-sm" onclick="goToday()">Today</button><button class="btn btn-sm" onclick="openShiftRotationPrintDialog()">Print / PDF</button></div></div>${eligible.length ? `<div class="rotation-scroll"><table class="rotation-table"><thead><tr><th class="rotation-employee sticky-left">Employee</th>${days.map(rotationDateHeader).join('')}</tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="card rotation-empty-state">No employees are included in Shift Rotation. Enable employees from People.</div>'}</div>`;
+  if (appSettings.jumpToTodayOnGridChange !== false && shiftRotationInitialScrollPending) setTimeout(() => {
+    document.querySelector(`.rotation-day-head[data-date="${todayStr()}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    shiftRotationInitialScrollPending = false;
+  }, 60);
+}
+function openShiftRotationPrintDialog() {
+  const range = scheduleRange();
+  document.getElementById('rotation-print-start').value = range.start;
+  document.getElementById('rotation-print-end').value = range.end;
+  document.getElementById('shift-rotation-print-modal').classList.add('open');
+}
+function printShiftRotation() {
+  const start = document.getElementById('rotation-print-start')?.value;
+  const end = document.getElementById('rotation-print-end')?.value;
+  if (!isValidIsoDate(start) || !isValidIsoDate(end) || start > end) {
+    alert('Enter a valid timeframe.');
+    return;
+  }
+  const days = datesBetween(start, end);
+  const eligible = employees.filter(emp => emp.includeInShiftRotation === true).sort((a, b) => a.name.localeCompare(b.name));
+  const headers = days.map(date => {
+    const d = new Date(`${date}T00:00:00`);
+    const classes = [isWknd(d) ? 'weekend' : ''].filter(Boolean).join(' ');
+    return `<th class="${classes}">${d.toLocaleDateString('en-US', { weekday: 'short' })}<br>${d.getDate()} ${d.toLocaleDateString('en-US', { month: 'short' })}</th>`;
+  }).join('');
+  const rows = eligible.map(emp => { const teamColor = resolveSubdepartmentColor(emp.department || 'Unassigned', emp.team || '') || resolveProcessColor(emp.department || 'Unassigned', emp.section || emp.subdepartment || '', emp.process || '') || resolveSectionColor(emp.department || 'Unassigned', emp.section || emp.subdepartment || '') || resolveDeptColor(emp.department || '') || '#64748b'; return `<tr><th style="border-left:4px solid ${teamColor};background:${teamColor}22">${displayEmployeeNameMarkup(emp)}<small>${esc(emp.role || '')}</small></th>${days.map(date => {
+    const record = rotationRecord(emp.id, date);
+    const meta = rotationShiftMeta(record?.shift);
+    const label = record ? `${meta.label}${rotationRecordRange(record) ? ` (${rotationRecordRange(record)})` : ''}` : '—';
+    const day = new Date(`${date}T00:00:00`);
+    const classes = [isWknd(day) ? 'weekend' : ''].filter(Boolean).join(' ');
+    return `<td class="${classes}">${esc(label)}</td>`;
+  }).join('')}</tr>`; }).join('');
+  const printWindow = window.open('', '_blank', 'width=1400,height=900');
+  if (!printWindow) { alert('Please allow pop-ups to print the Shift Rotation plan.'); return; }
+  printWindow.document.write(`<!doctype html><html><head><title>Shift Rotation ${start} to ${end}</title><style>@page{size:landscape;margin:8mm}body{font:11px system-ui;color:#111}h1{font-size:20px;margin:0 0 4px}p{margin:0 0 10px;color:#555}table{border-collapse:collapse;width:100%}th,td{border:1px solid #bbb;padding:5px;text-align:center}th:first-child,td:first-child{text-align:left;min-width:160px}th{background:#e5e7eb}.weekend{background:#fff7ed !important;color:#9a3412}small{display:block;font-weight:400;color:#666}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>Shift Rotation</h1><p>${esc(start)} – ${esc(end)}</p><table><thead><tr><th>Employee</th>${headers}</tr></thead><tbody>${rows}</tbody></table></body></html>`);
+  printWindow.document.close(); printWindow.focus(); printWindow.print();
+  closeModal('shift-rotation-print-modal');
 }
 
 // ═══ GRID VIEW ═══════════════════════════════════════════════════════════════
@@ -3060,10 +4093,21 @@ function dateBeforeIso(isoDate) {
 }
 function gridSpanLabelWidth(startIndex, endIndex) {
   const spanColumns = startIndex >= 0 && endIndex >= startIndex ? endIndex - startIndex + 1 : 1;
-  return Math.min(420, Math.max(68, spanColumns * 36 - 8));
+  const columnWidth = gridPeriod === 'week'
+    ? Math.min(180, Math.max(72, Math.floor((window.innerWidth - 300) / 7)))
+    : gridPeriod === 'month'
+      ? Math.min(96, Math.max(48, Math.floor((window.innerWidth - 300) / 31)))
+      : 36;
+  return Math.min(420, Math.max(68, spanColumns * columnWidth - 8));
 }
 function renderGrid() {
-  const days = daysOfYear(gridYear);
+  const range = scheduleRange();
+  const days = range.days;
+  const dayColumnWidth = gridPeriod === 'week'
+    ? Math.min(180, Math.max(72, Math.floor((window.innerWidth - 300) / Math.max(1, days.length))))
+    : gridPeriod === 'month'
+      ? Math.min(96, Math.max(48, Math.floor((window.innerWidth - 300) / Math.max(1, days.length))))
+      : 36;
   const today = todayStr();
 
   let monthCells = '', weekCells = '', dayCells = '';
@@ -3082,29 +4126,41 @@ function renderGrid() {
     const holiday = displayedHolidayFor(ds);
     const holidayIntensity = holiday?.isSpecialDay ? '41%' : '16%';
     const holidayStyle = holiday ? `background:color-mix(in srgb,${holiday.color || '#ef4444'} ${holidayIntensity},var(--surface)) !important;color:${holiday.color || '#ef4444'} !important;` : '';
-    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="${holidayStyle}${planningHorizonStyle(ds)}${planningHorizonHeaderStyle(ds)}width:36px;min-width:36px;top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
+    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="--grid-day-width:${dayColumnWidth}px;${holidayStyle}${planningHorizonStyle(ds)}${planningHorizonHeaderStyle(ds)}top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
+  const topbarActivityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
+  const topbarYearActivities = activities.filter(activity => activity.startDate <= range.end && activity.endDate >= range.start);
+  const topbarFilteredActivities = topbarActivityFilter === 'all'
+    ? topbarYearActivities
+    : topbarYearActivities.filter(activity => activityStatus(activity) === topbarActivityFilter);
+  const topbarPastActivities = topbarFilteredActivities.filter(activity => activity.endDate < today);
   document.getElementById('content').innerHTML = cleanHtml(`
-    <div id="grid-wrap" style="min-height:0">
+    <div id="grid-wrap" class="schedule-period-${gridPeriod}" style="min-height:0;--grid-day-width:${dayColumnWidth}px">
       <div class="grid-topbar">
         <div>
           <div class="page-title">${esc(appSettings.appName)}</div>
-          <div class="page-sub">Daily status for the whole year with week numbers and activity timeline.</div>
+          <div class="atlas-full-name">Adaptive Timeline, Load &amp; Allocation System</div>
+          <div class="page-sub">Daily status with week numbers and activity timeline.</div>
         </div>
-        <div class="flex items-center gap-2">
-          <button class="btn btn-sm" onclick="openStatusManager()">Manage Planning Options</button>
+        <div class="flex items-center gap-2 schedule-topbar-controls">
           <button class="btn btn-sm" onclick="openTeamScheduleReport()">Team Work Schedule</button>
           <button class="btn btn-sm" onclick="goToday()">Today</button>
+          <select class="plain-select" style="height:32px;padding:5px 7px;width:76px" onchange="applyAppZoom(this.value)" aria-label="Application zoom" title="Local application zoom">
+            ${[80,90,100,110,125,150,175].map(value => `<option value="${value}" ${appZoom === value ? 'selected' : ''}>${value}%</option>`).join('')}
+          </select>
           <select class="plain-select" style="height:32px;padding:5px 9px" onchange="setGridViewMode(this.value)" aria-label="Grid sections view">
             <option value="all" ${gridViewMode === 'all' ? 'selected' : ''}>All sections</option>
             <option value="timeline" ${gridViewMode === 'timeline' ? 'selected' : ''}>Timeline only</option>
             <option value="employees" ${gridViewMode === 'employees' ? 'selected' : ''}>Employees only</option>
           </select>
-          <div class="year-nav" aria-label="Calendar year">
-            <button class="btn btn-icon" onclick="changeGridYear(-1)" aria-label="Previous year">${svgIcon('chevronLeft')}</button>
-            <span class="year-label">${gridYear}</span>
-            <button class="btn btn-icon" onclick="changeGridYear(1)" aria-label="Next year">${svgIcon('chevronRight')}</button>
+          <div class="flex items-center gap-1" role="group" aria-label="Schedule period">
+            ${['week', 'month', 'year'].map(period => `<button class="btn btn-sm${gridPeriod === period ? ' btn-primary' : ''}" onclick="setGridPeriod('${period}')">${period[0].toUpperCase()}${period.slice(1)}</button>`).join('')}
+          </div>
+          <div class="year-nav" aria-label="Schedule period navigation">
+            <button class="btn btn-icon" onclick="changeGridPeriod(-1)" aria-label="Previous period">${svgIcon('chevronLeft')}</button>
+            <span class="year-label">${esc(range.label)}</span>
+            <button class="btn btn-icon" onclick="changeGridPeriod(1)" aria-label="Next period">${svgIcon('chevronRight')}</button>
           </div>
           ${renderSecurityLabel('security-label-inline')}
           ${hiddenEmployees.size ? `<button class="btn btn-sm" onclick="showAllEmployees()">Show all employees</button>` : ''}
@@ -3178,9 +4234,15 @@ function renderGrid() {
         <table class="gtable">
           <thead>
             <tr><th class="gh-emp sticky-left" rowspan="3" style="width:240px;min-width:240px;top:0">
-              <div class="flex items-center justify-between gap-2" style="width:100%">
-                <span>Employee / Activity</span>
-                <button class="btn btn-sm" type="button" onclick="openEmployeePicker(this)">Select...</button>
+              <div class="schedule-corner-header">
+                <div class="schedule-corner-title-row">
+                  <span class="schedule-corner-title">Activities</span>
+                </div>
+                <div class="schedule-corner-controls">
+                  <button class="icon-btn activity-past-toggle${pastActivitiesExpanded ? ' active' : ''}" type="button" style="${pastActivitiesExpanded ? 'background:var(--accent-blue);color:#fff;box-shadow:0 0 0 1px color-mix(in srgb,var(--accent-blue) 80%,#000)' : ''}" title="${topbarPastActivities.length ? (pastActivitiesExpanded ? 'Hide past activities' : `Show past activities (${topbarPastActivities.length})`) : 'No past activities in this period'}" aria-label="${pastActivitiesExpanded ? 'Hide past activities' : 'Show past activities'}" aria-pressed="${pastActivitiesExpanded}" ${topbarPastActivities.length ? '' : 'disabled'} onclick="togglePastActivities()">${svgIcon('history')}</button>
+                  <label class="schedule-compact-filter" title="Filter activities"><span>Show:</span><span class="schedule-filter-value">${topbarActivityFilter === 'tentative' ? 'Planned' : topbarActivityFilter === 'confirmed' ? 'Confirmed' : topbarActivityFilter === 'cancelled' ? 'Cancelled' : 'All'}</span><select id="activity-status-filter" class="plain-select" onchange="setActivityStatusFilter(this.value)" aria-label="Show activities"><option value="all" ${topbarActivityFilter === 'all' ? 'selected' : ''}>All</option><option value="tentative" ${topbarActivityFilter === 'tentative' ? 'selected' : ''}>Planned</option><option value="confirmed" ${topbarActivityFilter === 'confirmed' ? 'selected' : ''}>Confirmed</option><option value="cancelled" ${topbarActivityFilter === 'cancelled' ? 'selected' : ''}>Cancelled</option></select></label>
+                  <button class="btn btn-sm schedule-select-button" type="button" onclick="openEmployeePicker(this)">Select...</button>
+                </div>
               </div>
             </th>${monthCells}</tr>
             <tr>${weekCells}</tr>
@@ -3197,6 +4259,7 @@ function renderGrid() {
         <span style="font-weight:600">Legend:</span>
         ${statuses.map(s => `<span class="flex items-center" style="gap:4px"><span class="badge-status" style="${statusStyle(s.color)};padding:0 6px;font-size:10px">${esc(s.abbr)}</span> ${esc(s.label)}</span>`).join('')}
         <span class="flex items-center" style="gap:4px">${svgIcon('sun')} Day shift</span>
+        <span class="flex items-center" style="gap:4px">${svgIcon('evening')} Mid-day / Evening shift</span>
         <span class="flex items-center" style="gap:4px">${shiftChangeIcon('Night shift change')} Night shift</span>
       </div>
     </div>`);
@@ -3207,17 +4270,18 @@ function renderGrid() {
 function renderGridBody(days, today) {
   const tbody = document.getElementById('gtbody');
   if (!tbody) return;
+  const range = scheduleRange();
   let html = '';
   const showTimelineSections = gridViewMode !== 'employees';
   const showEmployeeSection = gridViewMode !== 'timeline';
-  const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
+  const yearActs = activities.filter(a => a.startDate <= range.end && a.endDate >= range.start);
   const activityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
   const filteredYearActs = activityFilter === 'all'
     ? yearActs
     : yearActs.filter(a => activityStatus(a) === activityFilter);
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
-  const visibleActivities = [...pastActs, ...currentActs].sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate) || a.name.localeCompare(b.name));
+  const visibleActivities = [...(pastActivitiesExpanded ? pastActs : []), ...currentActs].sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate) || a.name.localeCompare(b.name));
   const paginateActivities = gridViewMode !== 'timeline' && visibleActivities.length > activityPageCapacity();
   const pageSize = gridViewMode === 'timeline' ? Math.max(1, visibleActivities.length) : activityPageCapacity();
   activityPageSize = pageSize;
@@ -3226,20 +4290,25 @@ function renderGridBody(days, today) {
   const activityPage = paginateActivities ? visibleActivities.slice(activityPageOffset, activityPageOffset + pageSize) : visibleActivities;
   const pageStart = visibleActivities.length ? activityPageOffset + 1 : 0;
   const pageEnd = paginateActivities ? Math.min(activityPageOffset + pageSize, visibleActivities.length) : visibleActivities.length;
-  const activityHeadingText = paginateActivities && visibleActivities.length > pageSize
-    ? `${pageStart}–${pageEnd} of ${visibleActivities.length}`
-    : `${filteredYearActs.length}${appSettings.showOnlyConfirmedActivities ? ` of ${yearActs.length}` : ''}`;
+  const plannerYearStart = `${gridYear}-01-01`;
+  const plannerYearEnd = `${gridYear}-12-31`;
+  const plannerYearActs = activities.filter(activity => activity.startDate <= plannerYearEnd && activity.endDate >= plannerYearStart);
+  const totalFilteredActivities = activityFilter === 'all'
+    ? plannerYearActs
+    : plannerYearActs.filter(activity => activityStatus(activity) === activityFilter);
+  const activityHeadingText = gridPeriod === 'year'
+    ? `${totalFilteredActivities.length}`
+    : `${totalFilteredActivities.length} total · ${filteredYearActs.length} shown`;
   const hasAnyActivities = (currentActs.length + pastActs.length) > 0;
 
   // ── Activities section ────────────────────────────────────────
   if (showTimelineSections) {
-    html += `<tr class="sect-row"><td class="sticky-left" style="z-index:60">
-        <span class="flex items-center justify-between">
-          <span class="flex items-center" style="gap:6px"><button class="icon-btn" title="${collapsedGridSections.activities ? 'Expand activities' : 'Collapse activities'}" aria-label="${collapsedGridSections.activities ? 'Expand activities section' : 'Collapse activities section'}" aria-expanded="${collapsedGridSections.activities ? 'false' : 'true'}" onclick="toggleGridSection('activities')">${svgIcon(collapsedGridSections.activities ? 'chevronRight' : 'chevronDown')}</button>Activities (${activityHeadingText})</span>
-          <span class="flex items-center" style="gap:6px">
+    html += `<tr class="sect-row"><td class="sticky-left schedule-activities-header" style="z-index:60">
+        <span class="schedule-section-header">
+          <span class="flex items-center" style="gap:5px;font-size:10px"><button class="icon-btn" title="${collapsedGridSections.activities ? 'Expand activities' : 'Collapse activities'}" aria-label="${collapsedGridSections.activities ? 'Expand activities section' : 'Collapse activities section'}" aria-expanded="${collapsedGridSections.activities ? 'false' : 'true'}" onclick="toggleGridSection('activities')">${svgIcon(collapsedGridSections.activities ? 'chevronRight' : 'chevronDown')}</button>Activities <span class="schedule-activity-count">(${activityHeadingText})</span></span>
+          <span class="schedule-section-controls" style="gap:6px">
             ${paginateActivities ? `<button class="icon-btn" title="Scroll to previous activity" aria-label="Scroll to previous activity" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
             <button class="icon-btn" title="Scroll to next activity" aria-label="Scroll to next activity" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
-            <select id="activity-status-filter" class="plain-select" style="height:25px;padding:2px 6px;font-size:10px;min-width:104px" onchange="setActivityStatusFilter(this.value)"><option value="all" ${activityFilter === 'all' ? 'selected' : ''}>All activities</option><option value="tentative" ${activityFilter === 'tentative' ? 'selected' : ''}>Planned only</option><option value="confirmed" ${activityFilter === 'confirmed' ? 'selected' : ''}>Confirmed only</option><option value="cancelled" ${activityFilter === 'cancelled' ? 'selected' : ''}>Cancelled only</option></select>
             <button class="icon-btn" title="Activity Schedule" aria-label="Activity Schedule" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
             <button class="icon-btn" title="Add activity" aria-label="Add activity" onclick="openActModal()">${svgIcon('plus')}</button>
           </span>
@@ -3271,15 +4340,15 @@ function renderGridBody(days, today) {
           ${lifecycleBadge}
         </span>
         <span class="act-cell-actions">
-          ${lifecycle.status === 'confirmed' ? `<button class="icon-btn" title="Work Schedule" onclick="event.stopPropagation();openActivityReport(${act.id})">${svgIcon('report')}</button>` : ''}
+          ${lifecycle.status !== 'cancelled' ? `<button class="icon-btn" title="${lifecycle.status === 'tentative' ? 'Create draft work schedule' : 'Work Schedule'}" onclick="event.stopPropagation();openActivityReport(${act.id})">${svgIcon('report')}</button>` : ''}
           <button class="icon-btn" title="Edit" onclick="event.stopPropagation();openActModal(${act.id})">${svgIcon('edit')}</button>
           <button class="icon-btn danger" title="Delete" onclick="event.stopPropagation();confirmDelete('activity',${act.id})">${svgIcon('trash')}</button>
         </span>
       </div>
       <div class="act-dates muted">${fmtShort(act.startDate)} – ${fmtShort(act.endDate)} · ${attendCount} attending</div>
     </td>`;
-    const visibleStart = act.startDate < `${gridYear}-01-01` ? `${gridYear}-01-01` : act.startDate;
-    const visibleEnd = act.endDate > `${gridYear}-12-31` ? `${gridYear}-12-31` : act.endDate;
+    const visibleStart = act.startDate < range.start ? range.start : act.startDate;
+    const visibleEnd = act.endDate > range.end ? range.end : act.endDate;
     const startIdx = days.findIndex(day => fmt(day) === visibleStart);
     const endIdx = days.findIndex(day => fmt(day) === visibleEnd);
     const labelWidth = gridSpanLabelWidth(startIdx, endIdx);
@@ -3304,13 +4373,13 @@ function renderGridBody(days, today) {
     activityPage.forEach(act => { html += renderActRow(act, act.endDate < today); });
   }
 
-  const yearHolidays = holidayPeriodsForYear(gridYear);
+  const yearHolidays = holidayPeriodsForRange(range.start, range.end);
   const currentHolidays = yearHolidays.filter(holiday => holiday.endDate >= today);
   const pastHolidays = yearHolidays.filter(holiday => holiday.endDate < today);
   if (showTimelineSections) {
     html += `<tr class="sect-row"><td class="sticky-left" style="z-index:21">
-        <span class="flex items-center justify-between"><span class="flex items-center" style="gap:6px">Holidays (${yearHolidays.length})</span>
-          <span class="flex items-center" style="gap:6px"><button type="button" class="filter-chip${showHolidays ? ' active' : ''}" style="padding:2px 9px;font-size:10px;min-width:104px;text-align:center" onclick="showHolidays=!showHolidays;renderPage()">Show holidays</button><span class="icon-btn" style="visibility:hidden" aria-hidden="true">${svgIcon('report')}</span><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" aria-label="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
+          <span class="flex items-center justify-between"><span class="flex items-center" style="gap:6px">Holidays</span>
+          <span class="flex items-center" style="gap:6px"><button type="button" class="filter-chip schedule-visibility-btn${showHolidays ? ' active' : ''}" onclick="showHolidays=!showHolidays;renderPage()">${showHolidays ? 'Hide' : 'Show'}</button><span class="icon-btn" style="visibility:hidden" aria-hidden="true">${svgIcon('report')}</span><span class="holiday-add-menu" id="holiday-add-menu"><button class="icon-btn" type="button" title="Add holiday options" aria-label="Add holiday options" onclick="toggleHolidayAddMenu(event)">${svgIcon('plus')}</button></span>
           </span>
         </span></td><td colspan="${days.length}"></td></tr>`;
   }
@@ -3324,8 +4393,8 @@ function renderGridBody(days, today) {
     const renderHolidayRow = holiday => {
       const start = holiday.startDate, end = holiday.endDate;
       const color = holiday.color || '#ef4444';
-      const visibleStart = start < `${gridYear}-01-01` ? `${gridYear}-01-01` : start;
-      const visibleEnd = end > `${gridYear}-12-31` ? `${gridYear}-12-31` : end;
+      const visibleStart = start < range.start ? range.start : start;
+      const visibleEnd = end > range.end ? range.end : end;
       const startIndex = days.findIndex(day => fmt(day) === visibleStart);
       const endIndex = days.findIndex(day => fmt(day) === visibleEnd);
       const labelWidth = gridSpanLabelWidth(startIndex, endIndex);
@@ -3342,15 +4411,6 @@ function renderGridBody(days, today) {
       html += `<tr><td class="gempl sticky-left" style="background:color-mix(in srgb,var(--muted-bg) 60%,transparent)"><button class="icon-btn" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em" onclick="pastHolidaysExpanded=!pastHolidaysExpanded;renderPage()">${svgIcon(pastHolidaysExpanded ? 'chevronLeft' : 'chevronRight')} Past holidays (${pastHolidays.length})</button></td><td colspan="${days.length}" style="background:color-mix(in srgb,var(--muted-bg) 40%,transparent)"></td></tr>`;
       if (pastHolidaysExpanded) pastHolidays.forEach(renderHolidayRow);
     }
-    const specialDaysInYear = days.map(day => displayedSpecialDayFor(fmt(day))).filter(Boolean);
-    if (specialDaysInYear.length) {
-      html += `<tr><td class="gempl sticky-left" style="cursor:default"><div class="act-cell-name"><span class="act-name">Special days</span></div><div class="act-dates muted">Hard-coded dates</div></td>`;
-      days.forEach(day => {
-        const ds = fmt(day), specialDay = displayedSpecialDayFor(ds);
-        html += `<td class="gday${isWknd(day) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${specialDay ? ' holiday-col' : ''}" style="${specialDay ? `background:color-mix(in srgb,${specialDay.color || '#ef4444'} 41%,var(--surface)) !important;color:${specialDay.color || '#ef4444'} !important;` : ''}${planningHorizonStyle(ds)}" title="${specialDay ? esc(specialDay.name) : ''}">${specialDay ? '•' : ''}</td>`;
-      });
-      html += '</tr>';
-    }
   }
 
   // ── Employee section ──────────────────────────────────────────
@@ -3364,23 +4424,45 @@ function renderGridBody(days, today) {
           No employees yet. <button class="btn btn-sm btn-primary" onclick="nav('employees')" style="margin-left:8px">Add personnel</button></td></tr>`;
       }
       const colorMap = deptColorMap();
+      const departmentGroups = new Map();
       for (const group of deptGroups()) {
-        const deptColors = colorMap[group.dept] || { bg: 'transparent', accent: 'var(--border)' };
-        const colors = groupColorsFor(group.dept, group.subdept, deptColors);
-        html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-bottom:2px solid ${colors.accent};border-right:2px solid ${colors.accent} !important;z-index:21;padding:2px 7px">
-            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">${esc(group.dept)}</span>
-            <span style="font-size:10px;color:${colors.accent};font-weight:600"> · ${esc(group.subdept)} · ${group.emps.length} ${group.emps.length === 1 ? 'person' : 'people'}</span>
-          </td><td colspan="${days.length}" style="background:${colors.bg};opacity:.45;border-bottom:2px solid ${colors.accent}"></td></tr>`;
-        for (const emp of group.emps) {
-          html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-right:2px solid ${colors.accent} !important">
-            <div class="flex items-center justify-between gap-2"><div class="emp-name">${esc(emp.name)}</div></div>
-            <div class="emp-sub">${esc(emp.role)}${emp.subdepartment ? ` · ${esc(emp.subdepartment)}` : ''}</div>
-          </td>`;
-          for (const d of days) {
-            const ds = fmt(d);
-            html += buildEmployeeCell(emp, ds, isWknd(d), ds === today);
+        if (!departmentGroups.has(group.dept)) departmentGroups.set(group.dept, []);
+        departmentGroups.get(group.dept).push(group);
+      }
+      for (const [department, groups] of departmentGroups) {
+        const deptColors = colorMap[department] || { bg: 'transparent', accent: 'var(--border)' };
+        const departmentPeople = groups.reduce((count, group) => count + group.emps.length, 0);
+        const orderedGroups = [...groups].sort(compareScheduleGroups);
+        html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${deptColors.bg},${deptColors.bg}),var(--surface);border-bottom:2px solid ${deptColors.accent};border-right:2px solid ${deptColors.accent} !important;z-index:21;padding:3px 7px">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">${esc(department)}</span>
+            <span style="font-size:10px;color:${deptColors.accent};font-weight:600"> · ${departmentPeople} ${departmentPeople === 1 ? 'person' : 'people'}</span>
+          </td><td colspan="${days.length}" style="background:${deptColors.bg};opacity:.45;border-bottom:2px solid ${deptColors.accent}"></td></tr>`;
+        for (const group of orderedGroups) {
+          const colors = sectionGroupColor(group, deptColors);
+          if (group.subdept) {
+            html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${colors.bg},${colors.bg}),var(--surface);border-bottom:1px solid ${colors.accent};border-right:2px solid ${colors.accent} !important;padding:2px 7px 2px 15px">
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:${colors.accent}">${svgIcon('cornerDownRight')}${esc(group.subdept)}</span>
+                <span style="font-size:9px;color:var(--muted);font-weight:600"> · ${group.emps.length} ${group.emps.length === 1 ? 'person' : 'people'}</span>
+              </td><td colspan="${days.length}" style="background:${colors.bg};opacity:.3;border-bottom:1px solid ${colors.accent}"></td></tr>`;
           }
-          html += '</tr>';
+          for (const emp of group.emps) {
+            const teamName = emp.team || '';
+            const employeeColors = resolveProcessColor(
+              emp.department || 'Unassigned',
+              emp.section || emp.subdepartment || '',
+              emp.process || '',
+            ) || (teamName ? resolveSubdepartmentColor(emp.department || 'Unassigned', teamName) : null) || colors.accent;
+            const employeeRowColors = { bg: `${employeeColors}22`, accent: employeeColors };
+            html += `<tr><td class="gempl sticky-left" style="background:linear-gradient(${employeeRowColors.bg},${employeeRowColors.bg}),var(--surface);border-right:2px solid var(--border) !important">
+              <div class="flex items-center justify-between gap-2"><div class="emp-name">${displayEmployeeNameMarkup(emp)}</div></div>
+              <div class="emp-sub">${esc(emp.role || '')}</div>
+            </td>`;
+            for (const d of days) {
+              const ds = fmt(d);
+              html += buildEmployeeCell(emp, ds, isWknd(d), ds === today);
+            }
+            html += '</tr>';
+          }
         }
       }
     }
@@ -3395,7 +4477,8 @@ function activityPageCapacity() {
 }
 function changeActivityPage(direction) {
   const today = todayStr();
-  const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
+  const { start, end } = scheduleRange();
+  const yearActs = activities.filter(a => a.startDate <= end && a.endDate >= start);
   const activityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
   const filteredYearActs = activityFilter === 'all'
     ? yearActs
@@ -3405,7 +4488,7 @@ function changeActivityPage(direction) {
   const visibleActivities = [...pastActs, ...currentActs];
   const maxOffset = Math.max(0, visibleActivities.length - activityPageSize);
   activityPageOffset = Math.min(Math.max(0, activityPageOffset + direction), maxOffset);
-  renderGridBody(daysOfYear(gridYear), todayStr());
+  renderGridBody(scheduleDays(), todayStr());
 }
 let activityWheelLocked = false;
 function handleActivityListWheel(event) {
@@ -3435,20 +4518,42 @@ function scrollToActivityCell(rowKey, date) {
 function jumpToLastPastActivity(pastActivities) {
   if (!Array.isArray(pastActivities) || !pastActivities.length) return;
   const lastPast = [...pastActivities].sort((a, b) => a.endDate.localeCompare(b.endDate) || a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name))[pastActivities.length - 1];
-  const visibleDate = lastPast.endDate < `${gridYear}-01-01`
-    ? `${gridYear}-01-01`
-    : (lastPast.endDate > `${gridYear}-12-31` ? `${gridYear}-12-31` : lastPast.endDate);
+  const { start, end } = scheduleRange();
+  const visibleDate = lastPast.endDate < start ? start : (lastPast.endDate > end ? end : lastPast.endDate);
   requestAnimationFrame(() => scrollToActivityCell(`act-${lastPast.id}`, visibleDate));
+}
+function updatePastActivitiesToggle() {
+  document.querySelectorAll('.activity-past-toggle').forEach(button => {
+    button.classList.toggle('active', pastActivitiesExpanded);
+    button.setAttribute('aria-pressed', String(pastActivitiesExpanded));
+    button.style.cssText = pastActivitiesExpanded
+      ? 'background:var(--accent-blue);color:#fff;box-shadow:0 0 0 1px color-mix(in srgb,var(--accent-blue) 80%,#000)'
+      : '';
+  });
 }
 function togglePastActivities() {
   if (pastActivitiesExpanded) {
     pastActivitiesExpanded = false;
     activityPageOffset = 0;
-    renderGridBody(daysOfYear(gridYear), todayStr());
+    updatePastActivitiesToggle();
+    renderGridBody(scheduleDays(), todayStr());
     return;
   }
   pastActivitiesExpanded = true;
-  jumpToLastPastActivity();
+  // Showing past activities must also reveal the Activities section when it
+  // was previously collapsed; otherwise the state changes but no rows are
+  // visible to the user.
+  collapsedGridSections.activities = false;
+  saveGridPreferences();
+  activityPageOffset = 0;
+  updatePastActivitiesToggle();
+  const { start, end } = scheduleRange();
+  const filter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
+  const pastActivities = activities
+    .filter(activity => activity.startDate <= end && activity.endDate >= start && activity.endDate < todayStr())
+    .filter(activity => filter === 'all' || activityStatus(activity) === filter);
+  renderGridBody(scheduleDays(), todayStr());
+  if (pastActivities.length) requestAnimationFrame(() => jumpToLastPastActivity(pastActivities));
 }
 function jumpToActivity(activityId) {
   const activity = activities.find(act => Number(act.id) === Number(activityId));
@@ -3460,14 +4565,14 @@ function jumpToActivity(activityId) {
     jumpToLastPastActivity();
     return;
   }
-  const visibleDate = activity.endDate < `${gridYear}-01-01`
-    ? `${gridYear}-01-01`
-    : (activity.endDate > `${gridYear}-12-31` ? `${gridYear}-12-31` : activity.endDate);
+  const { start, end } = scheduleRange();
+  const visibleDate = activity.endDate < start ? start : (activity.endDate > end ? end : activity.endDate);
   requestAnimationFrame(() => scrollToActivityCell(activity.id, visibleDate));
 }
 function jumpToLastPastActivity() {
   const today = todayStr();
-  const yearActs = activities.filter(a => a.startDate <= `${gridYear}-12-31` && a.endDate >= `${gridYear}-01-01`);
+  const { start, end } = scheduleRange();
+  const yearActs = activities.filter(a => a.startDate <= end && a.endDate >= start);
   const activityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
   const filteredYearActs = activityFilter === 'all'
     ? yearActs
@@ -3476,23 +4581,21 @@ function jumpToLastPastActivity() {
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
   if (!pastActs.length) {
     activityPageOffset = 0;
-    renderGridBody(daysOfYear(gridYear), today);
+    renderGridBody(scheduleDays(), today);
     return;
   }
   const visibleActivities = [...pastActs, ...currentActs];
   const pageSize = gridViewMode !== 'timeline' ? activityPageCapacity() : Math.max(1, visibleActivities.length);
   const lastPastIndex = pastActs.length - 1;
   activityPageOffset = gridViewMode !== 'timeline' ? Math.floor(lastPastIndex / pageSize) * pageSize : 0;
-  renderGridBody(daysOfYear(gridYear), today);
+  renderGridBody(scheduleDays(), today);
   const latestPastActivity = [...pastActs].sort((left, right) =>
     left.endDate.localeCompare(right.endDate)
     || left.startDate.localeCompare(right.startDate)
     || left.name.localeCompare(right.name, 'nb', { sensitivity: 'base' })
   ).at(-1);
   if (!latestPastActivity) return;
-  const visibleDate = latestPastActivity.endDate < `${gridYear}-01-01`
-    ? `${gridYear}-01-01`
-    : (latestPastActivity.endDate > `${gridYear}-12-31` ? `${gridYear}-12-31` : latestPastActivity.endDate);
+  const visibleDate = latestPastActivity.endDate < start ? start : (latestPastActivity.endDate > end ? end : latestPastActivity.endDate);
   requestAnimationFrame(() => scrollToActivityCell(latestPastActivity.id, visibleDate));
 }
 function scrollToActivityCell(activityId, dateString) {
@@ -3515,7 +4618,7 @@ function scrollToActivityCell(activityId, dateString) {
   } else {
     activityPageOffset = 0;
   }
-  renderGridBody(daysOfYear(gridYear), todayStr());
+  renderGridBody(scheduleDays(), todayStr());
   if (nextExpanded) jumpToLastPastActivity(pastActs);
 }
 
@@ -3559,6 +4662,14 @@ function isEmployeeBirthday(emp, dateString) {
   const date = new Date(`${dateString}T00:00:00`);
   return birthday.getMonth() === date.getMonth() && birthday.getDate() === date.getDate();
 }
+function activityCellLabel(activity, spanDays = 1) {
+  const name = String(activity?.name || '').trim();
+  const abbreviation = String(activity?.abbreviation || '').trim().toUpperCase();
+  const availableCharacters = Math.max(4, spanDays * 4);
+  if (abbreviation) return abbreviation;
+  if (name && name.length <= availableCharacters) return name;
+  return name.slice(0, 4).toUpperCase();
+}
 
 function buildEmployeeCell(emp, ds, weekend, isToday) {
   const holiday = displayedHolidayFor(ds);
@@ -3568,10 +4679,13 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const si = entry ? siFor(entry.status) : null;
   const isPartial = entry?.durationType === 'time';
   const acts = cellActivities(emp.id, ds);
+  const rotation = rotationRecord(emp.id, ds);
+  const rotationMeta = rotationShiftMeta(rotation?.shift);
   const birthday = isEmployeeBirthday(emp, ds);
 
   const tipParts = [];
   if (holiday?.isSpecialDay && !acts.length) tipParts.push(`Special day: ${holiday.name}${holiday.nonWorking ? ' (non-working)' : ''}`);
+  if (rotationMeta) tipParts.push(`${rotationMeta.label}${rotationMeta.range ? ` (${rotationMeta.range})` : ''}${rotation?.shift === 'leave' ? '\nOff work — no planned hours' : '\nReserved for Shift Rotation'}`);
   acts.forEach(act => {
     const shift = activityShiftMeta(act, act.assignment.shift);
     let detail = `Activity: ${act.name}`;
@@ -3600,16 +4714,17 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   if (birthday) tipParts.push(`Birthday: ${emp.name}`);
   if (!tipParts.length) tipParts.push('Click to set status');
 
-  const primaryActivity = acts[0];
+  const primaryActivity = rotationMeta ? null : acts[0];
   const checkedActivity = bossSessionActive ? participantActivitiesForDate(emp.id, ds).find(act => isBossCheckSet(emp.id, ds, 'activity', act.id)) : null;
   const checkedStatus = bossSessionActive && si && isBossCheckSet(emp.id, ds, 'status', si.key) ? si : null;
-  const gridActivityAbbreviation = primaryActivity?.abbreviation ? primaryActivity.abbreviation.slice(0, 4) : '';
+  const activitySpanDays = primaryActivity ? Math.max(1, Math.round((new Date(`${primaryActivity.endDate}T00:00:00`) - new Date(`${primaryActivity.startDate}T00:00:00`)) / 86400000) + 1) : 1;
+  const gridActivityLabel = primaryActivity ? activityCellLabel(primaryActivity, activitySpanDays) : '';
   const activeWorkCode = primaryActivity?.workCode || null;
   let cellText = '', cellStyleStr = '';
   if (primaryActivity) {
     cellText = !activeWorkCode && primaryActivity.assignment.shift === 'normal'
-      ? (gridActivityAbbreviation || primaryActivity.name.slice(0, 4).toUpperCase())
-      : (activeWorkCode?.abbreviation || gridActivityAbbreviation || primaryActivity.name.slice(0, 4).toUpperCase());
+      ? gridActivityLabel
+      : (activeWorkCode?.abbreviation || gridActivityLabel);
     const activityColor = activeWorkCode?.color || primaryActivity.color;
     cellStyleStr = activityStatus(primaryActivity) === 'tentative'
       ? `background:repeating-linear-gradient(135deg,color-mix(in srgb,${activityColor} 28%,transparent) 0 5px,color-mix(in srgb,${activityColor} 7%,transparent) 5px 10px);color:${activityColor}`
@@ -3622,7 +4737,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     cellStyleStr = `color:${si.color}`;
   }
 
-  const customActivityShift = primaryActivity?.assignment.shift && !['normal', 'day', 'night', 'turn'].includes(primaryActivity.assignment.shift);
+  const customActivityShift = primaryActivity?.assignment.shift && !['normal', 'day', 'evening', 'night', 'turn'].includes(primaryActivity.assignment.shift);
   const dot = customActivityShift
     ? `<div class="status-dot" style="background:${activeWorkCode?.color || primaryActivity.color}"></div>`
     : ((isPartial && si && !primaryActivity) ? `<div class="status-dot" style="background:${si.color}"></div>` : '');
@@ -3631,10 +4746,10 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const shiftSymbol = !customActivityShift && shiftMeta?.icon ? `<span class="shift-symbol">${shiftMeta.icon}</span>` : '';
   if (primaryActivity && activityStatus(primaryActivity) === 'tentative') tipParts.push('Planned assignment');
   const isCancelledActivity = primaryActivity && activityStatus(primaryActivity) === 'cancelled';
-  const holidayTint = holiday && !primaryActivity
-    ? 'background:color-mix(in srgb,var(--holiday-color) 41%,var(--surface));color:color-mix(in srgb,var(--holiday-color) 65%,var(--text));'
+  const holidayTint = holiday && !primaryActivity && !si
+    ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;border-color:${holiday.color || '#ef4444'}55;`
     : '';
-  const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">🎂</span>` : '';
+  const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">${svgIcon('report', 'Birthday')}</span>` : '';
   const overtimeBadge = overtime
     ? `<span class="overtime-badge" title="Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` · ${esc(overtime.note)}` : ''}">OT ${formatHoursNumber(overtime.hours)}h</span>`
     : '';
@@ -3645,22 +4760,24 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     : '';
   const finalCellStyle = `${cellStyleStr}${holidayTint}${fullDayStatusStyle}${planningHorizonStyle(ds)}`;
 
-  const shiftClass = primaryActivity?.assignment.shift === 'day'
+  const shiftClass = rotationMeta ? ' rotation-reserved-cell' : (primaryActivity?.assignment.shift === 'day'
     ? ' day-shift-cell'
-    : (primaryActivity?.assignment.shift === 'night' ? ' night-shift-cell' : '');
+     : (primaryActivity?.assignment.shift === 'evening' ? ' evening-shift-cell' : (primaryActivity?.assignment.shift === 'night' ? ' night-shift-cell' : '')));
   const activityClass = primaryActivity ? ' has-activity' : '';
   const plannedClass = primaryActivity && activityStatus(primaryActivity) === 'tentative' ? ' planned-activity-cell' : '';
   const activityColor = activeWorkCode?.color || primaryActivity?.color || 'transparent';
   const activityTextStyle = primaryActivity ? `color:${activityColor};` : '';
   const cancelledTextStyle = isCancelledActivity ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : '';
 
+  const rotationMarker = rotationMeta ? `<span class="rotation-marker${rotation?.shift === 'leave' ? ' rotation-leave-marker' : ''}${rotation?.shift === 'overtime' ? ' rotation-overtime-marker' : ''}" title="${esc(rotationMeta.label)}">${rotation?.shift === 'leave' ? 'OFF' : (rotation?.shift === 'overtime' ? 'OT' : 'SR')}</span><span class="shift-symbol rotation-shift-symbol">${rotationMeta.icon}</span>` : '';
   return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}${checkedActivity || checkedStatus ? ' work-schedule-checked-cell' : ''}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
-    onclick="handleCellClick(event,${emp.id},'${ds}')"
-  oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}${workScheduleCheckBadge}<div class="gday-inner" style="${activityTextStyle}${cancelledTextStyle}">${esc(cellText)}${birthdayBadge}</div></td>`;
+     onclick="handleCellClick(event,${emp.id},'${ds}')"
+   oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${rotationMarker}${rotation ? '' : `${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}${workScheduleCheckBadge}`}<div class="gday-inner" style="${rotationMeta ? 'color:var(--accent-blue);font-weight:800;' : `${activityTextStyle}${cancelledTextStyle}`}\">${rotationMeta ? '' : esc(cellText)}${rotation ? '' : birthdayBadge}</div></td>`;
 }
 
+// The compact rotationMarker is the sole SR/OFF/OT label in Schedule cells.
 function updateCell(empId, ds) {
   const cell = document.querySelector(`td[data-empid="${empId}"][data-date="${ds}"]`);
   const emp = empById(empId);
@@ -3685,11 +4802,40 @@ function scrollToToday() {
 }
 function goToday() {
   const y = new Date().getFullYear();
-  if (gridYear !== y) { gridYear = y; saveGridPreferences(); renderPage(); }
-  else scrollToToday();
+  scheduleAnchorDate = todayStr();
+  const focusToday = () => {
+    if (currentPage === 'shift-rotation') {
+      document.querySelector(`.rotation-day-head[data-date="${todayStr()}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    } else scrollToToday();
+  };
+  if (gridPeriod === 'year' && gridYear !== y) {
+    gridYear = y;
+    saveGridPreferences();
+    renderPage();
+    setTimeout(focusToday, 60);
+  } else {
+    saveGridPreferences();
+    renderPage();
+    setTimeout(focusToday, 60);
+  }
 }
 function changeGridYear(delta) {
   gridYear += delta;
+  saveGridPreferences();
+  renderPage();
+}
+function setGridPeriod(period) {
+  gridPeriod = normalizeGridPeriod(period);
+  if (gridPeriod !== 'year') scheduleAnchorDate = todayStr();
+  saveGridPreferences();
+  renderPage();
+}
+function changeGridPeriod(delta) {
+  if (gridPeriod === 'year') return changeGridYear(delta);
+  const date = new Date(`${scheduleAnchorDate}T00:00:00`);
+  date.setDate(date.getDate() + (gridPeriod === 'week' ? delta * 7 : 0));
+  if (gridPeriod === 'month') date.setMonth(date.getMonth() + delta);
+  scheduleAnchorDate = fmt(date);
   saveGridPreferences();
   renderPage();
 }
@@ -3924,7 +5070,19 @@ function _showPicker(event, empId, dates) {
   }
 
   const sect = document.getElementById('pk-shift-section');
-  if (bossSessionActive) {
+  if (appSettings.shiftRotationEnabled === true && pickerDates.some(date => rotationRecord(empId, date))) {
+    const firstRotation = pickerDates.map(date => rotationRecord(empId, date)).find(Boolean);
+    const selectedRotation = firstRotation?.shift || '';
+    sect.innerHTML = `<div class="pk-sep"></div><div class="pk-label">Shift Rotation${pickerDates.length > 1 ? ' for selected dates' : ''}</div><div class="pk-shift-box"><div class="pk-shift-options">
+      ${['day','evening','night','turn','leave'].map(shift => `<button class="pk-chip${selectedRotation === shift ? ' sel' : ''}" onclick="setRotationFromPicker('${shift}')">${esc(rotationShiftMeta(shift).label)}</button>`).join('')}
+      <button class="pk-chip" onclick="setRotationFromPicker('')">Clear rotation</button>
+    </div></div>`;
+  } else if (appSettings.shiftRotationEnabled === true && currentPage === 'shift-rotation') {
+    sect.innerHTML = `<div class="pk-sep"></div><div class="pk-label">Shift Rotation${pickerDates.length > 1 ? ' for selected dates' : ''}</div><div class="pk-shift-box"><div class="pk-shift-options">
+      ${['day','evening','night','turn','leave'].map(shift => `<button class="pk-chip" onclick="setRotationFromPicker('${shift}')">${esc(rotationShiftMeta(shift).label)}</button>`).join('')}
+      <button class="pk-chip" onclick="setRotationFromPicker('')">Clear rotation</button>
+    </div></div>`;
+  } else if (bossSessionActive) {
     const status = entry ? siFor(entry.status) : null;
     const statusItem = status ? `<div class="pk-shift-box">
         <div class="pk-shift-title"><span class="pk-color-dot" style="background:${status.color}"></span><span>Daily code: ${esc(status.label)}${status.isAbsence ? ' (absence)' : ''}</span></div>
@@ -3949,7 +5107,7 @@ function _showPicker(event, empId, dates) {
         ? ''
         : (!assignment.shift
           ? 'normal'
-          : (['normal', 'day', 'night', 'turn'].includes(rawShift) ? rawShift : 'custom'));
+          : (['normal', 'day', 'evening', 'night', 'turn'].includes(rawShift) ? rawShift : 'custom'));
       return `<div class="pk-shift-box">
         <div class="pk-shift-title"><span class="act-dot" style="background:${act.color};width:9px;height:9px"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(act.name)}${act.abbreviation ? ` (${esc(act.abbreviation)})` : ''}</span></div>
         <div class="pk-field"><span class="pk-field-label">Work Code</span>
@@ -3961,8 +5119,9 @@ function _showPicker(event, empId, dates) {
         </div>
         <div id="pk-admin-${act.id}">${pickerAdministrativeField(act.id, selectedCode, assignment.administrativeTime)}</div>
         <div class="pk-field"><span class="pk-field-label">Shift Type</span><div class="pk-shift-options" id="pk-shifts-${act.id}" data-shift="${esc(selectedShift === 'custom' ? assignment.shift : selectedShift)}">
-          <button class="pk-chip${selectedShift === 'normal' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'normal')">Normal Working Hours (NA)</button>
+          <button class="pk-chip${selectedShift === 'normal' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'normal')">Normal Hours (NA)</button>
           <button class="pk-chip${selectedShift === 'day' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'day')">${svgIcon('sun')} Day</button>
+           <button class="pk-chip${selectedShift === 'evening' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'evening')">${svgIcon('evening')} Mid-day / Evening</button>
           <button class="pk-chip${selectedShift === 'night' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'night')">${svgIcon('moon')} Night</button>
           <button class="pk-chip${selectedShift === 'turn' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'turn')">${shiftChangeIcon('')} Turnaround</button>
           <button class="pk-chip${selectedShift === 'custom' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'custom')">Custom</button>
@@ -3978,20 +5137,22 @@ function _showPicker(event, empId, dates) {
   const picker = document.getElementById('picker');
   picker.classList.add('open');
   const pad = 8;
-  const pointedCell = cellFromEl(document.elementFromPoint(event.clientX, event.clientY));
+  const pointedCell = event ? cellFromEl(document.elementFromPoint(event.clientX, event.clientY)) : null;
   const fallbackCell = document.querySelector(`td.status-cell[data-empid="${empId}"][data-date="${pickerDate}"]`);
   const anchor = (pointedCell?.dataset.empid === String(empId) ? pointedCell : fallbackCell)?.getBoundingClientRect();
   picker.style.left = '0px'; picker.style.top = '0px';
   const pw = picker.offsetWidth, ph = picker.offsetHeight;
-  const preferredLeft = anchor ? anchor.right + 6 : event.clientX;
+  const preferredLeft = anchor ? anchor.right + 6 : (event?.clientX || window.innerWidth / 2);
   const left = preferredLeft + pw <= window.innerWidth - pad
     ? preferredLeft
-    : (anchor ? anchor.left - pw - 6 : event.clientX - pw);
+    : (anchor ? anchor.left - pw - 6 : (event?.clientX || window.innerWidth / 2) - pw);
   picker.style.left = Math.max(pad, Math.min(left, window.innerWidth - pw - pad)) + 'px';
-  picker.style.top = Math.max(pad, Math.min(anchor?.top ?? event.clientY, window.innerHeight - ph - pad)) + 'px';
+  picker.style.top = Math.max(pad, Math.min(anchor?.top ?? (event?.clientY || window.innerHeight / 2), window.innerHeight - ph - pad)) + 'px';
 }
 function openActivityFromSelection() {
   if (!pickerDates.length) return;
+  const blocked = pickerDates.filter(date => employeeHasRotation(pickerEmpId, date));
+  if (blocked.length) { alert(`Cannot create an Activity on Shift Rotation date(s): ${blocked.join(', ')}`); return; }
   const sorted = [...pickerDates].sort();
   pendingActivityPreset = {
     startDate: sorted[0],
@@ -4014,11 +5175,13 @@ function openActivityFromRange(dates) {
 function openPicker(event, empId, date) {
   if (suppressCellClick) { suppressCellClick = false; event.stopPropagation(); return; }
   event.stopPropagation();
+  if (currentPage !== 'shift-rotation' && employeeHasRotation(empId, date)) { showToast('This date is reserved by Shift Rotation.', 4000); return; }
   _showPicker(event, empId, [date]);
 }
 async function handleCellClick(event, empId, date) {
   if (suppressCellClick) { suppressCellClick = false; event.stopPropagation(); return; }
   event.stopPropagation();
+  if (currentPage !== 'shift-rotation' && employeeHasRotation(empId, date)) { showToast('This date is reserved by Shift Rotation. Remove the rotation before planning an Activity.', 4000); return; }
   openPicker(event, empId, date);
 }
 function selectPickerWorkCode(actId, workCodeId) {
@@ -4100,6 +5263,8 @@ async function saveActivityAssignment(empId, actId) {
   const shift = customShift || selectedShift;
   if (!activity) { alert('Select a Shift Type.'); return; }
   const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
+  const blockedDates = dates.filter(date => employeeHasRotation(empId, date));
+  if (blockedDates.length) { alert(`Cannot plan this Activity on Shift Rotation date(s): ${blockedDates.join(', ')}`); return; }
   if (!shift) {
     const hasAssignment = dates.some(date => {
       const assignment = activityAssignment(`${empId}_${date}_${actId}`);
@@ -4627,6 +5792,7 @@ function openActModal(id) {
   document.getElementById('af-status').value = act ? activityStatus(act) : 'tentative';
   document.getElementById('af-count-load').checked = act?.countsTowardLoad !== false;
   document.getElementById('af-day-shift').value = act?.dayShift || '0730-2400';
+  document.getElementById('af-evening-shift').value = act?.eveningShift || '1200-2000';
   document.getElementById('af-night-shift').value = act?.nightShift || '0000-0730';
   document.getElementById('af-include-weekends').checked = act?.includeWeekends === true;
   document.getElementById('af-start').value = formatActivityDateInput(act?.startDate || defaultStart);
@@ -4635,6 +5801,7 @@ function openActModal(id) {
   document.getElementById('af-notes').value = act?.notes || '';
   selectedActColor = act?.color || PALETTE[0];
   selectedParticipants = act ? act.participants.map(p => ({ id: p.id })) : [];
+  document.getElementById('af-prefill-cells').checked = false;
   if (!act && preset?.participantId && employees.some(emp => emp.id === preset.participantId)) {
     selectedParticipants = [{ id: preset.participantId }];
   }
@@ -4705,16 +5872,18 @@ async function saveActivity() {
   const status = document.getElementById('af-status').value;
   const countsTowardLoad = document.getElementById('af-count-load').checked;
   const dayShift = document.getElementById('af-day-shift').value.trim() || '0730-2400';
+  const eveningShift = document.getElementById('af-evening-shift').value.trim() || '1200-2000';
   const nightShift = document.getElementById('af-night-shift').value.trim() || '0000-0730';
   const includeWeekends = document.getElementById('af-include-weekends').checked;
+  const prefillCells = document.getElementById('af-prefill-cells').checked === true;
   if (!name) { alert('Activity name is required.'); return; }
   if (abbr.length > 6) { alert('Activity abbreviation can be at most 6 characters.'); return; }
   if (project && !/^[A-Za-z0-9\-]+$/.test(project)) { alert('Cost Center must contain only letters, numbers, and hyphens.'); return; }
   if (order && !/^[A-Za-z0-9]{1,9}$/.test(order)) { alert('Order must contain up to 9 alphanumeric characters.'); return; }
   if (!start || !end) { alert('Enter valid start and end dates using dd.mm.yyyy.'); return; }
   if (end < start) { alert('End date must be on or after start date.'); return; }
-  if (!timeRangeHours(dayShift) || !timeRangeHours(nightShift)) { alert('Enter valid Day and Night shift ranges, e.g. 0730-2400 and 0000-0730.'); return; }
-  const rec = { name, abbreviation: abbr, project, order, billing, type, status, countsTowardLoad, dayShift, nightShift, includeWeekends, color: selectedActColor, startDate: start, endDate: end,
+  if (!timeRangeHours(dayShift) || !timeRangeHours(eveningShift) || !timeRangeHours(nightShift)) { alert('Enter valid Day, Mid-day / Evening, and Night shift ranges.'); return; }
+  const rec = { name, abbreviation: abbr, project, order, billing, type, status, countsTowardLoad, dayShift, eveningShift, nightShift, includeWeekends, color: selectedActColor, startDate: start, endDate: end,
     participants: selectedParticipants.map(p => ({ ...p })), notes };
   await mutateState('saveActivity', () => {
   if (editingActId) {
@@ -4729,26 +5898,42 @@ async function saveActivity() {
   } else {
     rec.id = nextActId++;
     activities.push(rec);
+  }
+  if (prefillCells) {
     const assignmentDate = new Date(`${rec.startDate}T00:00:00`);
     const assignmentEnd = new Date(`${rec.endDate}T00:00:00`);
+    let prefilled = 0;
     while (assignmentDate <= assignmentEnd) {
       const date = fmt(assignmentDate);
       rec.participants.forEach(participant => {
-        activityShiftsMap[`${participant.id}_${date}_${rec.id}`] = {
-          shift: 'normal',
-          workCodeId: null,
-          administrativeTime: '',
-          staffingImpactOverride: null,
-          assigned: true,
-          excluded: false,
-        };
+        const statusKey = `${participant.id}_${date}`;
+        const hasCellEntry = Boolean(getEntryObj(statusKey));
+        const hasActivityAssignment = Object.keys(activityShiftsMap).some(key => {
+          const parts = key.split('_');
+          return Number(parts[0]) === Number(participant.id) && parts[1] === date && activityAssignment(key)?.assigned === true && activityAssignment(key)?.excluded !== true;
+        });
+        const targetKey = `${participant.id}_${date}_${rec.id}`;
+        if (!hasCellEntry && !hasActivityAssignment && !employeeHasRotation(participant.id, date)) {
+          activityShiftsMap[targetKey] = { shift: 'normal', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false };
+          prefilled++;
+        }
       });
       assignmentDate.setDate(assignmentDate.getDate() + 1);
     }
+    if (prefilled) showToast(`Prefilled ${prefilled} personnel cell${prefilled === 1 ? '' : 's'}. Existing entries were left unchanged.`, 4500);
   }
   for (const key of Object.keys(activityShiftsMap)) {
     const parts = key.split('_');
     if (+parts[2] === rec.id && (parts[1] < rec.startDate || parts[1] > rec.endDate)) activityShiftsMap[key] = null;
+  }
+  for (const participant of rec.participants) {
+    for (const day = new Date(`${rec.startDate}T00:00:00`); fmt(day) <= rec.endDate; day.setDate(day.getDate() + 1)) {
+      const date = fmt(day);
+      if (employeeHasRotation(participant.id, date)) {
+        const key = `${participant.id}_${date}_${rec.id}`;
+        activityShiftsMap[key] = { ...(activityShiftsMap[key] || {}), shift: '', assigned: false, excluded: true };
+      }
+    }
   }
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
   });
@@ -4768,6 +5953,69 @@ function activityReportDates(act) {
     if (act.includeWeekends || !isWknd(d)) dates.push(fmt(d));
   }
   return dates;
+}
+function activityReportWeekChunks(dates) {
+  const chunks = [];
+  for (const date of dates) {
+    const weekKey = isoWeekStringFromDate(new Date(`${date}T00:00:00`));
+    const chunk = chunks[chunks.length - 1];
+    if (chunk?.weekKey === weekKey) chunk.dates.push(date);
+    else chunks.push({ weekKey, dates: [date] });
+  }
+  return chunks;
+}
+function activityReportHasAssignment(act, empId, date) {
+  if (date < act.startDate || date > act.endDate) return false;
+  if (!act.includeWeekends && isWknd(new Date(`${date}T00:00:00`))) return false;
+  const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
+  return assignment.assigned === true && assignment.excluded !== true && Boolean(assignment.shift);
+}
+function activityReportCellInfo(act, emp, date) {
+  const info = activityAssignmentInfo(act, emp.id, date);
+  const weekend = isWknd(new Date(`${date}T00:00:00`));
+  if (!info) {
+    return {
+      info: null,
+      weekend,
+      className: weekend ? 'weekend' : '',
+      style: weekend ? 'background:var(--weekend-bg);color:var(--muted);' : 'color:var(--muted);',
+      html: '—',
+    };
+  }
+  const shiftMeta = activityShiftMeta(act, info.assignment.shift);
+  const shiftKey = shiftMeta?.key || 'custom';
+  const tint = shiftKey === 'night' ? 30 : (shiftKey === 'evening' ? 22 : (shiftKey === 'day' ? 14 : 10));
+  const color = normalizeHexColor(info.workCode.color, normalizeHexColor(act.color, '#2563eb'));
+  const baseColor = weekend ? 'var(--weekend-bg)' : 'var(--surface)';
+  const shiftIcon = ['day', 'evening', 'night'].includes(shiftKey) ? shiftMeta.icon : '';
+  const shiftClass = ['normal', 'day', 'evening', 'night', 'turn'].includes(shiftKey) ? `${shiftKey}-shift` : 'custom-shift';
+  return {
+    info,
+    weekend,
+    className: `${weekend ? 'weekend ' : ''}scheduled ${shiftClass}`,
+    style: `background:color-mix(in srgb,${color} ${tint}%,${baseColor});color:var(--text);--shift-color:${color};`,
+    html: `<div class="report-shift-line">${shiftIcon}<strong>${esc(info.workCode.abbreviation)} (${esc(info.administrativeValue)})</strong></div><div class="report-physical-shift">${esc(info.physicalShift)}</div>`,
+  };
+}
+function activityReportGroupsForDates(act, participantGroups, dates, hideInactive) {
+  if (!hideInactive) return participantGroups;
+  return participantGroups.map(group => ({
+    ...group,
+    participants: group.participants.filter(({ emp }) =>
+      dates.some(date => activityReportHasAssignment(act, emp.id, date))),
+  })).filter(group => group.participants.length);
+}
+function ensureActivityReportHideOption() {
+  const content = document.getElementById('activity-report-content');
+  if (!content) return;
+  let checkbox = document.getElementById('activity-report-hide-inactive-week');
+  let label = checkbox?.closest('label');
+  if (!label) {
+    label = document.createElement('label');
+    label.innerHTML = '<input type="checkbox" id="activity-report-hide-inactive-week"> Hide personnel not working in each printed week';
+  }
+  label.style.cssText = 'display:flex;align-items:center;gap:7px;margin:0 0 12px;font-size:12px;color:var(--muted);text-align:left';
+  content.insertBefore(label, content.firstChild);
 }
 function activityReportRows(act) {
   const rows = [];
@@ -4795,11 +6043,12 @@ function activityReportRows(act) {
 function openActivityReport(id) {
   const act = activities.find(item => item.id === id);
   if (!act) return;
+  if (activityStatus(act) === 'cancelled') return;
   activityReportId = id;
   const dates = activityReportDates(act);
   const participantGroups = activityReportParticipantGroups(act);
 
-  document.getElementById('activity-report-title').textContent = `Work Schedule: ${act.name}`;
+  document.getElementById('activity-report-title').textContent = `${activityStatus(act) === 'tentative' ? 'DRAFT · ' : ''}Work Schedule: ${act.name}`;
   document.getElementById('activity-report-content').innerHTML = `
     <div style="margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div style="flex:1;min-width:0"><div style="background:var(--muted-bg);border:1px solid var(--border);border-radius:6px;padding:10px"><div><b>Cost Center:</b> ${esc(act.project || 'Not specified')}</div><div style="margin-top:4px"><b>Order:</b> ${esc(act.order || 'Not specified')}</div><div style="margin-top:4px"><b>Billing explanation:</b> ${esc(act.billing || 'No note')}</div></div><div class="muted text-sm" style="margin-top:7px">Period: ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)} · ${(act.participants || []).length} participant${(act.participants || []).length === 1 ? '' : 's'}</div></div>${renderSecurityLabel()}</div>
     <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:620px">
@@ -4807,16 +6056,13 @@ function openActivityReport(id) {
         <th style="padding:7px 8px;min-width:150px">Employee</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 8px;min-width:92px;background:${weekend ? 'var(--weekend-bg)' : 'transparent'};color:${weekend ? 'var(--weekend-text)' : 'inherit'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}
       </tr></thead>
       <tbody>${participantGroups.length ? participantGroups.map(group => `<tr><td colspan="${dates.length + 1}" style="padding:7px 8px;background:${group.color}18;border-bottom:1px solid ${group.color}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${group.color};margin-right:5px"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${esc(emp.name)}</td>${dates.map(date => {
-          const info = activityAssignmentInfo(act, emp.id, date);
-          const label = info ? `${info.workCode.abbreviation} (${info.administrativeValue})` : '—';
+          const cell = activityReportCellInfo(act, emp, date);
           const deviation = dailyDeviationLabel(emp.id, date);
-          const details = `${info ? `<div style="font-size:11px;margin-top:2px">${esc(info.physicalShift)}</div>` : ''}${deviation ? `<div style="font-size:10px;margin-top:3px;color:var(--destructive)">${esc(deviation)}</div>` : ''}`;
-          const weekend = isWknd(new Date(`${date}T00:00:00`));
-          const weekendBackground = weekend ? 'var(--weekend-bg)' : 'transparent';
-          const cellBackground = info ? `${info.workCode.color}14` : weekendBackground;
-          return `<td style="padding:8px;background:${cellBackground};color:${info ? 'var(--text)' : 'var(--muted)'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}"><strong>${esc(label)}</strong>${details}</td>`;
+          const details = deviation ? `<div style="font-size:10px;margin-top:3px;color:var(--destructive)">${esc(deviation)}</div>` : '';
+          return `<td class="${cell.className}" style="padding:8px;${cell.style}border-left:${cell.weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${cell.weekend ? '1px solid var(--weekend-border)' : '0'}">${cell.html}${details}</td>`;
         }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${dates.length + 1}" class="empty-note" style="padding:24px;text-align:center">No participants assigned.</td></tr>`}</tbody>
     </table>`;
+  ensureActivityReportHideOption();
   document.getElementById('activity-report-modal').classList.add('open');
 }
 function activityReportCsvValue(value) { return `"${String(value ?? '').replace(/"/g, '""')}"`; }
@@ -4838,9 +6084,10 @@ function activityReportParticipantGroups(act) {
 function exportActivityReportCsv() {
   const act = activities.find(item => item.id === activityReportId);
   if (!act) return;
+  const draftLabel = activityStatus(act) === 'tentative' ? 'DRAFT · ' : '';
   const rows = activityReportRows(act);
   const lines = [['Report', 'Activity', 'Cost Center', 'Order', 'Billing explanation', 'Employee', 'Department', 'Date', 'Work Code / Administrative value', 'Physical Shift', 'Daily Deviation / Absence'],
-    ...rows.map(row => ['Work Schedule', act.name, act.project || '', act.order || '', act.billing || '', row.employee, row.department, row.date, row.shiftType, row.shift, row.deviation])]
+    ...rows.map(row => [`${draftLabel}Work Schedule`, act.name, act.project || '', act.order || '', act.billing || '', row.employee, row.department, row.date, row.shiftType, row.shift, row.deviation])]
     .map(row => row.map(activityReportCsvValue).join(','));
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob), link = document.createElement('a');
@@ -4851,29 +6098,35 @@ function exportActivityReportCsv() {
 function printActivityReport() {
   const act = activities.find(item => item.id === activityReportId);
   if (!act) return;
+  const draftLabel = activityStatus(act) === 'tentative' ? 'DRAFT · ' : '';
   const dates = activityReportDates(act);
+  if (!dates.length) {
+    alert('This activity has no reportable workdays. Enable weekends or extend the activity period before printing.');
+    return;
+  }
   const participantGroups = activityReportParticipantGroups(act);
+  const hideInactiveByWeek = document.getElementById('activity-report-hide-inactive-week')?.checked === true;
   const sections = [];
-  for (let i = 0; i < dates.length; i += 14) {
-    const chunkDates = dates.slice(i, i + 14);
+  for (const week of activityReportWeekChunks(dates)) {
+    const chunkDates = week.dates;
+    const visibleGroups = activityReportGroupsForDates(act, participantGroups, chunkDates, hideInactiveByWeek);
     sections.push(`<section class="report-section">
-      <h1>Work Schedule: ${esc(act.name)}</h1>
+      <div class="report-header"><h1>${draftLabel}Work Schedule: ${esc(act.name)}</h1><div class="week-label">Week ${isoWeek(new Date(`${chunkDates[0]}T00:00:00`))}</div></div>
       <div class="info-box"><div><b>Cost Center:</b> ${esc(act.project || 'Not specified')}</div><div><b>Order:</b> ${esc(act.order || 'Not specified')}</div><div><b>Billing explanation:</b> ${esc(act.billing || 'No note')}</div></div>
       <div class="period">Period: ${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])}</div>
       <table><thead><tr><th class="employee-column">Employee</th>${chunkDates.map(date => {
         const weekend = isWknd(new Date(`${date}T00:00:00`));
         return `<th class="date-column${weekend ? ' weekend' : ''}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted">${fmtShort(date)}</div></th>`;
-      }).join('')}</tr></thead><tbody>${participantGroups.length ? participantGroups.map(group => `<tr class="section-row"><td colspan="${chunkDates.length + 1}" style="background:${group.color}18;border-bottom-color:${group.color}"><span class="section-dot" style="background-color:${group.color}"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr><td><b>${esc(emp.name)}</b></td>${chunkDates.map(date => {
-          const info = activityAssignmentInfo(act, emp.id, date);
-          const weekend = isWknd(new Date(`${date}T00:00:00`));
-          return `<td class="${weekend ? 'weekend ' : ''}${info ? 'scheduled' : ''}"${info ? ` style="background:${info.workCode.color}14"` : ''}>${info ? `<strong>${esc(info.workCode.abbreviation)} (${esc(info.administrativeValue)})</strong><div>${esc(info.physicalShift)}</div>` : '—'}</td>`;
-        }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${chunkDates.length + 1}" class="empty-note">No participants assigned.</td></tr>`}</tbody></table>
+      }).join('')}</tr></thead><tbody>${visibleGroups.length ? visibleGroups.map(group => `<tr class="section-row"><td colspan="${chunkDates.length + 1}" style="background:${group.color}18;border-bottom-color:${group.color}"><span class="section-dot" style="background-color:${group.color}"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr><td><b>${esc(emp.name)}</b></td>${chunkDates.map(date => {
+          const cell = activityReportCellInfo(act, emp, date);
+          return `<td class="${cell.className}" style="${cell.style}">${cell.html}</td>`;
+        }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${chunkDates.length + 1}" class="empty-note">${hideInactiveByWeek ? 'No personnel scheduled this week.' : 'No participants assigned.'}</td></tr>`}</tbody></table>
     </section>`);
   }
-  const printWindow = window.open('', '_blank', 'width=1100,height=800');
+  const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the activity report.'); return; }
   printWindow.document.write(`<!doctype html><html><head><title>Work Schedule - ${esc(act.name)}</title><style>
-    @page{size:landscape;margin:8mm}*{box-sizing:border-box}body{font:9px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 5px}.info-box{background:#f5f5f5;border:1px solid #d8d8d8;border-radius:6px;padding:8px;margin-top:8px;display:flex;gap:20px}.period{color:#666;margin:7px 0 10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:5px 4px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:145px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:var(--weekend-bg)}.empty-note{text-align:center;padding:20px}.scheduled{color:#111}.section-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+    @page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}:root{--surface:#fff;--text:#111;--muted:#666;--weekend-bg:#fff7ed;--weekend-text:#c2410c;--weekend-border:#fed7aa}html,body{width:100%}body{font:9px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.week-label{font-size:12px;font-weight:700;color:#475569}h1{font-size:18px;margin:0 0 5px}.info-box{background:#f5f5f5;border:1px solid #d8d8d8;border-radius:6px;padding:8px;margin-top:8px;display:flex;gap:20px}.period{color:#666;margin:7px 0 10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:5px 4px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:145px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:var(--weekend-bg);color:var(--weekend-text);border-left-color:var(--weekend-border);border-right-color:var(--weekend-border);box-shadow:inset 0 0 0 1px var(--weekend-border)}.empty-note{text-align:center;padding:20px}.scheduled{color:#111}.report-shift-line{display:flex;align-items:center;gap:4px}.report-shift-line .ui-icon{width:11px;height:11px;flex:0 0 11px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--shift-color)}.report-physical-shift{font-size:8px;margin-top:2px}.section-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
   </style></head><body>${sections.join('')}</body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
@@ -4902,7 +6155,7 @@ function teamReportBillingSummary(reportActivities) {
 }
 function teamReportShiftRange(act, participant, shift) {
   const shiftType = assignmentShiftType(shift, participant);
-  if (shift === 'normal' || shift === 'day' || shift === 'night') return activityDefaultShift(shift, act);
+  if (shift === 'normal' || shift === 'day' || shift === 'evening' || shift === 'night') return activityDefaultShift(shift, act);
   if (shift === 'turn') return 'Turnaround';
   const configuredRange = activityDefaultShift(shiftType, act);
   const oppositeDefault = shiftType === 'night' ? activityDefaultShift('day', act) : activityDefaultShift('night', act);
@@ -4917,7 +6170,7 @@ function teamReportCellInfo(emp, act, date) {
   if (!info) return null;
   const hours = info.administrativeMeasure.hours;
   const days = info.administrativeMeasure.units;
-  const tint = info.assignment.shift === 'night' ? 0.22 : 0.12;
+  const tint = info.assignment.shift === 'night' ? 0.22 : (info.assignment.shift === 'evening' ? 0.18 : 0.12);
   const activityLabel = act.abbreviation || act.name;
   return {
     html: `<div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:${act.color || 'inherit'}"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:${act.color || 'currentColor'};flex:0 0 auto"></span>${esc(activityLabel)}</div><div style="font-weight:700">${esc(info.workCode.abbreviation || info.workCode.name)} (${esc(info.administrativeValue)})</div><div style="font-size:10px;margin-top:2px">${esc(info.physicalShift)}</div>`,
@@ -5544,12 +6797,73 @@ async function setSubdepartmentColor(dept, subdept, color) {
   renderPage();
   showToast(`Color updated for ${dept} / ${subdept}. Remember to Save Changes.`, 4000);
 }
+function personnelSectionKey(organisation, department, section) {
+  return `${organisation}\u0000${department}\u0000${section}`;
+}
+function personnelDepartmentKey(organisation, department) { return `${organisation}\u0000${department}`; }
+function togglePersonnelDepartment(organisation, department) {
+  const key = personnelDepartmentKey(organisation, department);
+  if (collapsedPersonnelDepartments.has(key)) collapsedPersonnelDepartments.delete(key);
+  else collapsedPersonnelDepartments.add(key);
+  renderEmployees();
+}
+function togglePersonnelSection(organisation, department, section) {
+  const key = personnelSectionKey(organisation, department, section);
+  if (collapsedPersonnelSections.has(key)) collapsedPersonnelSections.delete(key);
+  else collapsedPersonnelSections.add(key);
+  renderEmployees();
+}
+function startPersonnelDrag(event, empId) {
+  draggedPersonnelId = Number(empId);
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', String(empId));
+  event.currentTarget.classList.add('personnel-dragging');
+}
+function endPersonnelDrag(event) {
+  event.currentTarget.classList.remove('personnel-dragging');
+  draggedPersonnelId = null;
+}
+function allowPersonnelDrop(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  event.currentTarget.classList.add('personnel-drop-target');
+}
+function clearPersonnelDrop(event) {
+  event.currentTarget.classList.remove('personnel-drop-target');
+}
+async function dropPersonnel(event, targetId) {
+  event.preventDefault();
+  clearPersonnelDrop(event);
+  const sourceId = draggedPersonnelId || Number(event.dataTransfer.getData('text/plain'));
+  if (!sourceId || sourceId === Number(targetId)) return;
+  const source = empById(sourceId), target = empById(Number(targetId));
+  if (!source || !target) return;
+  const sameGroup = employeeHierarchyPath(source) === employeeHierarchyPath(target);
+  if (!sameGroup && !confirm(`Move ${source.name} into ${employeeHierarchyPath(target) || 'this hierarchy group'}?`)) return;
+  await mutateState('dropPersonnel', () => {
+    if (!sameGroup) {
+      source.organisation = target.organisation || '';
+      source.department = target.department || '';
+      source.section = target.section || target.subdepartment || '';
+      source.process = target.process || '';
+      source.team = target.team || '';
+      source.subdepartment = source.section;
+    }
+    const groupMembers = employees.filter(employee => employee.id !== source.id && employeeHierarchyPath(employee) === employeeHierarchyPath(target)).sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+    const targetIndex = groupMembers.findIndex(employee => employee.id === target.id);
+    const insertAt = Math.max(0, targetIndex);
+    groupMembers.splice(insertAt, 0, source);
+    groupMembers.forEach((employee, index) => { employee.sortOrder = (index + 1) * 10; });
+    ensureEmployeeSortOrders(employees);
+  }, { saveDisk: true });
+  renderEmployees();
+}
 function renderEmployees() {
   const searchLower = empSearch.toLowerCase();
   const filtered = employees.filter(emp => {
     const matchesSearch = !searchLower ||
       emp.name.toLowerCase().includes(searchLower) || (emp.email || '').toLowerCase().includes(searchLower) ||
-      (emp.department || '').toLowerCase().includes(searchLower) || (emp.subdepartment || '').toLowerCase().includes(searchLower) || (emp.role || '').toLowerCase().includes(searchLower) ||
+      (emp.organisation || '').toLowerCase().includes(searchLower) || (emp.department || '').toLowerCase().includes(searchLower) || (emp.section || '').toLowerCase().includes(searchLower) || (emp.process || '').toLowerCase().includes(searchLower) || (emp.team || '').toLowerCase().includes(searchLower) || (emp.subdepartment || '').toLowerCase().includes(searchLower) || (emp.role || '').toLowerCase().includes(searchLower) ||
       (emp.level || '').toLowerCase().includes(searchLower) || (emp.birthday || '').toLowerCase().includes(searchLower) ||
       (emp.homeAddress || '').toLowerCase().includes(searchLower);
     const matchesDept = !empFilterDept || emp.department === empFilterDept;
@@ -5559,17 +6873,47 @@ function renderEmployees() {
   const byDept = new Map();
   for (const emp of filtered) { 
     const deptName = emp.department || 'Unassigned';
-    const subdeptName = emp.subdepartment || 'General';
-    const groupKey = `${deptName}\u0000${subdeptName}`;
+    const subdeptName = employeeHierarchyLeaf(emp);
+    const organisationName = emp.organisation || 'Unassigned organisation';
+    const groupKey = `${organisationName}\u0000${deptName}\u0000${subdeptName}`;
     if (!byDept.has(groupKey)) byDept.set(groupKey, []);
     byDept.get(groupKey).push(emp);
   }
   const groups = [...byDept.entries()].map(([groupKey, list]) => {
-    const [department, subdepartment] = groupKey.split('\u0000');
-    const sorted = [...list].sort((a, b) => ((a.sortOrder ?? 99) - (b.sortOrder ?? 99)) || a.name.localeCompare(b.name));
-    return { department, subdepartment, list: sorted, minOrder: sorted[0]?.sortOrder ?? 99 };
-  }).sort((a, b) => (a.minOrder - b.minOrder) || a.department.localeCompare(b.department));
-  const allDepts = [...new Set(employees.map(e => e.department).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const [organisation, department, subdepartment] = groupKey.split('\u0000');
+    const sorted = [...list].sort((a, b) => ((a.sortOrder ?? 9999) - (b.sortOrder ?? 9999)) || a.name.localeCompare(b.name));
+    return { organisation, department, subdepartment, list: sorted, minOrder: sorted[0]?.sortOrder ?? 99, processOrder: Math.min(...list.map(employee => Number(employee.processOrder) || Number(employee.sortOrder) || 9999)) };
+  });
+  groups.sort((a, b) => {
+    const left = a.list[0] || { organisation: a.organisation, department: a.department, section: a.subdepartment };
+    const right = b.list[0] || { organisation: b.organisation, department: b.department, section: b.subdepartment };
+    return comparePersonnelHierarchy(left, right) || (Number(a.processOrder) - Number(b.processOrder));
+  });
+  const allDepts = orderedDepartments().filter(department => department !== 'Unassigned');
+  const departmentOrderControls = allDepts.map((dept, index) => {
+    const color = resolveDeptColor(dept) || PALETTE[index % PALETTE.length];
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)">
+      <span class="muted" style="width:22px;text-align:right;font-variant-numeric:tabular-nums">${index + 1}</span>
+      <span class="chip-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%"></span>
+      <span style="flex:1;font-size:12px;font-weight:600">${esc(dept)}</span>
+      <button type="button" class="icon-btn" title="Move ${esc(dept)} up" aria-label="Move ${esc(dept)} up" ${index === 0 ? 'disabled' : ''} onclick="moveDepartment(${esc(JSON.stringify(dept))},-1)">${svgIcon('chevronUp')}</button>
+      <button type="button" class="icon-btn" title="Move ${esc(dept)} down" aria-label="Move ${esc(dept)} down" ${index === allDepts.length - 1 ? 'disabled' : ''} onclick="moveDepartment(${esc(JSON.stringify(dept))},1)">${svgIcon('chevronDown')}</button>
+    </div>`;
+  }).join('');
+  const subdepartmentOrderControls = allDepts.map(dept => {
+    const teams = orderedSubdepartmentsFor(dept);
+    if (!teams.length) return '';
+    const color = resolveDeptColor(dept) || PALETTE[allDepts.indexOf(dept) % PALETTE.length];
+    return `<div style="border:1px solid var(--border);border-radius:10px;background:var(--surface);overflow:hidden">
+      <div style="padding:7px 9px;background:${color}18;border-bottom:1px solid ${color};font-size:12px;font-weight:700">${esc(dept)}</div>
+      <div>${teams.map((team, index) => `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;${index ? 'border-top:1px solid var(--border);' : ''}">
+        <span class="muted" style="width:22px;text-align:right;font-variant-numeric:tabular-nums">${index + 1}</span>
+        <span style="flex:1;font-size:12px">${esc(team)}</span>
+        <button type="button" class="icon-btn" title="Move ${esc(team)} up" aria-label="Move ${esc(team)} up" ${index === 0 ? 'disabled' : ''} onclick="moveSubdepartment(${esc(JSON.stringify(dept))},${esc(JSON.stringify(team))},-1)">${svgIcon('chevronUp')}</button>
+        <button type="button" class="icon-btn" title="Move ${esc(team)} down" aria-label="Move ${esc(team)} down" ${index === teams.length - 1 ? 'disabled' : ''} onclick="moveSubdepartment(${esc(JSON.stringify(dept))},${esc(JSON.stringify(team))},1)">${svgIcon('chevronDown')}</button>
+      </div>`).join('')}</div>
+    </div>`;
+  }).filter(Boolean).join('');
   const deptSwatches = allDepts.map((dept, idx) => {
     const color = resolveDeptColor(dept) || PALETTE[idx % PALETTE.length];
     const paletteButtons = PALETTE.map(option => `
@@ -5584,11 +6928,23 @@ function renderEmployees() {
       <div class="swatches" style="gap:5px">${paletteButtons}</div>
     </div>`;
   }).join('');
-  const subdeptSwatches = [...new Set(employees.map(emp => `${emp.department || 'Unassigned'}\u0000${emp.subdepartment || 'General'}`))].sort((a, b) => a.localeCompare(b)).map(key => {
-    const [dept, subdept] = key.split('\u0000');
-    const color = resolveSubdepartmentColor(dept, subdept) || resolveDeptColor(dept) || PALETTE[allDepts.indexOf(dept) % PALETTE.length];
-    const paletteButtons = PALETTE.map(option => `<button type="button" class="swatch${option === color ? ' sel' : ''}" title="${option}" style="background:${option};width:18px;height:18px" onclick="setSubdepartmentColor(${esc(JSON.stringify(dept))},${esc(JSON.stringify(subdept))},'${option}')"></button>`).join('');
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:12px"><span style="min-width:160px;display:inline-flex;align-items:center;gap:6px"><span class="chip-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%"></span><span>${esc(dept)} / ${esc(subdept)}</span></span><div class="swatches" style="gap:5px">${paletteButtons}</div></div>`;
+  const sectionSwatches = [...new Set(employees.filter(emp => emp.section || emp.subdepartment).map(emp => `${emp.department || 'Unassigned'}\u0000${emp.section || emp.subdepartment}`))].sort().map(key => {
+    const [dept, section] = key.split('\u0000');
+    const color = resolveSectionColor(dept, section) || resolveDeptColor(dept) || PALETTE[allDepts.indexOf(dept) % PALETTE.length];
+    const sectionButtons = PALETTE.map(option => `<button type="button" class="swatch${option === color ? ' sel' : ''}" title="${option}" style="background:${option};width:18px;height:18px" onclick="setSectionColor(${esc(JSON.stringify(dept))},${esc(JSON.stringify(section))},'${option}')"></button>`).join('');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:12px"><span style="min-width:160px;display:inline-flex;align-items:center;gap:6px"><span class="chip-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%"></span><span>${esc(dept)} / ${esc(section)}</span></span><div class="swatches" style="gap:5px">${sectionButtons}</div></div>`;
+  }).join('');
+  const teamSwatches = [...new Set(employees.filter(emp => emp.team).map(emp => `${emp.department || 'Unassigned'}\u0000${emp.section || emp.subdepartment || 'Unassigned section'}\u0000${emp.process || 'Unassigned process'}\u0000${emp.team}`))].sort().map(key => {
+    const [dept, section, process, team] = key.split('\u0000');
+    const color = resolveSubdepartmentColor(dept, team) || resolveProcessColor(dept, section, process) || resolveSectionColor(dept, section) || resolveDeptColor(dept) || PALETTE[allDepts.indexOf(dept) % PALETTE.length];
+    const paletteButtons = PALETTE.map(option => `<button type="button" class="swatch${option === color ? ' sel' : ''}" title="${option}" style="background:${option};width:18px;height:18px" onclick="setSubdepartmentColor(${esc(JSON.stringify(dept))},${esc(JSON.stringify(team))},'${option}')"></button>`).join('');
+    return `<div style="display:grid;grid-template-columns:minmax(180px,240px) 216px;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:12px;max-width:480px"><span style="display:inline-flex;align-items:center;gap:6px;min-width:0"><span class="chip-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(section)} / ${esc(process)} / ${esc(team)}</span></span><div class="swatches" style="gap:5px">${paletteButtons}</div></div>`;
+  }).join('');
+  const processSwatches = [...new Set(employees.filter(emp => emp.process).map(emp => `${emp.department || 'Unassigned'}\u0000${emp.section || emp.subdepartment || ''}\u0000${emp.process}`))].sort().map(key => {
+    const [dept, section, process] = key.split('\u0000');
+    const color = resolveProcessColor(dept, section, process) || resolveSectionColor(dept, section) || resolveDeptColor(dept) || PALETTE[allDepts.indexOf(dept) % PALETTE.length];
+    const paletteButtons = PALETTE.map(option => `<button type="button" class="swatch${option === color ? ' sel' : ''}" title="${option}" style="background:${option};width:18px;height:18px" onclick="setProcessColor(${esc(JSON.stringify(dept))},${esc(JSON.stringify(section))},${esc(JSON.stringify(process))},'${option}')"></button>`).join('');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:12px"><span style="min-width:190px;display:inline-flex;align-items:center;gap:6px"><span class="chip-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%"></span><span>${esc(dept)} / ${esc(section)} / ${esc(process)}</span></span><div class="swatches" style="gap:5px">${paletteButtons}</div></div>`;
   }).join('');
 
   const catChip = cat => `<span class="chip" style="${chipStyle(cat.color)}"><span class="chip-dot" style="background:${cat.color}"></span>${esc(cat.name)}</span>`;
@@ -5596,16 +6952,41 @@ function renderEmployees() {
   if (!filtered.length) {
     rowsHtml = `<tr><td colspan="10" class="empty-note">${employees.length ? 'No personnel match the current filters.' : 'No personnel yet. Click "Add Employee" to create the first record.'}</td></tr>`;
   } else {
+    let renderedOrganisation = null;
+    let renderedDepartment = null;
     for (const group of groups) {
+      if (group.organisation !== renderedOrganisation) {
+        renderedOrganisation = group.organisation;
+        renderedDepartment = null;
+        const organisationPeople = filtered.filter(emp => (emp.organisation || 'Unassigned organisation') === group.organisation).length;
+        rowsHtml += `<tr class="dept-row organisation-row"><td colspan="10" style="background:var(--primary);color:var(--primary-fg);font-size:13px;font-weight:800;letter-spacing:.03em;padding:8px 12px">${esc(group.organisation)} <span style="font-weight:500;opacity:.8;text-transform:none">· ${organisationPeople} ${organisationPeople === 1 ? 'person' : 'people'}</span></td></tr>`;
+      }
       const deptColor = resolveDeptColor(group.department) || PALETTE[allDepts.indexOf(group.department) % PALETTE.length];
-      rowsHtml += `<tr class="dept-row"><td colspan="10" style="background:${deptColor}22;border-bottom:1px solid ${deptColor};color:var(--text)">${esc(group.department)} <span style="font-weight:400;text-transform:none">/ ${esc(group.subdepartment)} · ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
+      if (group.department !== renderedDepartment) {
+        renderedDepartment = group.department;
+        const departmentCollapsed = collapsedPersonnelDepartments.has(personnelDepartmentKey(group.organisation, group.department));
+        const departmentPeople = filtered.filter(emp => (emp.organisation || 'Unassigned organisation') === group.organisation && (emp.department || 'Unassigned') === group.department).length;
+        rowsHtml += `<tr class="dept-row"><td colspan="10" style="background:${deptColor}22;border-bottom:2px solid ${deptColor};color:var(--text);font-weight:700"><button class="icon-btn" type="button" onclick="togglePersonnelDepartment(${esc(JSON.stringify(group.organisation))},${esc(JSON.stringify(group.department))})">${svgIcon(departmentCollapsed ? 'chevronRight' : 'chevronDown')}</button>${esc(group.department)} <span style="font-weight:400;text-transform:none">· ${departmentPeople} ${departmentPeople === 1 ? 'person' : 'people'}</span></td></tr>`;
+      }
+      if (collapsedPersonnelDepartments.has(personnelDepartmentKey(group.organisation, group.department))) continue;
+      const sectionName = group.list[0]?.section || group.list[0]?.subdepartment || group.subdepartment || '';
+      const processName = group.list[0]?.process || '';
+      const sectionHeading = [sectionName || 'Unassigned section', processName].filter(Boolean).join(' / ');
+      const sectionColor = resolveSectionColor(group.department, sectionName) || deptColor;
+      const sectionKey = personnelSectionKey(group.organisation, group.department, sectionName);
+      const sectionCollapsed = collapsedPersonnelSections.has(sectionKey);
+      rowsHtml += `<tr class="dept-row"><td colspan="10" style="background:color-mix(in srgb,${sectionColor} 16%,var(--surface));border-bottom:1px solid ${sectionColor};border-left:4px solid ${sectionColor};color:var(--text);padding-left:20px"><button class="icon-btn" type="button" aria-label="${sectionCollapsed ? 'Expand' : 'Collapse'} ${esc(sectionHeading)}" onclick="togglePersonnelSection(${esc(JSON.stringify(group.organisation))},${esc(JSON.stringify(group.department))},${esc(JSON.stringify(sectionName))})">${svgIcon(sectionCollapsed ? 'chevronRight' : 'chevronDown')}</button>${esc(sectionHeading)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
+      if (sectionCollapsed) continue;
       for (const emp of group.list) {
         const cats = (emp.categoryIds || []).map(catById).filter(Boolean);
-        rowsHtml += `<tr>
-          <td><div style="font-weight:500">${esc(emp.name)}</div>${cats.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px">${cats.map(catChip).join('')}</div>` : ''}</td>
+        const personnelColor = resolveProcessColor(emp.department || 'Unassigned', emp.section || emp.subdepartment || '', emp.process || '')
+          || (emp.team ? resolveSubdepartmentColor(emp.department || 'Unassigned', emp.team) : null)
+          || sectionColor;
+        rowsHtml += `<tr class="personnel-colored-row" style="--personnel-row-color:${personnelColor}" draggable="true" ondragstart="startPersonnelDrag(event,${emp.id})" ondragend="endPersonnelDrag(event)" ondragover="allowPersonnelDrop(event)" ondragleave="clearPersonnelDrop(event)" ondrop="dropPersonnel(event,${emp.id})">
+          <td><span class="personnel-drag-handle" title="Drag to reorder" aria-hidden="true">⋮⋮</span><div style="font-weight:500;display:inline">${esc(emp.name)}</div>${cats.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px">${cats.map(catChip).join('')}</div>` : ''}</td>
           <td class="muted">${esc(emp.email || '') || '<span class="sum-dash">—</span>'}</td>
           <td>${esc(emp.role || '')}</td>
-          <td class="muted">${esc(emp.department || '')}${emp.subdepartment ? `<div style="font-size:11px;margin-top:2px">${esc(emp.subdepartment)}</div>` : ''}${emp.level ? `<div style="font-size:11px;margin-top:2px">${esc(emp.level)}</div>` : ''}</td>
+          <td class="muted">${esc(employeeHierarchyLeaf(emp) || '')}${emp.level ? `<div style="font-size:11px;margin-top:2px">${esc(emp.level)}</div>` : ''}</td>
           <td class="muted">${emp.birthday ? esc(fmtMed(emp.birthday)) : '<span class="sum-dash">—</span>'}</td>
           <td class="muted">${emp.homeAddress ? esc(emp.homeAddress) : '<span class="sum-dash">—</span>'}</td>
           <td>${emp.phoneWork ? `<a class="tel-link" href="tel:${esc(emp.phoneWork)}">${esc(emp.phoneWork)}</a>` : '<span class="sum-dash">—</span>'}</td>
@@ -5647,11 +7028,32 @@ function renderEmployees() {
       ${categories.map(c => `<button class="filter-chip${empFilterCatId === c.id ? ' active' : ''}" onclick="empFilterCatId=${c.id};renderEmployees()"><span class="chip-dot" style="background:${c.color};display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px"></span>${esc(c.name)}</button>`).join('')}
     </div>` : ''}
     <div class="card mb-4" style="padding:12px">
+      <button class="btn btn-sm" type="button" onclick="hierarchyOrderExpanded=!hierarchyOrderExpanded;renderEmployees()" style="display:flex;align-items:center;gap:6px">
+        ${svgIcon(hierarchyOrderExpanded ? 'chevronDown' : 'chevronRight')} Hierarchy order
+      </button>
+      ${hierarchyOrderExpanded ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:12px">
+        <div>
+          <div style="font-size:13px;font-weight:700">Department order</div>
+          <div class="form-hint">Controls the department hierarchy in Schedule.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,220px));justify-content:start;gap:8px;margin-top:10px">
+            ${departmentOrderControls || '<span class="muted text-sm">Add at least two departments to manage their order.</span>'}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700">Sub-team order</div>
+          <div class="form-hint">Controls the sub-team hierarchy in Schedule. Employees without a sub-team remain first.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,220px));justify-content:start;gap:8px;margin-top:10px">
+            ${subdepartmentOrderControls || '<span class="muted text-sm">Add at least one sub-team to manage its order.</span>'}
+          </div>
+        </div>
+      </div>` : ''}
+    </div>
+    <div class="card mb-4" style="padding:12px">
       <button class="btn btn-sm" type="button" onclick="deptColorsExpanded=!deptColorsExpanded;renderEmployees()" style="display:flex;align-items:center;gap:6px">
-        ${svgIcon(deptColorsExpanded ? 'chevronDown' : 'chevronRight')} Department colors
+         ${svgIcon(deptColorsExpanded ? 'chevronDown' : 'chevronRight')} Department header colors
       </button>
       ${deptColorsExpanded
-        ? `<div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:10px">${deptSwatches || '<span class="muted text-sm">No departments yet.</span>'}</div><div class="form-hint" style="margin-top:10px">Team colors</div><div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:6px">${subdeptSwatches || '<span class="muted text-sm">No teams yet.</span>'}</div>`
+         ? `<div class="hierarchy-color-panel" style="max-height:300px;overflow:auto;padding-right:4px;margin-top:10px"><details data-color-group="departments"><summary style="cursor:pointer;font-size:12px;font-weight:700">Departments</summary><div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:6px">${deptSwatches || '<span class="muted text-sm">No departments yet.</span>'}</div></details><details data-color-group="sections" style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;font-weight:700">Sections</summary><div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:6px">${sectionSwatches || '<span class="muted text-sm">No sections yet.</span>'}</div></details><details data-color-group="processes" style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;font-weight:700">Processes</summary><div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:6px">${processSwatches || '<span class="muted text-sm">No processes yet.</span>'}</div></details><details data-color-group="teams" style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;font-weight:700">Teams</summary><div class="flex items-center gap-2" style="flex-wrap:wrap;margin-top:6px">${teamSwatches || '<span class="muted text-sm">No teams yet.</span>'}</div></details></div>`
         : ''}
     </div>
     <div class="card" style="padding:0;overflow:hidden">
@@ -5689,41 +7091,76 @@ function openEmpModal(id) {
   document.getElementById('ef-name').value = emp?.name || '';
   document.getElementById('ef-email').value = emp?.email || '';
   document.getElementById('ef-role').value = emp?.role || '';
+  document.getElementById('ef-organisation').value = emp?.organisation || '';
   document.getElementById('ef-dept').value = emp?.department || '';
-  document.getElementById('ef-subdept').value = emp?.subdepartment || '';
+  document.getElementById('ef-section').value = emp?.section || emp?.subdepartment || '';
+  document.getElementById('ef-process').value = emp?.process || '';
+  document.getElementById('ef-team').value = emp?.team || '';
+  updateEmployeeHierarchySuggestions();
+  ['ef-organisation', 'ef-dept', 'ef-section', 'ef-process'].forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) field.oninput = updateEmployeeHierarchySuggestions;
+  });
   document.getElementById('ef-level').value = emp?.level || '';
   document.getElementById('ef-birthday').value = emp?.birthday || '';
   document.getElementById('ef-address').value = emp?.homeAddress || '';
   document.getElementById('ef-phone-work').value = emp?.phoneWork || '';
   document.getElementById('ef-phone-priv').value = emp?.phonePrivate || '';
-  document.getElementById('ef-sort').value = emp?.sortOrder ?? '';
+  document.getElementById('ef-sort').value = emp?.sortOrder ?? nextAvailableEmployeeSortOrder();
+  document.getElementById('ef-shift-rotation').checked = emp?.includeInShiftRotation === true;
+  const shiftTeamSelect = document.getElementById('ef-shift-team');
+  shiftTeamSelect.innerHTML = `<option value="">Unassigned Shift Team</option>${normalizeShiftTeams(appSettings.shiftTeams).map(team => `<option value="${esc(team.id)}">${esc(team.name)}</option>`).join('')}`;
+  shiftTeamSelect.value = emp?.shiftTeamId || '';
   selectedEmpCatIds = emp ? [...(emp.categoryIds || [])] : [];
   buildEmpCategoryPicker();
   document.getElementById('emp-modal').classList.add('open');
   setTimeout(() => document.getElementById('ef-name').focus(), 50);
 }
+function setDataListOptions(id, values) {
+  const list = document.getElementById(id);
+  if (list) list.innerHTML = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb', { sensitivity: 'base' })).map(value => `<option value="${esc(value)}"></option>`).join('');
+}
+function updateEmployeeHierarchySuggestions() {
+  const organisation = document.getElementById('ef-organisation')?.value.trim() || '';
+  const department = document.getElementById('ef-dept')?.value.trim() || '';
+  const section = document.getElementById('ef-section')?.value.trim() || '';
+  const process = document.getElementById('ef-process')?.value.trim() || '';
+  setDataListOptions('ef-organisations', employees.map(emp => emp.organisation));
+  setDataListOptions('ef-departments', employees.filter(emp => !organisation || emp.organisation === organisation).map(emp => emp.department));
+  setDataListOptions('ef-sections', employees.filter(emp => (!organisation || emp.organisation === organisation) && (!department || emp.department === department)).map(emp => emp.section || emp.subdepartment));
+  setDataListOptions('ef-processes', employees.filter(emp => (!department || emp.department === department) && (!section || (emp.section || emp.subdepartment) === section)).map(emp => emp.process));
+  setDataListOptions('ef-teams', employees.filter(emp => (!department || emp.department === department) && (!section || (emp.section || emp.subdepartment) === section) && (!process || emp.process === process)).map(emp => emp.team));
+}
 async function saveEmployee() {
   const name = document.getElementById('ef-name').value.trim();
   const email = document.getElementById('ef-email').value.trim();
   const role = document.getElementById('ef-role').value.trim();
+  const organisation = document.getElementById('ef-organisation').value.trim();
   const dept = document.getElementById('ef-dept').value.trim();
-  const subdepartment = document.getElementById('ef-subdept').value.trim();
+  const section = document.getElementById('ef-section').value.trim();
+  const process = document.getElementById('ef-process').value.trim();
+  const team = document.getElementById('ef-team').value.trim();
   const level = document.getElementById('ef-level').value.trim();
   const birthday = document.getElementById('ef-birthday').value;
   const homeAddress = document.getElementById('ef-address').value.trim();
   const phoneWork = document.getElementById('ef-phone-work').value.trim();
   const phonePrivate = document.getElementById('ef-phone-priv').value.trim();
   const sortRaw = document.getElementById('ef-sort').value.trim();
-  if (!name || !email || !role || !dept) { alert('Name, email, role, and department are required.'); return; }
+  const includeInShiftRotation = document.getElementById('ef-shift-rotation').checked === true;
+  const shiftTeamId = document.getElementById('ef-shift-team').value;
+  if (!name || !email || !role) { alert('Name, email, and role are required.'); return; }
   let sortOrder;
   if (sortRaw !== '') {
     const n = parseInt(sortRaw, 10);
     if (isNaN(n) || n < 1 || n > 9999) { alert('Sort order must be a number between 1 and 9999.'); return; }
     sortOrder = n;
   }
+  if (sortOrder === undefined) sortOrder = editingEmpId
+    ? (normalizeEmployeeSortOrder(empById(editingEmpId)?.sortOrder) ?? nextAvailableEmployeeSortOrder(employees, editingEmpId))
+    : nextAvailableEmployeeSortOrder();
 
   await mutateState('saveEmployee', () => {
-    const rec = { name, email, role, department: dept, subdepartment, level, birthday, homeAddress, phoneWork, phonePrivate, sortOrder, categoryIds: [...selectedEmpCatIds] };
+    const rec = { name, email, role, organisation, department: dept, section, process, team, subdepartment: section, level, birthday, homeAddress, phoneWork, phonePrivate, sortOrder, categoryIds: [...selectedEmpCatIds], includeInShiftRotation, shiftTeamId };
     if (editingEmpId) {
       rec.id = editingEmpId;
       const idx = employees.findIndex(e => e.id === editingEmpId);
@@ -5732,10 +7169,42 @@ async function saveEmployee() {
       rec.id = nextEmpId++;
       employees.push(rec);
     }
+    ensureDepartmentOrders();
+    ensureSubdepartmentOrders();
     employees.sort((a, b) => a.name.localeCompare(b.name));
   }, { saveDisk: true });
 
   closeModal('emp-modal');
+  renderEmployees();
+}
+
+async function moveDepartment(dept, direction) {
+  const departments = orderedDepartments().filter(department => department !== 'Unassigned');
+  const fromIndex = departments.indexOf(dept);
+  const toIndex = fromIndex + Number(direction);
+  if (fromIndex < 0 || toIndex < 0 || toIndex >= departments.length) return;
+  await mutateState('moveDepartment', () => {
+    const reordered = [...departments];
+    [reordered[fromIndex], reordered[toIndex]] = [reordered[toIndex], reordered[fromIndex]];
+    reordered.forEach((department, index) => {
+      departmentOrder[department] = (index + 1) * 10;
+    });
+  }, { saveDisk: true });
+  renderEmployees();
+}
+
+async function moveSubdepartment(dept, subdept, direction) {
+  const teams = orderedSubdepartmentsFor(dept);
+  const fromIndex = teams.indexOf(subdept);
+  const toIndex = fromIndex + Number(direction);
+  if (fromIndex < 0 || toIndex < 0 || toIndex >= teams.length) return;
+  await mutateState('moveSubdepartment', () => {
+    const reordered = [...teams];
+    [reordered[fromIndex], reordered[toIndex]] = [reordered[toIndex], reordered[fromIndex]];
+    reordered.forEach((team, index) => {
+      subdepartmentOrder[subdepartmentOrderKey(dept, team)] = (index + 1) * 10;
+    });
+  }, { saveDisk: true });
   renderEmployees();
 }
 
@@ -5761,6 +7230,12 @@ function renderCategoryList() {
         </div>
       </div>`
     : `<div class="flex items-center justify-between" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px">
+    document.querySelectorAll('.hierarchy-color-panel details[data-color-group]').forEach(details => {
+      details.addEventListener('toggle', () => {
+        if (details.open) openPersonnelColorGroups.add(details.dataset.colorGroup);
+        else openPersonnelColorGroups.delete(details.dataset.colorGroup);
+      });
+    });
         <span class="chip" style="${chipStyle(cat.color)}"><span class="chip-dot" style="background:${cat.color}"></span>${esc(cat.name)}</span>
         <span class="flex gap-2">
           <button class="icon-btn" title="Edit" onclick="startEditCategory(${cat.id})"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l11.5-11.5a2.1 2.1 0 0 0-3-3z"/><path d="m14.5 6.5 3 3"/></svg></button>
@@ -5824,6 +7299,7 @@ function confirmDelete(kind, id) {
       for (const key of Object.keys(entriesMap)) if (key.startsWith(`${id}_`)) entriesMap[key] = null;
       for (const key of Object.keys(overtimeMap)) if (key.startsWith(`${id}_`)) overtimeMap[key] = null;
       for (const key of Object.keys(activityShiftsMap)) if (key.startsWith(`${id}_`)) activityShiftsMap[key] = null;
+      removeEmployeeRotationRelations(id);
       for (const act of activities) act.participants = act.participants.filter(p => p.id !== id);
     } else if (kind === 'activity') {
       activities = activities.filter(a => a.id !== id);
@@ -5975,7 +7451,7 @@ function staffingShiftIntervalsFor(empId, date) {
     if (date < activity.startDate || date > activity.endDate || (!activity.includeWeekends && isWknd(new Date(`${date}T00:00:00`)))) continue;
     const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
     if (!assignment.assigned || assignment.excluded || !assignment.shift) continue;
-    const shift = ['normal', 'day', 'night'].includes(assignment.shift) ? activityDefaultShift(assignment.shift, activity) : assignment.shift;
+    const shift = ['normal', 'day', 'evening', 'night'].includes(assignment.shift) ? activityDefaultShift(assignment.shift, activity) : assignment.shift;
     const interval = timeRangeInterval(shift);
     if (interval) intervals.push(interval);
   }
@@ -6699,6 +8175,20 @@ function setSummarySort(key) {
   else { summarySortKey = key; summarySortDir = key === 'name' ? 'asc' : 'desc'; }
   renderSummary();
 }
+function setSummarySortDirection(direction) {
+  summarySortDir = direction === 'asc' ? 'asc' : 'desc';
+  renderSummary();
+}
+function setSummaryViewMode(mode) {
+  summaryViewMode = mode === 'graph' ? 'graph' : 'table';
+  renderSummary();
+}
+function setSummaryGraphOption(kind, value) {
+  if (kind === 'metric') summaryGraphMetric = value;
+  if (kind === 'measure') summaryGraphMeasure = value === 'days' ? 'days' : 'hours';
+  if (kind === 'direction') summaryGraphDir = value === 'asc' ? 'asc' : 'desc';
+  renderSummary();
+}
 function renderSummary() {
   const range = summaryRange();
   const rows = computeSummaryRows(range.start, range.end);
@@ -6752,6 +8242,8 @@ function renderSummary() {
     .sort(([a], [b]) => a.localeCompare(b, 'nb', { sensitivity: 'base' }))
     .map(([team, teamRows]) => ({ team, rows: teamRows.sort(compareRows) }));
   const sorted = teamGroups.flatMap(group => group.rows);
+  const numericSort = summarySortKey !== 'people' && summarySortKey !== 'name';
+  const rankedRows = numericSort ? [...rows].sort(compareRows) : sorted;
 
   const sortIcon = col => svgIcon(summarySortKey !== col ? 'sort' : (summarySortDir === 'asc' ? 'chevronUp' : 'chevronDown'));
   const countPill = (count, color) => count > 0
@@ -6779,6 +8271,23 @@ function renderSummary() {
     ${visibleWorkCodes.map(code => `<th class="num" style="color:${code.color}" title="${esc(code.name)} · Full days and timed hours" data-sort="wc:${esc(code.id)}" onclick="setSummarySort(this.dataset.sort)">${esc(code.abbreviation || code.name)} <span style="opacity:.55">${sortIcon('wc:' + code.id)}</span></th>`).join('')}
     <th class="num" data-sort="total" onclick="setSummarySort(this.dataset.sort)" title="Full days and timed hours matching the selected columns">Total <span style="opacity:.55">${sortIcon('total')}</span></th>
   </tr>`;
+  const sortOptions = [
+    { key: 'people', label: 'Hierarchy' }, { key: 'name', label: 'Employee' },
+    ...visibleStatuses.map(item => ({ key: item.key, label: item.label })),
+    ...(hasAbsence ? [{ key: '__absence', label: 'Absence' }] : []),
+    ...(hasOoo ? [{ key: '__ooo', label: 'OOO' }] : []),
+    { key: '__overtime', label: 'Overtime' },
+    ...visibleWorkCodes.map(item => ({ key: `wc:${item.id}`, label: item.name })),
+    { key: 'total', label: 'Total' },
+  ];
+  const tableSortControls = `<div class="sum-sort-controls" aria-label="Table sorting">
+    <span class="sum-control-caption">Sort table</span>
+    <select class="plain-select" onchange="setSummarySort(this.value)">${sortOptions.map(item => `<option value="${esc(item.key)}" ${item.key === summarySortKey ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select>
+    <select class="plain-select" onchange="setSummarySortDirection(this.value)" aria-label="Sort direction">
+      <option value="desc" ${summarySortDir === 'desc' ? 'selected' : ''}>High to low</option>
+      <option value="asc" ${summarySortDir === 'asc' ? 'selected' : ''}>Low to high</option>
+    </select>
+  </div>`;
 
   const totalCols = 3 + visibleStatuses.length + visibleWorkCodes.length + (hasAbsence ? 1 : 0) + (hasOoo ? 1 : 0);
   const minibarFor = (items, field, label) => {
@@ -6811,9 +8320,11 @@ function renderSummary() {
       <td class="num">${measurePill(rowTotalMeasure(row), 'var(--text)')}</td>
     </tr>`;
   };
-  const bodyHtml = sorted.length ? teamGroups.map(group => `
-    <tr class="sum-team-row" data-team="${esc(group.team)}"><td colspan="${totalCols}">${esc(group.team)} · ${group.rows.length} ${group.rows.length === 1 ? 'employee' : 'employees'}</td></tr>
-    ${group.rows.map(employeeRowHtml).join('')}`).join('') : `<tr><td colspan="${totalCols}" class="empty-note">No data found for ${range.label}.</td></tr>`;
+  const bodyHtml = sorted.length ? (numericSort
+    ? `<tr class="sum-team-row"><td colspan="${totalCols}">Global ranking · ${rankedRows.length} employees</td></tr>${rankedRows.map(employeeRowHtml).join('')}`
+    : teamGroups.map(group => `
+      <tr class="sum-team-row" data-team="${esc(group.team)}"><td colspan="${totalCols}">${esc(group.team)} · ${group.rows.length} ${group.rows.length === 1 ? 'employee' : 'employees'}</td></tr>
+      ${group.rows.map(employeeRowHtml).join('')}`).join('')) : `<tr><td colspan="${totalCols}" class="empty-note">No data found for ${range.label}.</td></tr>`;
 
   const totals = sorted.reduce((acc, row) => {
     statuses.forEach(st => { acc.status[st.key] = addLoadMeasure(acc.status[st.key], statusMeasure(row, st.key)); });
@@ -6842,6 +8353,31 @@ function renderSummary() {
     return `<span><span class="dot" style="background:${code.color}"></span>${esc(code.name)}: <b style="color:var(--text)">${formatSummaryMeasure(total) || '0'}</b></span>`;
   }).join('') : '');
 
+  const graphMetricOptions = [
+    ...visibleStatuses.map(status => ({ key: status.key, label: status.label, color: status.color, measure: row => statusMeasure(row, status.key) })),
+    ...(hasAbsence ? [{ key: '__absence', label: 'Absence', color: '#dc2626', measure: row => flagMeasure(row, 'isAbsence') }] : []),
+    ...(hasOoo ? [{ key: '__ooo', label: 'OOO', color: '#7c3aed', measure: row => flagMeasure(row, 'isOutOfOffice') }] : []),
+    { key: '__overtime', label: 'Overtime', color: '#c2410c', measure: row => ({ units: 0, hours: row.overtimeHours }) },
+    ...visibleWorkCodes.map(code => ({ key: `wc:${code.id}`, label: code.name, color: code.color, measure: row => workCodeMeasure(row, code) })),
+    { key: 'total', label: 'Total', color: '#0f766e', measure: row => rowTotalMeasure(row) },
+  ];
+  const graphMetric = graphMetricOptions.find(item => item.key === summaryGraphMetric) || graphMetricOptions.at(-1);
+  summaryGraphMetric = graphMetric?.key || 'total';
+  const graphRows = [...rows].map(row => ({ row, value: graphMetric ? (graphMetric.measure(row)[summaryGraphMeasure] || 0) : 0 }))
+    .sort((a, b) => (summaryGraphDir === 'asc' ? a.value - b.value : b.value - a.value) || peopleOrder(a.row, b.row));
+  const graphMax = Math.max(1, ...graphRows.map(item => item.value));
+  const graphHtml = graphRows.length ? graphRows.map((item, index) => `
+    <div class="sum-rank-row">
+      <div class="sum-rank-num">${index + 1}</div>
+      <div class="sum-rank-person"><b>${esc(item.row.emp.name)}</b><span>${esc(item.row.emp.department || 'No team')}</span></div>
+      <div class="sum-rank-track"><div class="sum-rank-fill" style="width:${Math.max(item.value ? 2 : 0, item.value / graphMax * 100)}%;background:${graphMetric.color}"></div></div>
+      <div class="sum-rank-value">${formatHoursNumber(item.value)} ${summaryGraphMeasure === 'days' ? 'd' : 'h'}</div>
+    </div>`).join('') : '<div class="empty-note">No employees available for this period.</div>';
+  const graphControls = `<div class="sum-graph-controls">
+    <label>Metric <select class="plain-select" onchange="setSummaryGraphOption('metric',this.value)">${graphMetricOptions.map(item => `<option value="${esc(item.key)}" ${item.key === summaryGraphMetric ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></label>
+    <label>Unit <select class="plain-select" onchange="setSummaryGraphOption('measure',this.value)"><option value="days" ${summaryGraphMeasure === 'days' ? 'selected' : ''}>Days</option><option value="hours" ${summaryGraphMeasure === 'hours' ? 'selected' : ''}>Hours</option></select></label>
+    <label>Order <select class="plain-select" onchange="setSummaryGraphOption('direction',this.value)"><option value="desc" ${summaryGraphDir === 'desc' ? 'selected' : ''}>Highest first</option><option value="asc" ${summaryGraphDir === 'asc' ? 'selected' : ''}>Lowest first</option></select></label>
+  </div>`;
   document.getElementById('content').innerHTML = `
     <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:12px">
       <div>
@@ -6849,7 +8385,12 @@ function renderSummary() {
         <div class="page-sub">Selected statuses, absence totals, overtime, and Work Codes for ${range.label}. Period: ${range.subtitle}.</div>
       </div>
       <div class="year-nav" style="gap:8px">
+        ${summaryViewMode === 'table' ? tableSortControls : ''}
         <button class="btn" onclick="openSummaryColumns()">Columns</button>
+        <div class="sum-view-switch" role="group" aria-label="Summary view">
+          <button class="btn ${summaryViewMode === 'table' ? 'active' : ''}" onclick="setSummaryViewMode('table')">Table</button>
+          <button class="btn ${summaryViewMode === 'graph' ? 'active' : ''}" onclick="setSummaryViewMode('graph')">Graph</button>
+        </div>
         <select class="plain-select" onchange="setSummaryPeriod(this.value)" aria-label="Summary period">
           <option value="year" ${summaryPeriod === 'year' ? 'selected' : ''}>Full year</option>
           <option value="month" ${summaryPeriod === 'month' ? 'selected' : ''}>Month</option>
@@ -6860,13 +8401,13 @@ function renderSummary() {
         <button class="btn btn-icon" onclick="shiftSummaryPeriod(1)" aria-label="Next period">${svgIcon('chevronRight')}</button>
       </div>
     </div>
-    <div class="sum-wrap">
+    ${summaryViewMode === 'graph' ? `${graphControls}<div class="sum-graph">${graphHtml}</div>` : `<div class="sum-wrap">
       <table class="sum-table">
         <thead>${headHtml}</thead>
         <tbody>${bodyHtml}</tbody>
         ${footerHtml}
       </table>
-    </div>
+    </div>`}
     <div class="legend-row">${legend}</div>`;
 }
 
@@ -6898,6 +8439,8 @@ document.addEventListener('keydown', e => {
 
 // ═══ BOOT ════════════════════════════════════════════════════════════════════
 async function bootApp() {
+  loadSidebarMode();
+  loadAppZoom();
   loadSettings();
   loadGridPreferences();
   let storedRemoteSource = 'none';
@@ -6953,7 +8496,9 @@ async function bootApp() {
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
   updateDefaultJsonStatus();
-  applyTheme(); applyAppName(); updateSaveButton(); updateAutoSyncButton(); updateUndoButton();
+  updateShiftRotationNavigation();
+  updateWorkwheelNavigation();
+  applyTheme(); applyAppName(); applySidebarMode(); applyAppZoom(); updateSaveButton(); updateAutoSyncButton(); updateUndoButton();
   document.getElementById('af-start').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-end').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-start').addEventListener('input', updateActivityWeekLabels);
@@ -6962,7 +8507,7 @@ async function bootApp() {
   updateSbStatus();
   if (remoteUpdateSource === 'none') {
     setSyncStatusState('out-of-sync');
-    if (!configuredFileLoaded && !parsedLocalState) beginStartupFileSelection();
+    if (!configuredFileLoaded && !parsedLocalState) setStartupFileSelectionRequired(true);
     else if (!configuredFileLoaded) setStartupFileSelectionRequired(true);
     return;
   }
