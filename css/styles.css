@@ -167,6 +167,7 @@ body.dark .sb-link.unsaved-action:hover { background: #4a3815; color: #fcd34d; }
 .gh-week { background: color-mix(in srgb, var(--text) 2%, var(--surface)); color: var(--muted); border-bottom: 1px solid color-mix(in srgb, var(--text) 10%, var(--border)) !important; font-size: 9px; font-weight: 700; text-align: center; padding: 2px 0; }
 .gh-week.period-alt { background: color-mix(in srgb, var(--text) 7%, var(--surface)); color: var(--text); }
 .gh-day { background: var(--surface); font-size: 10px; color: var(--muted); text-align: center; height: 34px; padding: 0; width: var(--grid-day-width, 36px); min-width: var(--grid-day-width, 36px); }
+.gh-day { cursor:pointer; }
 .gh-day .dow { font-size: 8.5px; opacity: .75; display: block; }
 .gh-day.weekend { color: color-mix(in srgb, var(--muted) 88%, var(--text)); }
 .gh-day.weekend { color: color-mix(in srgb, var(--muted) 78%, var(--text)); }
@@ -176,6 +177,9 @@ body.dark .sb-link.unsaved-action:hover { background: #4a3815; color: #fcd34d; }
 body.dark .gh-day.holiday-col { background: #451a1a !important; color: #fca5a5; }
 .gday.status-cell.holiday-col { border-right: 1px solid color-mix(in srgb, var(--holiday-color, #ef4444) 16%, var(--border)) !important; border-bottom: 1px solid color-mix(in srgb, var(--holiday-color, #ef4444) 16%, var(--border)); }
 .gday.has-activity.holiday-col { border-bottom: 3px solid var(--activity-color, transparent) !important; }
+.gday.holiday-col.weekend { background:linear-gradient(color-mix(in srgb,var(--text) 9%,transparent),color-mix(in srgb,var(--text) 9%,transparent)),color-mix(in srgb,var(--holiday-color,#ef4444) 28%,var(--surface)) !important; }
+.gtable tbody .gday.holiday-col.weekend::after { content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--text) 10%,transparent);pointer-events:none;z-index:6; }
+.gh-day.holiday-col.weekend { background:linear-gradient(color-mix(in srgb,var(--text) 11%,transparent),color-mix(in srgb,var(--text) 11%,transparent)),color-mix(in srgb,var(--holiday-color,#ef4444) 30%,var(--surface)) !important; color:var(--weekend-text) !important; font-weight:800; }
 .gday.span-label-cell { overflow: visible; z-index: 4; }
 .grid-span-label { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); z-index: 5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; font-weight: 700; pointer-events: none; text-align: left; }
 .sticky-left { position: sticky; left: 0; z-index: 20; background: var(--surface); }
@@ -194,6 +198,7 @@ body.dark .gh-day.holiday-col { background: #451a1a !important; color: #fca5a5; 
 .cell-selected { outline: 2px solid var(--primary) !important; outline-offset: -2px; z-index: 10; }
 .holiday-range-selected { outline: 2px solid var(--destructive) !important; outline-offset: -2px; z-index: 10; }
 .activity-jump-focus { outline: 2px solid var(--accent-blue) !important; outline-offset: -2px; z-index: 10; }
+.jump-date-highlight { box-shadow:inset 2px 0 #f59e0b,inset -2px 0 #f59e0b !important; z-index:12 !important; }
 .gday-inner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 1; pointer-events: none; }
 .shift-symbol { position: absolute; left: 3px; top: 2px; z-index: 2; font-size: 10px; line-height: 1; pointer-events: none; }
 .activity-tag { position: absolute; left: 3px; bottom: 2px; z-index: 2; font-size: 8px; line-height: 1; font-weight: 700; padding: 1px 3px; border-radius: 4px; pointer-events: none; background: color-mix(in srgb, var(--muted-bg) 70%, transparent); color: var(--muted); }
@@ -467,6 +472,8 @@ body.dark .activity-past-toggle.active:hover { color: #0f1724; }
 .schedule-visibility-btn { padding:2px 7px; min-width:0; font-size:10px; line-height:1.2; }
 .schedule-section-header { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-width:0; }
 .schedule-section-controls { display:flex; align-items:center; justify-content:flex-end; flex-wrap:nowrap; flex:0 0 auto; gap:3px !important; }
+.schedule-date-jump-button { position:relative;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;cursor:pointer; }
+.schedule-date-jump-input { position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0; }
 .schedule-topbar-controls { flex-wrap:wrap; justify-content:flex-end; }
 .schedule-activity-controls { display:flex; align-items:center; gap:5px; padding:3px 6px; border:1px solid var(--border); border-radius:7px; background:color-mix(in srgb,var(--muted-bg) 42%,var(--surface)); }
 .schedule-corner-header { display:flex; flex-direction:column; align-items:stretch; gap:4px; width:100%; min-width:0; }

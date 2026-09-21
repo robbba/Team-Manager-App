@@ -68,6 +68,12 @@ Personnel receive an automatic employee order number when added. The number can 
 
 Dragging across dates creates a visible selection. **Remove from [activity]** removes only that activity from the selected dates; daily statuses and other activities remain. **Clear all selected cells** is the separate action for clearing everything in the selection. Both actions participate in Undo and browser recovery.
 
+The Schedule toolbar includes a section selector for shared workstations. Each browser stores its own selected section locally, so users can choose their own section without changing another workstation's view. The selection limits visible personnel, relevant activity rows, activity reports, and team schedule reports. Choose **All sections** to restore the complete schedule.
+
+Activities can optionally be marked as relevant to one or more Departments and Sections. An activity with no relevance targets is global. An activity with targets is shown only when the selected personnel or Schedule section matches those targets.
+
+The Activities header contains separate report buttons for **Team Work Schedule** and **Activity Schedule**. Team Work Schedule opens with all activities overlapping the selected period included; individual activities can be unchecked before previewing or printing.
+
 In Grid View, use **Import .ics holidays** in the Holidays section. Standard all-day `VEVENT` entries are shown for review before import. Only events in the active planner year are offered.
 
 ## Grid tools
@@ -83,3 +89,7 @@ In Grid View, use **Import .ics holidays** in the Holidays section. Standard all
 Settings → Manage Special Days supports recurring dates in `DD-MM` format, such as `04-07`, and one-off dates. Each entry can be edited, colored, and marked as non-working. Special days highlight the date headers, activity grid, employee cells, and a compact Special days row in the Holidays section. Their visual highlighting can be hidden without removing their capacity effect.
 
 Settings → Work schedule checks allows a boss password to be configured. After unlocking the local boss view, activity cells can be marked as checked against an external time system. Checked cells show a gray overlay and green checkmark only while the boss view is unlocked. The password gates the local UI; it does not encrypt the planner JSON.
+
+ATF administrative totals use the following rule: an ATF assignment using the standard Day or Night shift counts as one day when it represents 24 hours. An ATF assignment with a custom administrative interval shorter than 24 hours counts as the actual number of hours. The normal core-workday hours are not subtracted from ATF totals.
+
+Administration can enable the optional **Bug Report** sidebar page. Users can enter a description and reproduction steps and download a readable offline Markdown report. The report contains safe diagnostics only; it does not include planner records, contact details, or passwords.

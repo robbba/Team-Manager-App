@@ -52,6 +52,8 @@ function svgIcon(name, title = '') {
     sort: '<path d="m8 7 4-4 4 4M16 17l-4 4-4-4"/>',
     check: '<path d="m5 12 4 4L19 6"/>',
     report: '<path d="M5 20V10M12 20V4M19 20v-7"/>',
+    teamSchedule: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h6"/>',
+    cake: '<path d="M4 12h16v8H4z"/><path d="M4 16h16M8 12V9a2 2 0 0 1 4 0v3M12 12V8a2 2 0 0 1 4 0v4M7 5v2M12 4v2M17 5v2"/>',
     save: '<path d="M5 4h12l3 3v13H4V4z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/>',
     sync: '<path d="M20 4v6h-6"/><path d="M4 20v-6h6"/><path d="M6.5 9.5A7 7 0 0 1 19 10"/><path d="M17.5 14.5A7 7 0 0 1 5 14"/>',
   };
@@ -125,12 +127,23 @@ let appSettings = {
   shiftTeams: [],
   workwheelEnabled: false,
   workwheelUpcomingDays: 14,
+  bugReportEnabled: false,
+  bugTracker: [],
 };
 
 function normalizeHexColor(color, fallback = '#3b82f6') {
   if (typeof color !== 'string') return fallback;
   const value = color.trim();
   return /^#[0-9a-fA-F]{3,8}$/.test(value) ? value : fallback;
+}
+function normalizeBugTracker(value) {
+  return (Array.isArray(value) ? value : []).map((item, index) => ({
+    id: String(item?.id || `bug-${Date.now()}-${index}`),
+    date: /^\d{4}-\d{2}-\d{2}$/.test(String(item?.date || '')) ? String(item.date) : todayStr(),
+    poc: String(item?.poc || '').trim().slice(0, 120),
+    description: String(item?.description || '').trim().slice(0, 4000),
+    createdAt: String(item?.createdAt || ''),
+  })).filter(item => item.poc || item.description);
 }
 function normalizeShiftTemplates(value) {
   const source = Array.isArray(value) && value.length ? value : DEFAULT_SHIFT_TEMPLATES;
@@ -203,8 +216,12 @@ function loadSettings() {
       appSettings.shiftRotationRanges = normalizeShiftRotationRanges(parsed.shiftRotationRanges);
       appSettings.shiftRotationColors = normalizeShiftRotationColors(parsed.shiftRotationColors);
       appSettings.shiftTeams = normalizeShiftTeams(parsed.shiftTeams);
+      appSettings.bugReportEnabled = parsed.bugReportEnabled === true;
+      appSettings.bugTracker = normalizeBugTracker(parsed.bugTracker);
       appSettings.workwheelEnabled = parsed.workwheelEnabled === true;
       appSettings.workwheelUpcomingDays = Number.isFinite(Number(parsed.workwheelUpcomingDays)) ? Math.max(1, Math.min(365, Math.round(Number(parsed.workwheelUpcomingDays)))) : 14;
+      appSettings.bugReportEnabled = parsed.bugReportEnabled === true;
+      appSettings.bugTracker = normalizeBugTracker(parsed.bugTracker);
       return;
     }
     appSettings.darkMode = lsGet(LEGACY_THEME_KEY) === 'dark';
@@ -289,6 +306,27 @@ function normalizeActivityTypes(value) {
     abbreviation: String(type.abbreviation || type.abbr || '').trim().toUpperCase().slice(0, 8),
     color: normalizeHexColor(type.color),
   }));
+}
+function normalizeActivityRelevance(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const values = item => [...new Set((Array.isArray(item) ? item : []).map(value => String(value || '').trim()).filter(Boolean))];
+  return { departments: values(source.departments), sections: values(source.sections) };
+}
+function activityRelevance(activity) {
+  return normalizeActivityRelevance(activity?.relevance || { departments: activity?.departments, sections: activity?.sections });
+}
+function employeeSection(employee) { return String(employee?.section || employee?.subdepartment || '').trim(); }
+function activityRelevantToEmployee(activity, employee) {
+  if (!activity || !employee) return false;
+  const relevance = activityRelevance(activity);
+  return (!relevance.departments.length || relevance.departments.includes(String(employee.department || '').trim()))
+    && (!relevance.sections.length || relevance.sections.includes(employeeSection(employee)));
+}
+function activityVisibleForScheduleSection(activity) {
+  if (!scheduleSectionFilter) return true;
+  const matchingEmployees = employees.filter(employee => employeeSection(employee) === scheduleSectionFilter);
+  return (activity.participants || []).some(participant => matchingEmployees.some(employee => employee.id === Number(participant.id)))
+    || activityRelevance(activity).sections.includes(scheduleSectionFilter);
 }
 function normalizeWorkCodes(value) {
   const source = Array.isArray(value) && value.length ? value : DEFAULT_WORK_CODES;
@@ -498,6 +536,7 @@ const APP_ZOOM_KEY = 'teamManagerAppZoom';
 const GRID_HIDDEN_EMPLOYEES_KEY = 'teamManagerGridHiddenEmployees';
 const GRID_VIEW_MODE_KEY = 'teamManagerGridViewMode';
 const GRID_SECTION_COLLAPSE_KEY = 'teamManagerGridCollapsedSections';
+const GRID_SECTION_FILTER_KEY = 'teamManagerGridSectionFilter';
 function normalizeGridViewMode(value) {
   return ['all', 'timeline', 'employees'].includes(value) ? value : 'all';
 }
@@ -564,6 +603,7 @@ function loadGridPreferences() {
     period: lsGet(GRID_PERIOD_KEY) || 'year',
     collapsedSections: savedCollapsed,
   }, { resetMissing: true });
+  scheduleSectionFilter = lsGet(GRID_SECTION_FILTER_KEY) || '';
 }
 function saveGridPreferences() {
   lsSet(GRID_YEAR_KEY, String(gridYear));
@@ -571,6 +611,7 @@ function saveGridPreferences() {
   lsSet(GRID_VIEW_MODE_KEY, gridViewMode);
   lsSet(GRID_PERIOD_KEY, gridPeriod);
   lsSet(GRID_SECTION_COLLAPSE_KEY, JSON.stringify(collapsedGridSections));
+  lsSet(GRID_SECTION_FILTER_KEY, scheduleSectionFilter);
 }
 function applyTheme() {
   document.body.classList.toggle('dark', appSettings.darkMode);
@@ -658,8 +699,18 @@ function openAdministrationSettings() {
   document.getElementById('set-admin-password').value = '';
   document.getElementById('boss-session-status').textContent = bossSessionActive ? 'Boss View is unlocked.' : 'Boss View is locked.';
   const info = document.getElementById('admin-audit-info');
+  document.getElementById('set-bug-report-enabled').checked = appSettings.bugReportEnabled === true;
   if (info) info.innerHTML = `Active file: <b>${esc(activeFileName || 'None')}</b><br>Source: <b>${esc(remoteUpdateSource)}</b><br>Status: <b>${hasUnsavedChanges ? 'Unsaved changes' : 'Saved'}</b><br>App version: <b>${esc(APP_VERSION)}</b><br>Data format: <b>v${DATA_VERSION}</b>`;
   document.getElementById('administration-settings-modal').classList.add('open');
+}
+async function saveAdministrationSettings() {
+  await mutateState('saveAdministrationSettings', () => {
+    appSettings.bugReportEnabled = document.getElementById('set-bug-report-enabled').checked === true;
+    persistSettings();
+  });
+  if (!appSettings.bugReportEnabled && currentPage === 'bug-report') currentPage = 'grid';
+  closeModal('administration-settings-modal');
+  renderPage();
 }
 function openScheduleSettings() {
   closeModal('settings-modal');
@@ -936,6 +987,15 @@ function openSpecialDaysModal() {
   document.getElementById('special-days-visible').checked = appSettings.specialDaysVisible !== false;
   renderSpecialDaysList();
   document.getElementById('special-days-modal').classList.add('open');
+}
+function openSpecialDayForDate(date) {
+  if (!isValidIsoDate(date)) return;
+  openSpecialDaysModal();
+  document.getElementById('special-day-kind').value = 'oneOff';
+  document.getElementById('special-day-date').value = date;
+  document.getElementById('special-day-name').value = '';
+  toggleSpecialDayFields();
+  setTimeout(() => document.getElementById('special-day-name')?.focus(), 50);
 }
 function closeSpecialDaysModal() { document.getElementById('special-days-modal')?.classList.remove('open'); }
 function resetSpecialDayForm() {
@@ -1380,6 +1440,13 @@ function toggleShowOnlyConfirmedActivities(checked) {
 }
 function setGridViewMode(mode) {
   gridViewMode = normalizeGridViewMode(mode);
+  saveGridPreferences();
+  renderPage();
+}
+function setScheduleSectionFilter(value) {
+  scheduleSectionFilter = String(value || '');
+  hiddenEmployees = new Set([...hiddenEmployees].filter(id => sortedEmployees().some(employee => employee.id === id)));
+  activityPageOffset = 0;
   saveGridPreferences();
   renderPage();
 }
@@ -1965,13 +2032,65 @@ function remapLeadingRelationIds(map, idRemap) {
   }));
 }
 
+function validatedPlannerPayload(payloadData) {
+  validatePlannerData(payloadData);
+  const payload = JSON.stringify(payloadData, null, 2);
+  if (!payload.trim()) throw new Error('Refusing to save an empty planner file.');
+  const parsed = JSON.parse(payload);
+  validatePlannerData(parsed);
+  return payload;
+}
+async function replacePlannerFileContents(handle, payload) {
+  const blob = new Blob([payload], { type: 'application/json' });
+  const writable = await handle.createWritable({ keepExistingData: true });
+  try {
+    await writable.write({ type: 'write', position: 0, data: blob });
+    await writable.write({ type: 'truncate', size: blob.size });
+    await writable.close();
+  } catch (err) {
+    try { await writable.abort(); } catch (abortErr) { }
+    throw err;
+  }
+}
+async function verifyPlannerFileContents(handle, expectedPayload) {
+  const savedFile = await handle.getFile();
+  const savedText = await savedFile.text();
+  if (!savedText.trim()) throw new Error('Save verification failed: the planner file is empty.');
+  const parsed = JSON.parse(savedText);
+  validatePlannerData(parsed);
+  if (savedText !== expectedPayload) throw new Error('Save verification failed: the planner file does not match the data written.');
+}
+async function preserveLastKnownGoodPlanner(handle, originalText) {
+  if (!originalText?.trim()) return false;
+  const originalData = JSON.parse(originalText);
+  validatePlannerData(originalData);
+  const directoryHandle = await loadStoredPlannerDirectoryHandle();
+  if (!directoryHandle || typeof directoryHandle.getDirectoryHandle !== 'function') return false;
+  if (typeof directoryHandle.queryPermission === 'function') {
+    const permission = await directoryHandle.queryPermission({ mode: 'readwrite' });
+    if (permission !== 'granted') return false;
+  }
+  if (typeof directoryHandle.resolve === 'function') {
+    const relativePath = await directoryHandle.resolve(handle);
+    if (!Array.isArray(relativePath) || relativePath.length !== 1) return false;
+  }
+  const backupsDirectory = await directoryHandle.getDirectoryHandle('backups', { create: true });
+  const safeName = String(handle.name || 'planner.json').replace(/[^A-Za-z0-9._-]/g, '_');
+  const backupHandle = await backupsDirectory.getFileHandle(`last-known-good-${safeName}`, { create: true });
+  await replacePlannerFileContents(backupHandle, originalText);
+  await verifyPlannerFileContents(backupHandle, originalText);
+  return true;
+}
+
 async function writeLocalBackupFile(handle) {
   const localSnapshot = snapshotData();
   let mergedWithDisk = false;
   let entityConflicts = [];
+  let originalText = '';
   try {
     const diskFile = await handle.getFile();
     const diskText = await diskFile.text();
+    originalText = diskText;
     if (diskText && diskText.trim()) {
       const parsedDiskData = JSON.parse(diskText);
       validatePlannerData(parsedDiskData);
@@ -2030,8 +2149,8 @@ async function writeLocalBackupFile(handle) {
   for (const key of Object.keys(activityShiftsMap)) if (activityShiftsMap[key] === null) delete activityShiftsMap[key];
   const persistedShiftRotationMap = withoutNullMap(shiftRotationMap);
 
-  lastSyncTime = new Date().toISOString();
-  localSnapshot.savedAt = lastSyncTime;
+  const saveTimestamp = new Date().toISOString();
+  localSnapshot.savedAt = saveTimestamp;
   const payloadData = {
     ...localSnapshot,
     employees, activities,
@@ -2040,12 +2159,16 @@ async function writeLocalBackupFile(handle) {
     activityShiftsMap: isObjectMap(activityShiftsMap),
     shiftRotationMap: persistedShiftRotationMap,
   };
-  const payload = JSON.stringify(payloadData, null, 2);
-  validatePlannerData(payloadData);
-  const writable = await handle.createWritable();
+  const payload = validatedPlannerPayload(payloadData);
   try {
-    await writable.write(payload);
-    await writable.close();
+    await preserveLastKnownGoodPlanner(handle, originalText);
+  } catch (backupError) {
+    console.warn('Could not create the last-known-good backup before saving:', backupError?.message || backupError);
+  }
+  try {
+    await replacePlannerFileContents(handle, payload);
+    await verifyPlannerFileContents(handle, payload);
+    lastSyncTime = saveTimestamp;
     for (const key of Object.keys(shiftRotationMap)) if (shiftRotationMap[key] === null) delete shiftRotationMap[key];
     baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
     if (mergedWithDisk) {
@@ -2056,7 +2179,14 @@ async function writeLocalBackupFile(handle) {
       setTimeout(() => alert(`Your changes were saved along with new updates from your colleagues.${conflictNote}`), 0);
     }
   } catch (err) {
-    try { await writable.abort(); } catch (abortErr) { }
+    if (originalText?.trim()) {
+      try {
+        await replacePlannerFileContents(handle, originalText);
+        await verifyPlannerFileContents(handle, originalText);
+      } catch (restoreError) {
+        console.error('Could not restore the previous planner file after a failed save:', restoreError);
+      }
+    }
     throw err;
   }
 }
@@ -2215,7 +2345,10 @@ async function applyLoadedPlannerData(parsed, options = {}) {
 
 async function loadDataFile(file, handle, options = {}) {
   const text = await file.text();
-  const parsed = text.trim() ? JSON.parse(text) : { employees: [], activities: [], statuses: [] };
+  if (!text.trim()) {
+    throw new Error('The selected JSON file is empty. Choose a valid planner backup instead of opening it as a blank planner.');
+  }
+  const parsed = JSON.parse(text);
   validatePlannerData(parsed);
   await applyLoadedPlannerData(parsed, {
     handle,
@@ -2349,6 +2482,7 @@ let summaryGraphMeasure = 'hours';
 let summaryGraphDir = 'desc';
 let summaryColumnsDraft = null;
 let empSearch = '', empFilterDept = '', empFilterCatId = null;
+let scheduleSectionFilter = '';
 let deptColorsExpanded = false;
 let collapsedPersonnelSections = new Set();
 let collapsedPersonnelDepartments = new Set();
@@ -2373,6 +2507,7 @@ let rotationDragSelection = null;
 let nextEmpId = 1, nextActId = 1, nextStatusId = 1, nextCatId = 1;
 
 let pickerEmpId = null, pickerDate = null, pickerSelectedStatus = null;
+let pickerStatusLifecycle = 'confirmed';
 let pickerDates = [];
 let pendingActivityPreset = null;
 let quickActivityTypeReturn = false;
@@ -2396,7 +2531,9 @@ let pendingRemoteRefreshData = null;
 let pendingRemoteRefreshSavedAt = null;
 let syncStatusState = 'updated';
 let startupFileSelectionRequired = false;
+let startupRecoveredDataAvailable = false;
 let bossSessionActive = false;
+let teamReportSelectedActivityIds = null;
 
 // ═══ STATE MUTATION ENGINE ═══════════════════════════════════════════════════
 async function mutateState(actionName, updateFn, options = { saveDisk: true }) {
@@ -2579,6 +2716,7 @@ function loadFromData(data) {
     a.order = a.order || '';
     a.billing = a.billing || '';
     a.type = a.type || '';
+    a.relevance = normalizeActivityRelevance(a.relevance || { departments: a.departments, sections: a.sections });
     a.eveningShift = a.eveningShift || '1200-2000';
     a.status = activityStatus(a);
     return a;
@@ -2707,6 +2845,7 @@ function snapshotData() {
     shiftTemplates: appSettings.shiftTemplates || [],
     summaryColumns: appSettings.summaryColumns,
     employees, categories, statuses: snapshotStatuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, shiftRotationMap, overtimeMap, cellNotesMap, workScheduleChecksMap,
+      bugTracker: normalizeBugTracker(appSettings.bugTracker),
     nextEmpId, nextActId, nextStatusId, nextCatId,
   };
 }
@@ -2765,6 +2904,7 @@ async function saveData() {
     } else if (!message.includes('selected')) {
       message += ' Please ensure a JSON file is selected.';
     }
+    console.error('Save failed:', err);
     alert(message);
     updateSaveButton();
   } finally {
@@ -2876,19 +3016,12 @@ async function createBackupIfNeeded(options = {}) {
   }
   const payloadData = persistableSnapshotData();
   payloadData.savedAt = new Date().toISOString();
-  validatePlannerData(payloadData);
-  const payload = JSON.stringify(payloadData, null, 2);
+  const payload = validatedPlannerPayload(payloadData);
   try {
     const backupsDirectoryHandle = await directoryHandle.getDirectoryHandle('backups', { create: true });
     const backupFileHandle = await backupsDirectoryHandle.getFileHandle(`backup-${todayStr()}.json`, { create: true });
-    const writable = await backupFileHandle.createWritable();
-    try {
-      await writable.write(payload);
-      await writable.close();
-    } catch (err) {
-      try { await writable.abort(); } catch (abortErr) { }
-      throw err;
-    }
+    await replacePlannerFileContents(backupFileHandle, payload);
+    await verifyPlannerFileContents(backupFileHandle, payload);
     lsSet(LAST_BACKUP_TIMESTAMP_KEY, payloadData.savedAt);
     return true;
   } catch (err) {
@@ -2977,13 +3110,15 @@ function empById(id) { return employees.find(e => e.id === id) || null; }
 function getEntryObj(key) {
   const v = entriesMap[key];
   if (!v) return null;
-  if (typeof v === 'string') return { status: v, durationType: 'fullday', time: null };
+  if (typeof v === 'string') return { status: v, durationType: 'fullday', time: null, lifecycle: 'confirmed' };
   return {
     ...v,
     durationType: v.durationType || (String(v.time || '').trim() ? 'time' : 'fullday'),
     time: v.time || null,
+    lifecycle: v.lifecycle === 'planned' ? 'planned' : 'confirmed',
   };
 }
+function statusEntryIsPlanned(entry) { return entry?.lifecycle === 'planned'; }
 function statusStyle(color) { return `background:${color}20;color:${color};border-color:${color}50`; }
 function chipStyle(color) { return `background:${color}20;border-color:${color}60;color:${color}`; }
 function friendlyStatusLabel(key) {
@@ -3131,7 +3266,7 @@ function participantActivityShift(act, empId, dateString) {
   return dateString ? activityAssignmentShift(`${empId}_${dateString}_${act.id}`) : '';
 }
 function activityHasScheduledShift(act, empId, start, end) {
-  if (activityStatus(act) !== 'confirmed') return false;
+  if (activityStatus(act) === 'cancelled') return false;
   const prefix = `${empId}_`;
   const suffix = `_${act.id}`;
   return Object.keys(activityShiftsMap).some(key => {
@@ -3140,7 +3275,8 @@ function activityHasScheduledShift(act, empId, start, end) {
     if (date < start || date > end) return false;
     // Respect includeWeekends flag: if activity is weekday-only, skip weekend shifts
     if (!act.includeWeekends && isWknd(new Date(`${date}T00:00:00`))) return false;
-    return Boolean(activityAssignment(key).workCodeId);
+    const assignment = activityAssignment(key);
+    return assignment.assigned === true && assignment.excluded !== true && Boolean(assignment.shift);
   });
 }
 function pruneImplicitDefaultActivityShifts() {
@@ -3448,14 +3584,22 @@ function employeeHierarchyPath(employee, options = {}) {
 function employeeProcessPath(employee) {
   return [employee?.organisation, employee?.department, employee?.section || employee?.subdepartment, employee?.process].filter(Boolean).join('\u0000');
 }
+function employeeNameForDisplay(employee, maxLength = 30) {
+  const name = String(employee?.name || '').trim();
+  const characters = Array.from(name);
+  if (characters.length <= maxLength) return name;
+  return `${characters.slice(0, Math.max(1, maxLength - 1)).join('')}…`;
+}
 function displayEmployeeName(employee) {
   const rank = appSettings.showLevelRankInSchedule !== false ? String(employee?.level || '').trim() : '';
-  return [rank, employee?.name || ''].filter(Boolean).join(' ');
+  return [rank, employeeNameForDisplay(employee)].filter(Boolean).join(' ');
 }
 function displayEmployeeNameMarkup(employee) {
-  const name = esc(employee?.name || '');
+  const fullName = String(employee?.name || '').trim();
+  const name = esc(employeeNameForDisplay(employee));
   const rank = appSettings.showLevelRankInSchedule !== false ? String(employee?.level || '').trim() : '';
-  return rank ? `<strong class="employee-rank">${esc(rank)}</strong> ${name}` : name;
+  const content = rank ? `<strong class="employee-rank">${esc(rank)}</strong> ${name}` : name;
+  return `<span title="${esc(fullName)}">${content}</span>`;
 }
 function employeeHierarchyLeaf(employee) {
   return [employee?.section || employee?.subdepartment, employee?.process, employee?.team].filter(Boolean).join(' / ');
@@ -3479,12 +3623,12 @@ function comparePersonnelHierarchy(left, right) {
     String(left?.name || '').localeCompare(String(right?.name || ''), 'nb', { sensitivity: 'base' });
 }
 function sortedEmployees() {
-  return [...employees].sort(comparePersonnelHierarchy);
+  return [...employees].filter(employee => !scheduleSectionFilter || employeeSection(employee) === scheduleSectionFilter).sort(comparePersonnelHierarchy);
 }
 function deptGroups() {
   const byDept = new Map();
   for (const emp of employees) {
-    if (hiddenEmployees.has(emp.id)) continue;
+    if (hiddenEmployees.has(emp.id) || (scheduleSectionFilter && employeeSection(emp) !== scheduleSectionFilter)) continue;
     const department = emp.department || 'Unassigned';
     const subdepartment = employeeHierarchyLeaf(emp);
     const key = `${department}\u0000${subdepartment}`;
@@ -3694,11 +3838,15 @@ function setStartupFileSelectionRequired(required) {
     if (content) {
       content.style.cssText = 'flex:1;overflow:auto;padding:24px;display:flex;align-items:center;justify-content:center';
       content.innerHTML = `
-        <div class="card" style="max-width:520px;padding:20px">
-          <h3 style="margin-bottom:8px">Choose your data file</h3>
-          <p class="muted" style="line-height:1.5">Open an existing planner JSON or create a blank planner to get started.</p>
+        <div class="card" style="width:min(520px,100%);padding:20px">
+          <div style="width:min(460px,100%);margin:0 auto 18px;padding:10px;background:#000;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.24)">
+            <img src="assets/atlas-logo.jpg" alt="ATLAS — Adaptive Timeline, Load and Allocation System" style="display:block;width:100%;height:auto;object-fit:contain;border-radius:6px">
+          </div>
+          <h3 style="margin-bottom:8px;text-align:center">Choose your data file</h3>
+          <p class="muted" style="line-height:1.5;text-align:center">Open an existing planner JSON or create a blank planner to get started.</p>
           <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-primary" type="button" onclick="beginStartupFileSelection()">Choose JSON file</button>
+            ${startupRecoveredDataAvailable ? '<button class="btn" type="button" onclick="continueWithRecoveredData()">Use recovered data</button>' : ''}
             <button class="btn" type="button" onclick="createBlankPlanner()" style="margin-left:8px">Create blank planner</button>
           </div>
         </div>`;
@@ -3712,6 +3860,11 @@ function completeStartupFileSelection() {
 }
 function beginStartupFileSelection() {
   importData({ required: true });
+}
+function continueWithRecoveredData() {
+  startupRecoveredDataAvailable = false;
+  completeStartupFileSelection();
+  showToast('Using recovered browser data. Save it to a new JSON file before editing.', 7000);
 }
 async function createBlankPlanner() {
   try {
@@ -3764,6 +3917,7 @@ async function loadExampleTestData() {
 function nav(page) {
   if (page === 'shift-rotation' && appSettings.shiftRotationEnabled !== true) page = 'grid';
   if (page === 'workwheel' && appSettings.workwheelEnabled !== true) page = 'grid';
+  if (page === 'bug-report' && appSettings.bugReportEnabled !== true) page = 'grid';
   if (page === 'shift-rotation' && currentPage !== 'shift-rotation') shiftRotationInitialScrollPending = true;
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
@@ -3782,10 +3936,17 @@ function updateWorkwheelNavigation() {
     btn.classList.toggle('active', currentPage === 'workwheel');
   });
 }
+function updateBugReportNavigation() {
+  document.querySelectorAll('.bug-report-nav').forEach(btn => {
+    btn.style.display = appSettings.bugReportEnabled === true ? '' : 'none';
+    btn.classList.toggle('active', currentPage === 'bug-report');
+  });
+}
 function renderPage() {
   renderSbToday();
   updateShiftRotationNavigation();
   updateWorkwheelNavigation();
+  updateBugReportNavigation();
   const content = document.getElementById('content');
   if (currentPage === 'grid' || currentPage === 'shift-rotation') {
     content.style.cssText = 'padding:0;overflow:hidden;display:flex;flex-direction:column;height:100%';
@@ -3798,6 +3959,43 @@ function renderPage() {
   else if (currentPage === 'shift-rotation') renderShiftRotation();
   else if (currentPage === 'workwheel') renderWorkwheel();
   else if (currentPage === 'status-board') renderStatusBoard();
+  else if (currentPage === 'bug-report') renderBugReport();
+}
+function renderBugReport() {
+  const content = document.getElementById('content');
+  const bugs = normalizeBugTracker(appSettings.bugTracker).sort((a, b) => b.date.localeCompare(a.date));
+  const rows = bugs.length ? bugs.map(bug => '<tr><td>' + esc(bug.date) + '</td><td>' + esc(bug.poc) + '</td><td style="white-space:pre-wrap;min-width:360px">' + esc(bug.description) + '</td><td style="white-space:nowrap"><button class="btn btn-sm" onclick="editBugTrackerEntry(\'' + esc(bug.id) + '\')">Edit</button><button class="btn btn-sm btn-danger" style="margin-left:5px" onclick="deleteBugTrackerEntry(\'' + esc(bug.id) + '\')">Delete</button></td></tr>').join('') : '<tr><td colspan="4" class="empty-note">No bug reports recorded.</td></tr>';
+  content.innerHTML = `<div class="page-title">Bug Tracker</div><div class="page-sub">Record software issues for follow-up.</div><div class="card" style="max-width:1000px;margin-top:20px"><div class="form-row-2"><div class="form-row" style="margin:0"><label>Date *</label><input id="bug-report-date" type="date" value="${todayStr()}"></div><div class="form-row" style="margin:0"><label>POC *</label><input id="bug-report-poc" placeholder="Person responsible"></div></div><div class="form-row"><label>Bug description *</label><textarea id="bug-report-description" rows="5" placeholder="Describe the issue and expected behavior."></textarea></div><div class="modal-actions"><button class="btn btn-primary" onclick="saveBugTrackerEntry()">Save</button><button class="btn" onclick="clearBugTrackerForm()">Cancel</button></div></div><div class="card" style="max-width:1000px;margin-top:16px;padding:0;overflow:hidden"><div style="overflow:auto"><table class="list-table"><thead><tr><th>Date</th><th>POC</th><th>Bug description</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+async function saveBugTrackerEntry() {
+  const date = document.getElementById('bug-report-date')?.value || '';
+  const poc = document.getElementById('bug-report-poc')?.value.trim() || '';
+  const description = document.getElementById('bug-report-description')?.value.trim() || '';
+  if (!date || !poc || !description) { alert('Date, POC, and bug description are required.'); return; }
+  await mutateState('saveBugTrackerEntry', () => { appSettings.bugTracker = [...normalizeBugTracker(appSettings.bugTracker), { id: `bug-${Date.now()}`, date, poc, description, createdAt: new Date().toISOString() }]; persistSettings(); });
+  renderBugReport();
+}
+function clearBugTrackerForm() { renderBugReport(); }
+function editBugTrackerEntry(id) {
+  const bug = normalizeBugTracker(appSettings.bugTracker).find(item => item.id === id);
+  if (!bug) return;
+  const date = prompt('Date (YYYY-MM-DD):', bug.date); if (date === null) return;
+  const poc = prompt('POC:', bug.poc); if (poc === null) return;
+  const description = prompt('Bug description:', bug.description); if (description === null) return;
+  if (!date.trim() || !poc.trim() || !description.trim()) return;
+  mutateState('editBugTrackerEntry', () => { appSettings.bugTracker = normalizeBugTracker(appSettings.bugTracker).map(item => item.id === id ? { ...item, date: date.trim(), poc: poc.trim(), description: description.trim() } : item); persistSettings(); }).then(renderBugReport);
+}
+function deleteBugTrackerEntry(id) {
+  if (!confirm('Delete this bug report?')) return;
+  mutateState('deleteBugTrackerEntry', () => { appSettings.bugTracker = normalizeBugTracker(appSettings.bugTracker).filter(item => item.id !== id); persistSettings(); }).then(renderBugReport);
+}
+function downloadBugReport() {
+  const description = document.getElementById('bug-report-description')?.value.trim() || '';
+  const steps = document.getElementById('bug-report-steps')?.value.trim() || '';
+  if (!description) { alert('Please describe the problem first.'); return; }
+  const report = `# ATLAS Bug Report\n\n## Description\n${description}\n\n## Reproduction steps\n${steps || 'Not provided'}\n\n## Diagnostics\n- Time: ${new Date().toISOString()}\n- App version: ${APP_VERSION}\n- Data format: ${DATA_VERSION}\n- Active page: ${currentPage}\n- Browser: ${navigator.userAgent}\n- Active file: ${activeFileName || 'None'}\n`;
+  const url = URL.createObjectURL(new Blob([report], { type: 'text/markdown;charset=utf-8' }));
+  const link = document.createElement('a'); link.href = url; link.download = `atlas-bug-report-${fmt(new Date())}.md`; link.click(); URL.revokeObjectURL(url);
 }
 
 function rotationShiftMeta(shift) {
@@ -4109,6 +4307,7 @@ function renderGrid() {
       ? Math.min(96, Math.max(48, Math.floor((window.innerWidth - 300) / Math.max(1, days.length))))
       : 36;
   const today = todayStr();
+  const scheduleSections = [...new Set(employees.map(employeeSection).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb', { sensitivity: 'base' }));
 
   let monthCells = '', weekCells = '', dayCells = '';
   let mLabel = '', mCount = 0, mIndex = 0;
@@ -4125,12 +4324,12 @@ function renderGrid() {
     const ds = fmt(d);
     const holiday = displayedHolidayFor(ds);
     const holidayIntensity = holiday?.isSpecialDay ? '41%' : '16%';
-    const holidayStyle = holiday ? `background:color-mix(in srgb,${holiday.color || '#ef4444'} ${holidayIntensity},var(--surface)) !important;color:${holiday.color || '#ef4444'} !important;` : '';
-    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : ''}" style="--grid-day-width:${dayColumnWidth}px;${holidayStyle}${planningHorizonStyle(ds)}${planningHorizonHeaderStyle(ds)}top:46px"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
+    const holidayStyle = holiday ? `background:color-mix(in srgb,${holiday.color || '#ef4444'} ${holidayIntensity},var(--surface)) !important;color:${holiday.color || '#ef4444'} !important;${isWknd(d) ? 'filter:brightness(.86);' : ''}` : '';
+    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : 'Click to add a special day'}" style="--grid-day-width:${dayColumnWidth}px;${holidayStyle}${planningHorizonStyle(ds)}${planningHorizonHeaderStyle(ds)}top:46px" onclick="openSpecialDayForDate('${ds}')"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
   const topbarActivityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
-  const topbarYearActivities = activities.filter(activity => activity.startDate <= range.end && activity.endDate >= range.start);
+  const topbarYearActivities = activities.filter(activity => activity.startDate <= range.end && activity.endDate >= range.start && activityVisibleForScheduleSection(activity));
   const topbarFilteredActivities = topbarActivityFilter === 'all'
     ? topbarYearActivities
     : topbarYearActivities.filter(activity => activityStatus(activity) === topbarActivityFilter);
@@ -4144,15 +4343,19 @@ function renderGrid() {
           <div class="page-sub">Daily status with week numbers and activity timeline.</div>
         </div>
         <div class="flex items-center gap-2 schedule-topbar-controls">
-          <button class="btn btn-sm" onclick="openTeamScheduleReport()">Team Work Schedule</button>
           <button class="btn btn-sm" onclick="goToday()">Today</button>
+          <label class="btn btn-sm schedule-date-jump-button" title="Jump to a specific date"><span>Jump…</span>${svgIcon('teamSchedule')}<input id="schedule-date-jump-input" class="schedule-date-jump-input" type="date" value="${gridPeriod === 'year' ? `${gridYear}-01-01` : scheduleAnchorDate}" onchange="jumpToScheduleDate(this.value)" aria-label="Jump to date"></label>
           <select class="plain-select" style="height:32px;padding:5px 7px;width:76px" onchange="applyAppZoom(this.value)" aria-label="Application zoom" title="Local application zoom">
             ${[80,90,100,110,125,150,175].map(value => `<option value="${value}" ${appZoom === value ? 'selected' : ''}>${value}%</option>`).join('')}
           </select>
-          <select class="plain-select" style="height:32px;padding:5px 9px" onchange="setGridViewMode(this.value)" aria-label="Grid sections view">
-            <option value="all" ${gridViewMode === 'all' ? 'selected' : ''}>All sections</option>
-            <option value="timeline" ${gridViewMode === 'timeline' ? 'selected' : ''}>Timeline only</option>
-            <option value="employees" ${gridViewMode === 'employees' ? 'selected' : ''}>Employees only</option>
+          <select class="plain-select" style="height:32px;padding:5px 9px" onchange="setGridViewMode(this.value)" aria-label="Show schedule layout">
+            <option value="all" ${gridViewMode === 'all' ? 'selected' : ''}>Show: All</option>
+            <option value="timeline" ${gridViewMode === 'timeline' ? 'selected' : ''}>Show: Timeline only</option>
+            <option value="employees" ${gridViewMode === 'employees' ? 'selected' : ''}>Show: Employees only</option>
+          </select>
+          <select class="plain-select" style="height:32px;padding:5px 9px;max-width:180px" onchange="setScheduleSectionFilter(this.value)" aria-label="Show section">
+            <option value="">All sections</option>
+            ${scheduleSections.map(section => `<option value="${esc(section)}" ${scheduleSectionFilter === section ? 'selected' : ''}>${esc(section)}</option>`).join('')}
           </select>
           <div class="flex items-center gap-1" role="group" aria-label="Schedule period">
             ${['week', 'month', 'year'].map(period => `<button class="btn btn-sm${gridPeriod === period ? ' btn-primary' : ''}" onclick="setGridPeriod('${period}')">${period[0].toUpperCase()}${period.slice(1)}</button>`).join('')}
@@ -4274,7 +4477,7 @@ function renderGridBody(days, today) {
   let html = '';
   const showTimelineSections = gridViewMode !== 'employees';
   const showEmployeeSection = gridViewMode !== 'timeline';
-  const yearActs = activities.filter(a => a.startDate <= range.end && a.endDate >= range.start);
+  const yearActs = activities.filter(a => a.startDate <= range.end && a.endDate >= range.start && activityVisibleForScheduleSection(a));
   const activityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
   const filteredYearActs = activityFilter === 'all'
     ? yearActs
@@ -4292,7 +4495,7 @@ function renderGridBody(days, today) {
   const pageEnd = paginateActivities ? Math.min(activityPageOffset + pageSize, visibleActivities.length) : visibleActivities.length;
   const plannerYearStart = `${gridYear}-01-01`;
   const plannerYearEnd = `${gridYear}-12-31`;
-  const plannerYearActs = activities.filter(activity => activity.startDate <= plannerYearEnd && activity.endDate >= plannerYearStart);
+  const plannerYearActs = activities.filter(activity => activity.startDate <= plannerYearEnd && activity.endDate >= plannerYearStart && activityVisibleForScheduleSection(activity));
   const totalFilteredActivities = activityFilter === 'all'
     ? plannerYearActs
     : plannerYearActs.filter(activity => activityStatus(activity) === activityFilter);
@@ -4309,6 +4512,7 @@ function renderGridBody(days, today) {
           <span class="schedule-section-controls" style="gap:6px">
             ${paginateActivities ? `<button class="icon-btn" title="Scroll to previous activity" aria-label="Scroll to previous activity" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button>
             <button class="icon-btn" title="Scroll to next activity" aria-label="Scroll to next activity" ${pageEnd >= visibleActivities.length ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button>` : ''}
+            <button class="icon-btn" title="Team Work Schedule" aria-label="Team Work Schedule" onclick="openTeamScheduleReport()">${svgIcon('teamSchedule')}</button>
             <button class="icon-btn" title="Activity Schedule" aria-label="Activity Schedule" onclick="openActivityScheduleReport()">${svgIcon('report')}</button>
             <button class="icon-btn" title="Add activity" aria-label="Add activity" onclick="openActModal()">${svgIcon('plus')}</button>
           </span>
@@ -4319,7 +4523,7 @@ function renderGridBody(days, today) {
       html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">Activities collapsed.</td><td colspan="${days.length}"></td></tr>`;
     } else if (!hasAnyActivities) {
       const emptyActivityText = activityFilter === 'tentative' ? 'No planned activities to show.' : (activityFilter === 'confirmed' ? 'No confirmed activities to show.' : (activityFilter === 'cancelled' ? 'No cancelled activities to show.' : 'No activities yet. Use the add activity button to create one.'));
-      html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">${emptyActivityText}</td>${days.map(d => `<td class="gday${isWknd(d) ? ' weekend' : ''}" style="${planningHorizonStyle(fmt(d))}"></td>`).join('')}</tr>`;
+      html += `<tr><td class="gempl sticky-left" style="font-size:12px;color:var(--muted);height:30px">${emptyActivityText}</td>${days.map(d => { const ds = fmt(d); return `<td class="gday${isWknd(d) ? ' weekend' : ''}${displayedHolidayFor(ds) ? ' holiday-col' : ''}" style="--holiday-color:${displayedHolidayFor(ds)?.color || '#ef4444'};${planningHorizonStyle(ds)}"></td>`; }).join('')}</tr>`;
     }
   }
   const renderActRow = (act, dim) => {
@@ -4335,7 +4539,7 @@ function renderGridBody(days, today) {
       <div class="act-cell-name">
         <span class="flex items-center gap-2" style="min-width:0">
           <span class="act-dot" style="background:${act.color}"></span>
-          <span class="act-name" role="button" tabindex="0" title="Jump to ${esc(act.name)}" onclick="event.stopPropagation();jumpToActivity(${act.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();jumpToActivity(${act.id})}"${lifecycle.status === 'cancelled' ? ' style="text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;"' : ''}>${esc(act.name)}</span>
+          <span class="act-name" role="button" tabindex="0" title="Jump to ${esc(act.name)}" onclick="event.stopPropagation();jumpToActivity(${act.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();jumpToActivity(${act.id})}"${lifecycle.status === 'cancelled' ? ' style="text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;"' : ''}>${esc(activityDisplayName(act))}</span>
           ${act.abbreviation ? `<span style="font-size:10px;font-weight:700;color:${act.color};flex-shrink:0">[${esc(act.abbreviation)}]</span>` : ''}
           ${lifecycleBadge}
         </span>
@@ -4355,16 +4559,17 @@ function renderGridBody(days, today) {
     for (const d of days) {
       const ds = fmt(d), inR = ds >= act.startDate && ds <= act.endDate;
       const specialDay = displayedSpecialDayFor(ds);
+      const calendarHoliday = displayedHolidayFor(ds);
       const specialDayStyle = specialDay ? `background:color-mix(in srgb,${specialDay.color || '#ef4444'} 41%,var(--surface)) !important;` : '';
       const isS = ds === visibleStart, isE = ds === visibleEnd;
       if (inR) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
-        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)}${typeMeta ? ` · ${esc(typeMeta.label)}` : ''} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
+        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${calendarHoliday ? ' holiday-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="--holiday-color:${calendarHoliday?.color || '#ef4444'};height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)}${typeMeta ? ` · ${esc(typeMeta.label)}` : ''} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
           <div class="act-bar${lifecycle.status === 'cancelled' ? ' cancelled-bar' : ''}" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${barOpacity};border-radius:${brl} ${brr}"></div>
-          ${isS ? `<span class="grid-span-label" style="color:${act.color};width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
+          ${isS ? `<span class="grid-span-label" title="${esc(act.name)}" style="color:${act.color};width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(activityDisplayName(act))}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
         </td>`;
       } else {
-        row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
+        row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${calendarHoliday ? ' holiday-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="--holiday-color:${calendarHoliday?.color || '#ef4444'};height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
       }
     }
     return row + '</tr>';
@@ -4402,7 +4607,7 @@ function renderGridBody(days, today) {
       days.forEach(day => {
         const ds = fmt(day), active = ds >= start && ds <= end;
         const isStart = ds === visibleStart;
-        html += `<td class="gday holiday-select-cell${isWknd(day) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${active ? ' holiday-col' : ''}${isStart ? ' span-label-cell' : ''}" data-date="${ds}" style="${active ? `--holiday-color:${color};background:${color}28 !important;color:${color};border-color:${color}55;` : ''}${planningHorizonStyle(ds)}" onpointerdown="startHolidayRangeSelection(event,'${ds}')" title="${active ? esc(holiday.name || 'Holiday') : 'Drag to add a holiday period'}">${isStart ? `<span class="grid-span-label" style="width:${labelWidth}px;color:${color}">${esc(holiday.name || 'Holiday')}</span>` : ''}</td>`;
+        html += `<td class="gday holiday-select-cell${isWknd(day) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${active ? ' holiday-col' : ''}${isStart ? ' span-label-cell' : ''}" data-date="${ds}" style="${active ? `--holiday-color:${color};background:${color}28 !important;color:${color};border-color:${color}55;${isWknd(day) ? 'filter:brightness(.86);' : ''}` : ''}${planningHorizonStyle(ds)}" onpointerdown="startHolidayRangeSelection(event,'${ds}')" title="${active ? esc(holiday.name || 'Holiday') : 'Drag to add a holiday period'}">${isStart ? `<span class="grid-span-label" style="width:${labelWidth}px;color:${color}">${esc(holiday.name || 'Holiday')}</span>` : ''}</td>`;
       });
       html += '</tr>';
     };
@@ -4489,6 +4694,12 @@ function changeActivityPage(direction) {
   const maxOffset = Math.max(0, visibleActivities.length - activityPageSize);
   activityPageOffset = Math.min(Math.max(0, activityPageOffset + direction), maxOffset);
   renderGridBody(scheduleDays(), todayStr());
+  requestAnimationFrame(() => {
+    const visible = [...document.querySelectorAll('tr.activity-grid-row')];
+    const target = direction > 0 ? visible.at(-1) : visible[0];
+    const cell = target?.querySelector('.activity-select-cell[data-date]');
+    if (cell) document.getElementById('grid-scroll')?.scrollTo({ left: Math.max(0, cell.offsetLeft - 260), behavior: 'smooth' });
+  });
 }
 let activityWheelLocked = false;
 function handleActivityListWheel(event) {
@@ -4623,9 +4834,10 @@ function scrollToActivityCell(activityId, dateString) {
 }
 
 function cellActivities(empId, ds) {
+  const employee = empById(empId);
   return activities
     .filter(act => {
-      if (!(ds >= act.startDate && ds <= act.endDate && participantFor(act, empId))) return false;
+      if (!(ds >= act.startDate && ds <= act.endDate && participantFor(act, empId) && activityRelevantToEmployee(act, employee))) return false;
       const assignment = activityAssignment(`${empId}_${ds}_${act.id}`);
       return assignment.assigned === true && !assignment.excluded;
     })
@@ -4654,6 +4866,19 @@ function isBossCheckSet(empId, date, kind, id) {
   if (workScheduleChecksMap[currentKey] === true) return true;
   return kind === 'activity' && workScheduleChecksMap[`${empId}_${date}_${id}`] === true;
 }
+function bossCheckDates(empId, kind, id, dates = pickerDates) {
+  const candidateDates = Array.isArray(dates) ? dates : [];
+  if (kind === 'status') return candidateDates.filter(date => getEntryObj(`${empId}_${date}`)?.status === id);
+  const activity = activities.find(item => Number(item.id) === Number(id));
+  if (!activity || !participantFor(activity, empId)) return [];
+  return candidateDates.filter(date => date >= activity.startDate && date <= activity.endDate && activityRelevantToEmployee(activity, empById(empId)));
+}
+function bossCheckState(empId, kind, id) {
+  const dates = bossCheckDates(empId, kind, id);
+  if (!dates.length) return 'none';
+  const checkedCount = dates.filter(date => isBossCheckSet(empId, date, kind, id)).length;
+  return checkedCount === dates.length ? 'all' : (checkedCount ? 'some' : 'none');
+}
 
 function isEmployeeBirthday(emp, dateString) {
   if (!emp || !emp.birthday || !dateString) return false;
@@ -4662,13 +4887,25 @@ function isEmployeeBirthday(emp, dateString) {
   const date = new Date(`${dateString}T00:00:00`);
   return birthday.getMonth() === date.getMonth() && birthday.getDate() === date.getDate();
 }
+function activityDisplayName(activity, maxLength = 25) {
+  const name = String(activity?.name || '').trim();
+  const characters = Array.from(name);
+  if (characters.length <= maxLength) return name;
+  return `${characters.slice(0, Math.max(1, maxLength - 1)).join('')}…`;
+}
 function activityCellLabel(activity, spanDays = 1) {
   const name = String(activity?.name || '').trim();
   const abbreviation = String(activity?.abbreviation || '').trim().toUpperCase();
-  const availableCharacters = Math.max(4, spanDays * 4);
-  if (abbreviation) return abbreviation;
+  const compact = value => {
+    const normalized = String(value || '').replace(/[^A-Z0-9]/g, '');
+    if (normalized.length <= 4) return normalized;
+    const consonants = normalized[0] + normalized.slice(1).replace(/[AEIOU]/g, '');
+    return consonants.slice(0, 4);
+  };
+  const availableCharacters = gridPeriod === 'year' ? Math.max(4, spanDays * 4) : 6;
+  if (abbreviation) return gridPeriod === 'year' ? compact(abbreviation) : abbreviation.slice(0, 6);
   if (name && name.length <= availableCharacters) return name;
-  return name.slice(0, 4).toUpperCase();
+  return compact(name);
 }
 
 function buildEmployeeCell(emp, ds, weekend, isToday) {
@@ -4678,6 +4915,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const cellNote = cellNotesMap[`${emp.id}_${ds}`] || '';
   const si = entry ? siFor(entry.status) : null;
   const isPartial = entry?.durationType === 'time';
+  const isPlannedStatus = statusEntryIsPlanned(entry);
   const acts = cellActivities(emp.id, ds);
   const rotation = rotationRecord(emp.id, ds);
   const rotationMeta = rotationShiftMeta(rotation?.shift);
@@ -4715,7 +4953,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   if (!tipParts.length) tipParts.push('Click to set status');
 
   const primaryActivity = rotationMeta ? null : acts[0];
-  const checkedActivity = bossSessionActive ? participantActivitiesForDate(emp.id, ds).find(act => isBossCheckSet(emp.id, ds, 'activity', act.id)) : null;
+  const checkedActivity = bossSessionActive ? participantActivitiesForDate(emp.id, ds).find(act => activityRelevantToEmployee(act, emp) && isBossCheckSet(emp.id, ds, 'activity', act.id)) : null;
   const checkedStatus = bossSessionActive && si && isBossCheckSet(emp.id, ds, 'status', si.key) ? si : null;
   const activitySpanDays = primaryActivity ? Math.max(1, Math.round((new Date(`${primaryActivity.endDate}T00:00:00`) - new Date(`${primaryActivity.startDate}T00:00:00`)) / 86400000) + 1) : 1;
   const gridActivityLabel = primaryActivity ? activityCellLabel(primaryActivity, activitySpanDays) : '';
@@ -4731,7 +4969,9 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
       : `background:${activityColor}20;color:${activityColor}`;
   } else if (!isPartial && si) {
     cellText = si.abbr;
-    cellStyleStr = statusStyle(si.color);
+    cellStyleStr = isPlannedStatus
+      ? `background:repeating-linear-gradient(135deg,${si.color}30 0 5px,${si.color}12 5px 10px);color:${si.color};border-color:${si.color}50`
+      : statusStyle(si.color);
   } else if (isPartial && si) {
     cellText = si.abbr;
     cellStyleStr = `color:${si.color}`;
@@ -4747,15 +4987,15 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   if (primaryActivity && activityStatus(primaryActivity) === 'tentative') tipParts.push('Planned assignment');
   const isCancelledActivity = primaryActivity && activityStatus(primaryActivity) === 'cancelled';
   const holidayTint = holiday && !primaryActivity && !si
-    ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;border-color:${holiday.color || '#ef4444'}55;`
+    ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;border-color:${holiday.color || '#ef4444'}55;${weekend ? 'filter:brightness(.86);' : ''}`
     : '';
-  const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">${svgIcon('report', 'Birthday')}</span>` : '';
+  const birthdayBadge = birthday ? `<span class="birthday-cake" title="Birthday">${svgIcon('cake', 'Birthday')}</span>` : '';
   const overtimeBadge = overtime
     ? `<span class="overtime-badge" title="Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` · ${esc(overtime.note)}` : ''}">OT ${formatHoursNumber(overtime.hours)}h</span>`
     : '';
   const workScheduleCheckBadge = checkedActivity || checkedStatus ? `<span class="work-schedule-check" title="Checked in external work system">✓</span>` : '';
 
-  const fullDayStatusStyle = !primaryActivity && !isPartial && si
+  const fullDayStatusStyle = !primaryActivity && !isPartial && si && !isPlannedStatus
     ? `background:${si.color}20 !important;color:${si.color} !important;`
     : '';
   const finalCellStyle = `${cellStyleStr}${holidayTint}${fullDayStatusStyle}${planningHorizonStyle(ds)}`;
@@ -4770,7 +5010,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const cancelledTextStyle = isCancelledActivity ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : '';
 
   const rotationMarker = rotationMeta ? `<span class="rotation-marker${rotation?.shift === 'leave' ? ' rotation-leave-marker' : ''}${rotation?.shift === 'overtime' ? ' rotation-overtime-marker' : ''}" title="${esc(rotationMeta.label)}">${rotation?.shift === 'leave' ? 'OFF' : (rotation?.shift === 'overtime' ? 'OT' : 'SR')}</span><span class="shift-symbol rotation-shift-symbol">${rotationMeta.icon}</span>` : '';
-  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}${checkedActivity || checkedStatus ? ' work-schedule-checked-cell' : ''}"
+  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}${isPlannedStatus ? ' planned-status-cell' : ''}${checkedActivity || checkedStatus ? ' work-schedule-checked-cell' : ''}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
      onclick="handleCellClick(event,${emp.id},'${ds}')"
@@ -4818,6 +5058,35 @@ function goToday() {
     renderPage();
     setTimeout(focusToday, 60);
   }
+}
+function jumpToScheduleDate(value) {
+  if (!isValidIsoDate(value)) return;
+  const target = new Date(`${value}T00:00:00`);
+  if (gridPeriod === 'year') {
+    gridYear = target.getFullYear();
+  } else {
+    scheduleAnchorDate = value;
+  }
+  saveGridPreferences();
+  renderPage();
+  setTimeout(() => {
+    const scroll = document.getElementById('grid-scroll');
+    const header = scroll?.querySelector(`th[data-date="${value}"]`);
+    if (!scroll || !header) return;
+    document.querySelectorAll('.jump-date-highlight').forEach(element => element.classList.remove('jump-date-highlight'));
+    scroll.querySelectorAll(`[data-date="${value}"]`).forEach(element => element.classList.add('jump-date-highlight'));
+    const sticky = scroll.querySelector('th.sticky-left, td.sticky-left');
+    const stickyWidth = sticky?.getBoundingClientRect().width || 0;
+    const scrollRect = scroll.getBoundingClientRect();
+    const headerRect = header.getBoundingClientRect();
+    const targetLeft = headerRect.left - scrollRect.left + scroll.scrollLeft;
+    const visibleWidth = Math.max(0, scroll.clientWidth - stickyWidth);
+    scroll.scrollLeft = Math.max(0, targetLeft - stickyWidth - Math.max(0, (visibleWidth - headerRect.width) / 2));
+    clearTimeout(jumpToScheduleDate._highlightTimer);
+    jumpToScheduleDate._highlightTimer = setTimeout(() => {
+      document.querySelectorAll('.jump-date-highlight').forEach(element => element.classList.remove('jump-date-highlight'));
+    }, 5000);
+  }, 80);
 }
 function changeGridYear(delta) {
   gridYear += delta;
@@ -5027,8 +5296,9 @@ function _showPicker(event, empId, dates) {
     : fmtMed(pickerDate);
   document.getElementById('pk-head').innerHTML = `<b>${esc(emp?.name || '')}</b>${dateLabel}`;
 
-  const acts = activities.filter(act => actParticipantIds(act).includes(empId) && pickerDates.some(date => date >= act.startDate && date <= act.endDate));
+  const acts = activities.filter(act => actParticipantIds(act).includes(empId) && activityRelevantToEmployee(act, emp) && pickerDates.some(date => date >= act.startDate && date <= act.endDate));
   const entry = getEntryObj(`${empId}_${pickerDate}`);
+  pickerStatusLifecycle = entry?.lifecycle || 'confirmed';
   if (bossSessionActive) {
     document.getElementById('pk-status-section').style.display = 'none';
     document.getElementById('pk-duration-section').style.display = 'none';
@@ -5040,7 +5310,7 @@ function _showPicker(event, empId, dates) {
     document.getElementById('pk-status-section').style.display = 'flex';
     const btns = document.getElementById('pk-status-btns');
     btns.innerHTML = statuses.length
-      ? statuses.map(s => `<button class="pk-btn${entry?.status === s.key ? ' pk-sel' : ''}" title="${esc(s.label)}" style="${statusStyle(s.color)};border:1px solid ${s.color}50" onclick="pickStatusById(${s.id})"><span class="pk-initial">${esc(s.abbr)}</span><span class="pk-status-label">${esc(s.label)}</span></button>`).join('')
+      ? statuses.map(s => `<button class="pk-btn${entry?.status === s.key ? ' pk-sel' : ''}" title="${esc(s.label)}" style="${statusStyle(s.color)};border:1px solid ${s.color}50${entry?.status === s.key && statusEntryIsPlanned(entry) ? ';background:repeating-linear-gradient(135deg,' + s.color + '30 0 5px,' + s.color + '12 5px 10px)' : ''}" onclick="pickStatusById(${s.id})"><span class="pk-initial">${esc(s.abbr)}</span><span class="pk-status-label">${esc(s.label)}</span></button>`).join('')
       : '<div style="padding:4px 6px;font-size:11.5px;color:var(--muted)">No daily statuses configured.</div>';
     document.getElementById('pk-duration-section').style.display = 'none';
     document.getElementById('pk-time').value = (entry?.durationType === 'time' && entry.time) ? entry.time : '';
@@ -5084,15 +5354,16 @@ function _showPicker(event, empId, dates) {
     </div></div>`;
   } else if (bossSessionActive) {
     const status = entry ? siFor(entry.status) : null;
+    const statusCheckState = status ? bossCheckState(empId, 'status', status.key) : 'none';
     const statusItem = status ? `<div class="pk-shift-box">
         <div class="pk-shift-title"><span class="pk-color-dot" style="background:${status.color}"></span><span>Daily code: ${esc(status.label)}${status.isAbsence ? ' (absence)' : ''}</span></div>
-        <div class="pk-save-row"><button class="pk-chip${pickerDates.some(date => isBossCheckSet(empId, date, 'status', status.key)) ? ' sel' : ''}" onclick="toggleBossCheck(${empId},'status',${JSON.stringify(status.key)})">${pickerDates.some(date => isBossCheckSet(empId, date, 'status', status.key)) ? '✓ Checked' : 'Mark checked'}</button></div>
+        <div class="pk-save-row"><button class="pk-chip${statusCheckState !== 'none' ? ' sel' : ''}" onclick="toggleBossCheck(${empId},'status',${JSON.stringify(status.key)})">${statusCheckState === 'all' ? '✓ Checked' : (statusCheckState === 'some' ? '◐ Partly checked' : 'Mark checked')}</button></div>
       </div>` : '';
     const activityItems = acts.map(act => {
-      const checkedInWorkSystem = pickerDates.some(date => isBossCheckSet(empId, date, 'activity', act.id));
+      const checkState = bossCheckState(empId, 'activity', act.id);
       return `<div class="pk-shift-box">
         <div class="pk-shift-title"><span class="act-dot" style="background:${act.color};width:9px;height:9px"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(act.name)}${act.abbreviation ? ` (${esc(act.abbreviation)})` : ''}</span></div>
-        <div class="pk-save-row"><button class="pk-chip${checkedInWorkSystem ? ' sel' : ''}" onclick="toggleBossCheck(${empId},'activity',${act.id})">${checkedInWorkSystem ? '✓ Checked' : 'Mark checked'}</button></div>
+        <div class="pk-save-row"><button class="pk-chip${checkState !== 'none' ? ' sel' : ''}" onclick="toggleBossCheck(${empId},'activity',${act.id})">${checkState === 'all' ? '✓ Checked' : (checkState === 'some' ? '◐ Partly checked' : 'Mark checked')}</button></div>
       </div>`;
     }).join('');
     sect.innerHTML = statusItem || activityItems ? '<div class="pk-sep"></div><div class="pk-label">Work schedule check</div>' + statusItem + activityItems : '';
@@ -5326,8 +5597,20 @@ async function pickStatus(key) {
   const btn = document.querySelectorAll('#pk-status-btns .pk-btn')[idx];
   if (btn) btn.classList.add('pk-sel');
   const st = siFor(key);
+  updatePickerStatusLifecycle();
   document.getElementById('pk-duration-label').innerHTML = `Duration &mdash; ${esc(st ? st.label : key)} <span class="muted" style="font-weight:400;text-transform:none">(Ignored when assigning an activity below)</span>`;
   document.getElementById('pk-duration-section').style.display = 'flex';
+}
+function updatePickerStatusLifecycle() {
+  document.querySelectorAll('#pk-status-lifecycle [data-lifecycle]').forEach(button => button.classList.toggle('sel', button.dataset.lifecycle === pickerStatusLifecycle));
+  const hint = document.getElementById('pk-status-lifecycle-hint');
+  if (hint) hint.textContent = pickerStatusLifecycle === 'planned'
+    ? 'Planned statuses are informational only and do not affect workload or availability.'
+    : 'Confirmed statuses affect workload and availability.';
+}
+function setPickerStatusLifecycle(lifecycle) {
+  pickerStatusLifecycle = lifecycle === 'planned' ? 'planned' : 'confirmed';
+  updatePickerStatusLifecycle();
 }
 async function removeSelectedStatus() {
   if (pickerEmpId == null || !pickerDate) return;
@@ -5355,7 +5638,7 @@ async function saveWithDuration(durationType) {
   }
   const dates = pickerDates.length ? pickerDates : [pickerDate];
   await mutateState('saveWithDuration', () => {
-    for (const date of dates) entriesMap[`${pickerEmpId}_${date}`] = { status: pickerSelectedStatus, durationType, time };
+    for (const date of dates) entriesMap[`${pickerEmpId}_${date}`] = { status: pickerSelectedStatus, durationType, time, lifecycle: pickerStatusLifecycle };
   });
   dates.forEach(date => updateCell(pickerEmpId, date));
   closePicker();
@@ -5390,16 +5673,21 @@ async function toggleWorkScheduleCheck(empId, actId) {
 }
 async function toggleBossCheck(empId, kind, id) {
   if (!bossSessionActive || !pickerDates.length) return;
-  const checked = pickerDates.every(date => isBossCheckSet(empId, date, kind, id));
+  const dates = bossCheckDates(empId, kind, id);
+  if (!dates.length) return;
+  const checked = dates.every(date => isBossCheckSet(empId, date, kind, id));
   await mutateState('toggleBossCheck', () => {
-  pickerDates.forEach(date => {
+  dates.forEach(date => {
     const key = bossCheckKey(empId, date, kind, id);
-    if (checked) delete workScheduleChecksMap[key];
+    if (checked) {
+      delete workScheduleChecksMap[key];
+      if (kind === 'activity') delete workScheduleChecksMap[`${empId}_${date}_${id}`];
+    }
     else workScheduleChecksMap[key] = true;
   });
   });
-  pickerDates.forEach(date => updateCell(empId, date));
-  closePicker();
+  dates.forEach(date => updateCell(empId, date));
+  _showPicker(null, empId, pickerDates);
 }
 async function saveOvertime() {
   if (pickerEmpId == null || !pickerDate) return;
@@ -5777,6 +6065,13 @@ function toggleParticipant(id, checked) {
 function openActModal(id) {
   editingActId = id || null;
   const act = id ? activities.find(a => a.id === id) : null;
+  const relevance = activityRelevance(act);
+  const departmentOptions = [...new Set(employees.map(employee => String(employee.department || '').trim()).filter(Boolean))].sort();
+  const sectionOptions = [...new Set(employees.map(employeeSection).filter(Boolean))].sort();
+  const departmentSelect = document.getElementById('af-relevance-departments');
+  const sectionSelect = document.getElementById('af-relevance-sections');
+  departmentSelect.innerHTML = departmentOptions.map(value => `<option value="${esc(value)}" ${relevance.departments.includes(value) ? 'selected' : ''}>${esc(value)}</option>`).join('');
+  sectionSelect.innerHTML = sectionOptions.map(value => `<option value="${esc(value)}" ${relevance.sections.includes(value) ? 'selected' : ''}>${esc(value)}</option>`).join('');
   const preset = !act ? pendingActivityPreset : null;
   const today = todayStr();
   const defaultStart = preset?.startDate || (today.startsWith(`${gridYear}-`) ? today : `${gridYear}-01-01`);
@@ -5875,15 +6170,17 @@ async function saveActivity() {
   const eveningShift = document.getElementById('af-evening-shift').value.trim() || '1200-2000';
   const nightShift = document.getElementById('af-night-shift').value.trim() || '0000-0730';
   const includeWeekends = document.getElementById('af-include-weekends').checked;
+  const relevance = { departments: [...document.getElementById('af-relevance-departments').selectedOptions].map(option => option.value), sections: [...document.getElementById('af-relevance-sections').selectedOptions].map(option => option.value) };
   const prefillCells = document.getElementById('af-prefill-cells').checked === true;
   if (!name) { alert('Activity name is required.'); return; }
+  if (Array.from(name).length > 25) { alert('Activity name can be at most 25 characters.'); return; }
   if (abbr.length > 6) { alert('Activity abbreviation can be at most 6 characters.'); return; }
   if (project && !/^[A-Za-z0-9\-]+$/.test(project)) { alert('Cost Center must contain only letters, numbers, and hyphens.'); return; }
   if (order && !/^[A-Za-z0-9]{1,9}$/.test(order)) { alert('Order must contain up to 9 alphanumeric characters.'); return; }
   if (!start || !end) { alert('Enter valid start and end dates using dd.mm.yyyy.'); return; }
   if (end < start) { alert('End date must be on or after start date.'); return; }
   if (!timeRangeHours(dayShift) || !timeRangeHours(eveningShift) || !timeRangeHours(nightShift)) { alert('Enter valid Day, Mid-day / Evening, and Night shift ranges.'); return; }
-  const rec = { name, abbreviation: abbr, project, order, billing, type, status, countsTowardLoad, dayShift, eveningShift, nightShift, includeWeekends, color: selectedActColor, startDate: start, endDate: end,
+  const rec = { name, abbreviation: abbr, project, order, billing, type, status, countsTowardLoad, dayShift, eveningShift, nightShift, includeWeekends, relevance, color: selectedActColor, startDate: start, endDate: end,
     participants: selectedParticipants.map(p => ({ ...p })), notes };
   await mutateState('saveActivity', () => {
   if (editingActId) {
@@ -5947,6 +6244,7 @@ function requestDeleteActivityFromModal() {
 }
 
 let activityReportId = null;
+let activityReportHideInactiveByWeek = false;
 function activityReportDates(act) {
   const dates = [];
   for (const d = new Date(`${act.startDate}T00:00:00`); fmt(d) <= act.endDate; d.setDate(d.getDate() + 1)) {
@@ -6012,10 +6310,16 @@ function ensureActivityReportHideOption() {
   let label = checkbox?.closest('label');
   if (!label) {
     label = document.createElement('label');
-    label.innerHTML = '<input type="checkbox" id="activity-report-hide-inactive-week"> Hide personnel not working in each printed week';
+    label.innerHTML = '<input type="checkbox" id="activity-report-hide-inactive-week" onchange="updateActivityReportPreview()"> Hide personnel not working in each printed week';
   }
+  checkbox = label.querySelector('input');
+  checkbox.checked = activityReportHideInactiveByWeek;
   label.style.cssText = 'display:flex;align-items:center;gap:7px;margin:0 0 12px;font-size:12px;color:var(--muted);text-align:left';
   content.insertBefore(label, content.firstChild);
+}
+function updateActivityReportPreview() {
+  activityReportHideInactiveByWeek = document.getElementById('activity-report-hide-inactive-week')?.checked === true;
+  if (activityReportId != null) openActivityReport(activityReportId);
 }
 function activityReportRows(act) {
   const rows = [];
@@ -6044,6 +6348,7 @@ function openActivityReport(id) {
   const act = activities.find(item => item.id === id);
   if (!act) return;
   if (activityStatus(act) === 'cancelled') return;
+  if (activityReportId !== id) activityReportHideInactiveByWeek = false;
   activityReportId = id;
   const dates = activityReportDates(act);
   const participantGroups = activityReportParticipantGroups(act);
@@ -6140,7 +6445,7 @@ function teamReportEntries(start, end) {
   return sortedEmployees().map(emp => {
     const employeeActivities = activities.filter(act => {
       const participant = participantFor(act, emp.id);
-      return act.startDate <= end && act.endDate >= start && participant && activityHasScheduledShift(act, emp.id, start, end);
+      return act.startDate <= end && act.endDate >= start && participant && activityRelevantToEmployee(act, emp) && activityHasScheduledShift(act, emp.id, start, end);
     })
       .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
     return { emp, activities: employeeActivities };
@@ -6214,7 +6519,27 @@ function openTeamScheduleReport() {
   end.setDate(end.getDate() + 30);
   document.getElementById('team-report-start').value = fmt(start);
   document.getElementById('team-report-end').value = fmt(end);
+  teamReportSelectedActivityIds = null;
   document.getElementById('team-report-modal').classList.add('open');
+  renderTeamScheduleReport();
+}
+function teamReportAvailableActivities(start, end) {
+  return activities.filter(act => act.startDate <= end && act.endDate >= start && activityVisibleForScheduleSection(act))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
+}
+function setTeamReportActivitySelection(id, checked) {
+  const start = document.getElementById('team-report-start')?.value;
+  const end = document.getElementById('team-report-end')?.value;
+  const available = teamReportAvailableActivities(start, end);
+  const selected = new Set(teamReportSelectedActivityIds ?? available.map(act => act.id));
+  if (checked) selected.add(Number(id)); else selected.delete(Number(id));
+  teamReportSelectedActivityIds = [...selected];
+  renderTeamScheduleReport();
+}
+function setTeamReportAllActivities(checked) {
+  const start = document.getElementById('team-report-start')?.value;
+  const end = document.getElementById('team-report-end')?.value;
+  teamReportSelectedActivityIds = checked ? teamReportAvailableActivities(start, end).map(act => act.id) : [];
   renderTeamScheduleReport();
 }
 function renderTeamScheduleReport() {
@@ -6223,11 +6548,16 @@ function renderTeamScheduleReport() {
   const content = document.getElementById('team-report-content');
   if (!start || !end || end < start) { content.innerHTML = '<div class="empty-note" style="padding:24px;text-align:center">Choose a valid date range.</div>'; return; }
   const dates = teamReportDates(start, end);
-  const entries = teamReportEntries(start, end);
+  const availableActivities = teamReportAvailableActivities(start, end);
+  if (teamReportSelectedActivityIds === null) teamReportSelectedActivityIds = availableActivities.map(act => act.id);
+  const selectedActivityIds = new Set(teamReportSelectedActivityIds);
+  const entries = teamReportEntries(start, end).map(entry => ({ ...entry, activities: entry.activities.filter(act => selectedActivityIds.has(act.id)) })).filter(entry => entry.activities.length);
   const reportActivities = teamReportActivities(entries);
+  const allSelected = availableActivities.length > 0 && availableActivities.every(act => selectedActivityIds.has(act.id));
   content.innerHTML = `
     <div style="margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div><div style="font-weight:600;font-size:14px">Team Work Schedule</div><div class="muted text-sm" style="margin-top:3px">Period: ${fmtMed(start)} – ${fmtMed(end)}</div></div>${renderSecurityLabel()}</div>
     ${teamReportBillingSummary(reportActivities)}
+    <div style="margin-bottom:14px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--muted-bg)"><div style="font-weight:600;margin-bottom:7px">Activities to include</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" ${allSelected ? 'checked' : ''} onchange="setTeamReportAllActivities(this.checked)"> Select all</label><button class="btn btn-sm" type="button" onclick="setTeamReportAllActivities(false)">Clear all</button></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:5px">${availableActivities.map(act => `<label style="display:flex;align-items:flex-start;gap:6px;font-size:12px"><input type="checkbox" ${selectedActivityIds.has(act.id) ? 'checked' : ''} onchange="setTeamReportActivitySelection(${act.id},this.checked)"><span><b>${esc(act.name)}</b><small class="muted" style="display:block">${fmtShort(act.startDate)} – ${fmtShort(act.endDate)} · ${esc(activityStatusMeta(act).label)}</small></span></label>`).join('') || '<span class="muted">No activities overlap this period.</span>'}</div></div>
     <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:${220 + dates.length * 92 + 150}px">
       <thead><tr style="text-align:left;border-bottom:2px solid var(--border)"><th style="padding:7px 8px;min-width:210px;position:sticky;left:0;background:var(--surface);z-index:1">Employee / Activity</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 6px;min-width:92px;background:${weekend ? 'var(--weekend-bg)' : 'var(--surface)'};color:${weekend ? 'var(--weekend-text)' : 'inherit'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}<th style="padding:7px 8px;min-width:70px">Days</th><th style="padding:7px 8px;min-width:70px">Hours</th></tr></thead>
       <tbody>${entries.map(entry => {
@@ -6242,7 +6572,8 @@ function printTeamScheduleReport() {
   const end = document.getElementById('team-report-end').value;
   if (!start || !end || end < start) { alert('Choose a valid date range first.'); return; }
   const dates = teamReportDates(start, end);
-  const entries = teamReportEntries(start, end);
+  const selectedActivityIds = new Set(teamReportSelectedActivityIds ?? teamReportAvailableActivities(start, end).map(act => act.id));
+  const entries = teamReportEntries(start, end).map(entry => ({ ...entry, activities: entry.activities.filter(act => selectedActivityIds.has(act.id)) })).filter(entry => entry.activities.length);
   const reportActivities = teamReportActivities(entries);
   const secCfg = normalizeSecurityLabel(appSettings.securityLabel);
   const secLabelHtml = secCfg.enabled ? `<span class="security-label" style="--security-label-color:${esc(secCfg.color)}">${esc(secCfg.text)}</span>` : '';
@@ -6285,7 +6616,7 @@ function activityScheduleDates(start, end) {
 }
 function activityScheduleFilteredActivities(start, end, statuses) {
   return activities
-    .filter(act => act.startDate <= end && act.endDate >= start && statuses.includes(activityStatus(act)))
+    .filter(act => act.startDate <= end && act.endDate >= start && statuses.includes(activityStatus(act)) && activityVisibleForScheduleSection(act))
     .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
 }
 function activityScheduleHeaderGroups(dates, keyFor, labelFor, className) {
@@ -6330,7 +6661,7 @@ function activityScheduleBarRow(act, dates) {
     <div class="act-cell-name">
       <span class="flex items-center gap-2" style="min-width:0">
         <span class="act-dot" style="background:${act.color}"></span>
-        <span class="act-name">${esc(act.name)}</span>
+        <span class="act-name" title="${esc(act.name)}">${esc(activityDisplayName(act))}</span>
         ${act.abbreviation ? `<span style="font-size:10px;font-weight:700;color:${act.color};flex-shrink:0">[${esc(act.abbreviation)}]</span>` : ''}
         ${lifecycle.status === 'confirmed' ? '' : `<span class="act-lifecycle ${lifecycle.className}">${lifecycle.label}</span>`}
       </span>
@@ -6345,7 +6676,7 @@ function activityScheduleBarRow(act, dates) {
     const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
     row += `<td class="gday${isWknd(d) ? ' weekend' : ''}${isS ? ' span-label-cell' : ''}" style="height:28px${isS ? ';overflow:visible;z-index:4' : ''}">
         <div class="act-bar${lifecycle.status === 'cancelled' ? ' cancelled-bar' : ''}" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${barOpacity};border-radius:${brl} ${brr}"></div>
-        ${isS ? `<span class="grid-span-label" style="color:${act.color};width:${labelWidth}px">${esc(act.name)}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
+        ${isS ? `<span class="grid-span-label" title="${esc(act.name)}" style="color:${act.color};width:${labelWidth}px">${esc(activityDisplayName(act))}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
       </td>`;
   }
   return row + '</tr>';
@@ -6872,7 +7203,7 @@ function renderEmployees() {
   });
   const byDept = new Map();
   for (const emp of filtered) { 
-    const deptName = emp.department || 'Unassigned';
+    const deptName = emp.department || '';
     const subdeptName = employeeHierarchyLeaf(emp);
     const organisationName = emp.organisation || 'Unassigned organisation';
     const groupKey = `${organisationName}\u0000${deptName}\u0000${subdeptName}`;
@@ -6887,6 +7218,8 @@ function renderEmployees() {
   groups.sort((a, b) => {
     const left = a.list[0] || { organisation: a.organisation, department: a.department, section: a.subdepartment };
     const right = b.list[0] || { organisation: b.organisation, department: b.department, section: b.subdepartment };
+    if (!left.department && right.department) return -1;
+    if (left.department && !right.department) return 1;
     return comparePersonnelHierarchy(left, right) || (Number(a.processOrder) - Number(b.processOrder));
   });
   const allDepts = orderedDepartments().filter(department => department !== 'Unassigned');
@@ -6961,22 +7294,24 @@ function renderEmployees() {
         const organisationPeople = filtered.filter(emp => (emp.organisation || 'Unassigned organisation') === group.organisation).length;
         rowsHtml += `<tr class="dept-row organisation-row"><td colspan="10" style="background:var(--primary);color:var(--primary-fg);font-size:13px;font-weight:800;letter-spacing:.03em;padding:8px 12px">${esc(group.organisation)} <span style="font-weight:500;opacity:.8;text-transform:none">· ${organisationPeople} ${organisationPeople === 1 ? 'person' : 'people'}</span></td></tr>`;
       }
-      const deptColor = resolveDeptColor(group.department) || PALETTE[allDepts.indexOf(group.department) % PALETTE.length];
-      if (group.department !== renderedDepartment) {
+      const deptColor = resolveDeptColor(group.department) || 'var(--border)';
+      if (group.department && group.department !== renderedDepartment) {
         renderedDepartment = group.department;
         const departmentCollapsed = collapsedPersonnelDepartments.has(personnelDepartmentKey(group.organisation, group.department));
         const departmentPeople = filtered.filter(emp => (emp.organisation || 'Unassigned organisation') === group.organisation && (emp.department || 'Unassigned') === group.department).length;
         rowsHtml += `<tr class="dept-row"><td colspan="10" style="background:${deptColor}22;border-bottom:2px solid ${deptColor};color:var(--text);font-weight:700"><button class="icon-btn" type="button" onclick="togglePersonnelDepartment(${esc(JSON.stringify(group.organisation))},${esc(JSON.stringify(group.department))})">${svgIcon(departmentCollapsed ? 'chevronRight' : 'chevronDown')}</button>${esc(group.department)} <span style="font-weight:400;text-transform:none">· ${departmentPeople} ${departmentPeople === 1 ? 'person' : 'people'}</span></td></tr>`;
       }
-      if (collapsedPersonnelDepartments.has(personnelDepartmentKey(group.organisation, group.department))) continue;
+      if (group.department && collapsedPersonnelDepartments.has(personnelDepartmentKey(group.organisation, group.department))) continue;
       const sectionName = group.list[0]?.section || group.list[0]?.subdepartment || group.subdepartment || '';
       const processName = group.list[0]?.process || '';
-      const sectionHeading = [sectionName || 'Unassigned section', processName].filter(Boolean).join(' / ');
+      const sectionHeading = [sectionName, processName].filter(Boolean).join(' / ');
       const sectionColor = resolveSectionColor(group.department, sectionName) || deptColor;
       const sectionKey = personnelSectionKey(group.organisation, group.department, sectionName);
       const sectionCollapsed = collapsedPersonnelSections.has(sectionKey);
-      rowsHtml += `<tr class="dept-row"><td colspan="10" style="background:color-mix(in srgb,${sectionColor} 16%,var(--surface));border-bottom:1px solid ${sectionColor};border-left:4px solid ${sectionColor};color:var(--text);padding-left:20px"><button class="icon-btn" type="button" aria-label="${sectionCollapsed ? 'Expand' : 'Collapse'} ${esc(sectionHeading)}" onclick="togglePersonnelSection(${esc(JSON.stringify(group.organisation))},${esc(JSON.stringify(group.department))},${esc(JSON.stringify(sectionName))})">${svgIcon(sectionCollapsed ? 'chevronRight' : 'chevronDown')}</button>${esc(sectionHeading)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
-      if (sectionCollapsed) continue;
+      if (sectionHeading) {
+        rowsHtml += `<tr class="dept-row"><td colspan="10" style="background:color-mix(in srgb,${sectionColor} 16%,var(--surface));border-bottom:1px solid ${sectionColor};border-left:4px solid ${sectionColor};color:var(--text);padding-left:20px"><button class="icon-btn" type="button" aria-label="${sectionCollapsed ? 'Expand' : 'Collapse'} ${esc(sectionHeading)}" onclick="togglePersonnelSection(${esc(JSON.stringify(group.organisation))},${esc(JSON.stringify(group.department))},${esc(JSON.stringify(sectionName))})">${svgIcon(sectionCollapsed ? 'chevronRight' : 'chevronDown')}</button>${esc(sectionHeading)} <span style="font-weight:400;text-transform:none">· ${group.list.length} ${group.list.length === 1 ? 'person' : 'people'}</span></td></tr>`;
+        if (sectionCollapsed) continue;
+      }
       for (const emp of group.list) {
         const cats = (emp.categoryIds || []).map(catById).filter(Boolean);
         const personnelColor = resolveProcessColor(emp.department || 'Unassigned', emp.section || emp.subdepartment || '', emp.process || '')
@@ -6986,7 +7321,7 @@ function renderEmployees() {
           <td><span class="personnel-drag-handle" title="Drag to reorder" aria-hidden="true">⋮⋮</span><div style="font-weight:500;display:inline">${esc(emp.name)}</div>${cats.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px">${cats.map(catChip).join('')}</div>` : ''}</td>
           <td class="muted">${esc(emp.email || '') || '<span class="sum-dash">—</span>'}</td>
           <td>${esc(emp.role || '')}</td>
-          <td class="muted">${esc(employeeHierarchyLeaf(emp) || '')}${emp.level ? `<div style="font-size:11px;margin-top:2px">${esc(emp.level)}</div>` : ''}</td>
+          <td class="muted">${esc(employeeHierarchyLeaf(emp))}${emp.level ? `<div style="font-size:11px;margin-top:2px">${esc(emp.level)}</div>` : ''}</td>
           <td class="muted">${emp.birthday ? esc(fmtMed(emp.birthday)) : '<span class="sum-dash">—</span>'}</td>
           <td class="muted">${emp.homeAddress ? esc(emp.homeAddress) : '<span class="sum-dash">—</span>'}</td>
           <td>${emp.phoneWork ? `<a class="tel-link" href="tel:${esc(emp.phoneWork)}">${esc(emp.phoneWork)}</a>` : '<span class="sum-dash">—</span>'}</td>
@@ -7149,6 +7484,7 @@ async function saveEmployee() {
   const includeInShiftRotation = document.getElementById('ef-shift-rotation').checked === true;
   const shiftTeamId = document.getElementById('ef-shift-team').value;
   if (!name || !email || !role) { alert('Name, email, and role are required.'); return; }
+  if (Array.from(name).length > 30) { alert('Employee name can be at most 30 characters.'); return; }
   let sortOrder;
   if (sortRaw !== '') {
     const n = parseInt(sortRaw, 10);
@@ -7159,12 +7495,23 @@ async function saveEmployee() {
     ? (normalizeEmployeeSortOrder(empById(editingEmpId)?.sortOrder) ?? nextAvailableEmployeeSortOrder(employees, editingEmpId))
     : nextAvailableEmployeeSortOrder();
 
+  const rec = { name, email, role, organisation, department: dept, section, process, team, subdepartment: section, level, birthday, homeAddress, phoneWork, phonePrivate, sortOrder, categoryIds: [...selectedEmpCatIds], includeInShiftRotation, shiftTeamId };
+  const existingEmployee = editingEmpId ? empById(editingEmpId) : null;
+  const rotationDates = existingEmployee?.includeInShiftRotation && !includeInShiftRotation
+    ? rotationDatesForEmployee(editingEmpId) : [];
+  if (rotationDates.length) {
+    confirmShiftRotationRemoval(existingEmployee, rotationDates.length, () => completeEmployeeSave(rec));
+    return;
+  }
+  await completeEmployeeSave(rec);
+}
+async function completeEmployeeSave(rec) {
   await mutateState('saveEmployee', () => {
-    const rec = { name, email, role, organisation, department: dept, section, process, team, subdepartment: section, level, birthday, homeAddress, phoneWork, phonePrivate, sortOrder, categoryIds: [...selectedEmpCatIds], includeInShiftRotation, shiftTeamId };
     if (editingEmpId) {
       rec.id = editingEmpId;
       const idx = employees.findIndex(e => e.id === editingEmpId);
       if (idx !== -1) employees[idx] = rec; else employees.push(rec);
+      if (!rec.includeInShiftRotation) removeEmployeeRotationRelations(editingEmpId);
     } else {
       rec.id = nextEmpId++;
       employees.push(rec);
@@ -7176,6 +7523,18 @@ async function saveEmployee() {
 
   closeModal('emp-modal');
   renderEmployees();
+}
+function confirmShiftRotationRemoval(employee, rotationDateCount, onConfirm) {
+  document.getElementById('confirm-msg').textContent = `${employee?.name || 'This person'} has ${rotationDateCount} Shift Rotation date${rotationDateCount === 1 ? '' : 's'}. Removing them from Shift Rotation will clear these dates from Schedule. Continue?`;
+  const confirmButton = document.getElementById('confirm-ok');
+  confirmButton.textContent = 'Clear rotation & save';
+  confirmButton.className = 'btn btn-danger';
+  confirmButton.onclick = async () => {
+    await onConfirm();
+    confirmButton.textContent = 'Delete';
+    closeModal('confirm-modal');
+  };
+  document.getElementById('confirm-modal').classList.add('open');
 }
 
 async function moveDepartment(dept, direction) {
@@ -7299,6 +7658,8 @@ function confirmDelete(kind, id) {
       for (const key of Object.keys(entriesMap)) if (key.startsWith(`${id}_`)) entriesMap[key] = null;
       for (const key of Object.keys(overtimeMap)) if (key.startsWith(`${id}_`)) overtimeMap[key] = null;
       for (const key of Object.keys(activityShiftsMap)) if (key.startsWith(`${id}_`)) activityShiftsMap[key] = null;
+      for (const key of Object.keys(shiftRotationMap)) if (key.startsWith(`${id}_`)) shiftRotationMap[key] = null;
+      for (const key of Object.keys(workScheduleChecksMap)) if (key.startsWith(`${id}_`)) delete workScheduleChecksMap[key];
       removeEmployeeRotationRelations(id);
       for (const act of activities) act.participants = act.participants.filter(p => p.id !== id);
     } else if (kind === 'activity') {
@@ -7345,8 +7706,12 @@ function statusCountsTowardLoadOnDate(status, dateString) {
   if (!status?.isAbsence) return true;
   return isNormalWorkDate(dateString);
 }
+function entryCountsTowardLoad(entry, status, dateString) {
+  return !statusEntryIsPlanned(entry) && statusCountsTowardLoadOnDate(status, dateString);
+}
 function statusLoadMeasure(entry) {
   if (!entry || entry.status === 'at_work') return { units: 0, hours: 0 };
+  if (statusEntryIsPlanned(entry)) return { units: 0, hours: 0 };
   if (entry.durationType === '24hours') return { units: 0, hours: 24 };
   if (entry.durationType === 'time') return { units: 0, hours: timeRangeHours(entry.time) ?? 0 };
   return { units: 1, hours: 0 };
@@ -7364,11 +7729,12 @@ function activityAdministrativeMeasure(activity, empId, date) {
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
   if (!workCode) return { units: 0, hours: 0 };
   if (workCode.aggregationMode === 'days') return { units: 1, hours: 0 };
-  if (workCode.durationMode === 'fixed') return { units: 0, hours: workloadHoursBeyondCore(workCode.fixedHours) };
+  if (workCode.abbreviation === 'ATF' && ['day', 'night'].includes(assignment.shift)) return { units: 1, hours: 0 };
   const shiftMeta = activityShiftMeta(activity, assignment.shift);
   const legacyInterval = shiftMeta?.range || (timeRangeHours(assignment.shift) ? assignment.shift : '');
   const enteredHours = timeRangeHours(assignment.administrativeTime || legacyInterval) || 0;
-  return { units: 0, hours: workloadHoursBeyondCore(enteredHours) };
+  if (enteredHours >= 24) return { units: 1, hours: 0 };
+  return { units: 0, hours: enteredHours };
 }
 function activityLoadMeasure(activity, empId, date) {
   if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return { units: 0, hours: 0 };
@@ -7408,9 +7774,9 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
     const entry = getEntryObj(`${emp.id}_${ds}`);
     if (entry) {
       const st = siFor(entry.status);
-      if (!statusCountsTowardLoadOnDate(st, ds)) return;
+      if (!entryCountsTowardLoad(entry, st, ds)) return;
       const measure = statusLoadMeasure(entry);
-      if (statusCountsTowardLoadOnDate(st, ds)) {
+      if (entryCountsTowardLoad(entry, st, ds)) {
         statusUnits += measure.units;
         timedStatusHours += measure.hours;
         if (st?.isAbsence) { absenceUnits += measure.units; timedAbsenceHours += measure.hours; }
@@ -8057,9 +8423,9 @@ function computeSummaryRows(startDate, endDate) {
     const entry = getEntryObj(key);
     if (!entry) continue;
     const status = siFor(entry.status);
-    if (!statusCountsTowardLoadOnDate(status, date)) continue;
+    if (!entryCountsTowardLoad(entry, status, date)) continue;
     row.counts[entry.status] = (row.counts[entry.status] || 0) + 1;
-    if (statusCountsTowardLoadOnDate(status, date)) {
+    if (entryCountsTowardLoad(entry, status, date)) {
       row.statusMeasures[entry.status] = addLoadMeasure(row.statusMeasures[entry.status], statusLoadMeasure(entry));
     }
   }
@@ -8481,6 +8847,11 @@ async function bootApp() {
   if (!configuredFileLoaded && parsedLocalState) {
     loadFromData(parsedLocalState);
     setRemoteUpdateSource('none');
+    // Loading browser recovery data is a clean reload state. Any later edit
+    // will call markUnsaved() again; do not carry a stale dirty flag from a
+    // previous session into the freshly loaded application.
+    markFileSaved();
+    startupRecoveredDataAvailable = true;
   } else if (!configuredFileLoaded && storedRemoteSource === 'portable-default') {
     try {
       await loadPortableDefaultPlannerData({ closeSettings: false });
@@ -8507,8 +8878,7 @@ async function bootApp() {
   updateSbStatus();
   if (remoteUpdateSource === 'none') {
     setSyncStatusState('out-of-sync');
-    if (!configuredFileLoaded && !parsedLocalState) setStartupFileSelectionRequired(true);
-    else if (!configuredFileLoaded) setStartupFileSelectionRequired(true);
+    if (!configuredFileLoaded) setStartupFileSelectionRequired(true);
     return;
   }
   await loadStoredPlannerDirectoryHandle();
