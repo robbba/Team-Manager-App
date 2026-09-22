@@ -26,9 +26,9 @@
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3h7v9H3z"/><path d="M14 3h7v5h-7z"/><path d="M14 12h7v9h-7z"/><path d="M3 16h7v5H3z"/></svg>
       <span class="sidebar-item-label">Dashboard</span>
     </button>
-    <button class="nav-btn" data-page="employees" onclick="nav('employees')" aria-label="People">
+    <button class="nav-btn" data-page="employees" onclick="nav('employees')" aria-label="Personnel">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span class="sidebar-item-label">People</span>
+      <span class="sidebar-item-label">Personnel</span>
     </button>
     <button class="nav-btn" data-page="summary" onclick="nav('summary')" aria-label="Summary">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -426,12 +426,12 @@
 <div class="modal-bg" id="settings-modal">
   <div class="modal" style="width:560px">
     <h3>Application settings</h3>
-    <p class="modal-desc">Customise the app name and working-hours configuration.</p>
+    <p class="modal-desc">Customise the organisation name and working-hours configuration.</p>
     <div class="form-row"><label>Administration</label><button class="btn" type="button" onclick="openAdministrationSettings()">Open Administration settings</button><div class="form-hint">Boss View, audit information, and protected maintenance tools.</div></div>
     <div class="form-row">
-      <label>Application name</label>
-      <input id="set-app-name" placeholder="e.g. JDLOC Employee Overview">
-      <div class="form-hint">Shown in the sidebar and as the main heading in Grid View.</div>
+      <label>Organisation name</label>
+      <input id="set-app-name" placeholder="e.g. JDLOC">
+      <div class="form-hint">Shown as the main planning header. ATLAS remains the application name in the corner.</div>
     </div>
     <div class="form-row"><label>Schedule</label><button class="btn" type="button" onclick="openScheduleSettings()">Open Schedule settings</button><div class="form-hint">Core workday, grid behavior, special days, planning options, and activity deadline.</div></div>
     <div class="form-row"><label>Organisation Structure</label><button class="btn" type="button" onclick="openOrganisationStructure()">Manage Organisation Structure</button><div class="form-hint">Reorder and review Departments, Sections, Processes, and Teams.</div></div>
