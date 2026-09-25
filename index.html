@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ATLAS — Adaptive Timeline, Load &amp; Allocation System</title>
-<link rel="stylesheet" href="css/styles.css?v=28">
+<link rel="stylesheet" href="css/styles.css?v=29">
 </head>
 <body>
 <aside id="sidebar">
@@ -461,6 +461,7 @@
       <label>About</label>
       <div class="form-hint" id="set-about-version"></div>
     </div>
+    <div class="settings-copyright">Created by rSoft · Copyright © 2026</div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('settings-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveSettings()">Save</button>
@@ -471,7 +472,7 @@
 <div class="modal-bg" id="workwheel-file-modal">
   <div class="modal" style="width:520px">
     <h3>Workwheel data file</h3>
-    <p class="modal-desc">Open or export the separate Workwheel JSON file. Browser recovery is used while testing.</p>
+    <p class="modal-desc">Workwheel data is saved with the planner JSON. You can also import or export a separate Workwheel JSON file for backup or transfer.</p>
     <div class="form-hint" id="workwheel-file-status" style="margin-bottom:12px"></div>
     <div class="flex gap-2" style="flex-wrap:wrap"><button class="btn" type="button" onclick="importWorkwheelFile()">Open JSON</button><button class="btn" type="button" onclick="saveWorkwheelFileAs()">Export JSON</button><button class="btn" type="button" onclick="loadWorkwheelExample()">Load example</button></div>
     <input id="workwheel-json-file" type="file" accept="application/json,.json" onchange="handleWorkwheelFile(event)" style="display:none">
@@ -494,12 +495,17 @@
     <h3>Add Workwheel activity</h3>
     <p class="modal-desc">Add a meeting, deadline, or recurring section activity.</p>
     <div class="form-row"><label>Title *</label><input id="ww-activity-title" placeholder="Weekly JDLOC meeting"></div>
-    <div class="form-row-2"><div class="form-row" style="margin:0"><label>Date *</label><input id="ww-activity-date" type="date"></div><div class="form-row" style="margin:0"><label>Time</label><input id="ww-activity-time" placeholder="1000-1100"></div></div>
+    <div class="form-row-2"><div class="form-row" style="margin:0"><label>Start date *</label><input id="ww-activity-date" type="date"></div><div class="form-row" style="margin:0"><label>End date</label><input id="ww-activity-end-date" type="date"><span class="form-hint">Leave blank for one day.</span></div></div>
+    <div class="form-row-2"><div class="form-row" style="margin:0"><label>Start time</label><input id="ww-activity-start-time" type="time"></div><div class="form-row" style="margin:0"><label>End time</label><input id="ww-activity-end-time" type="time"></div></div><div class="form-hint">Leave both times blank for all day.</div>
+    <div class="form-row"><label>Location</label><input id="ww-activity-location" placeholder="Meeting room or location"></div>
     <div class="form-row-2"><div class="form-row" style="margin:0"><label>Type</label><select id="ww-activity-type" class="plain-select"><option value="meeting">Meeting</option><option value="deadline">Deadline</option><option value="briefing">Briefing</option><option value="other">Other</option></select></div><div class="form-row" style="margin:0"><label>Recurrence</label><select id="ww-activity-recurrence" class="plain-select" onchange="toggleWorkwheelWeekday()"><option value="none">None</option><option value="weekly">Weekly</option><option value="fortnightly">Every 14 days</option><option value="monthly">Monthly</option></select></div></div>
     <div class="form-row-2"><div class="form-row" id="ww-weekday-row" style="margin:0;display:none"><label>Weekday</label><select id="ww-activity-weekday" class="plain-select"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></div><div class="form-row" style="margin:0"><label>Meeting color</label><input id="ww-activity-color" type="color" value="#3b82f6" style="width:52px;height:36px;padding:2px"></div></div>
-    <div class="form-row"><label>Responsible person</label><input id="ww-activity-responsible" placeholder="Name or call sign"></div>
+    <div class="form-row"><label>Responsible person</label><div class="responsible-mode-switch"><label><input type="radio" name="ww-responsible-mode" value="internal" checked onchange="toggleWorkwheelResponsibleMode()"> Internal personnel</label><label><input type="radio" name="ww-responsible-mode" value="external" onchange="toggleWorkwheelResponsibleMode()"> External contact</label></div></div>
+    <div id="ww-responsible-internal" class="form-row"><label>Personnel</label><select id="ww-activity-responsible-id" class="plain-select"><option value="">Unassigned</option></select></div>
+    <div id="ww-responsible-external" style="display:none"><div class="form-row"><label>External name *</label><input id="ww-activity-responsible" placeholder="Contact name"></div><div class="form-row-2"><div class="form-row" style="margin:0"><label>Organisation</label><input id="ww-responsible-organization" placeholder="Organisation or company"></div><div class="form-row" style="margin:0"><label>Email</label><input id="ww-responsible-email" type="email" placeholder="name@example.com"></div></div><div class="form-row"><label>Phone</label><input id="ww-responsible-phone" type="tel" placeholder="Optional phone number"></div></div>
+    <div class="form-row"><label>Participants</label><div class="workwheel-participant-toolbar"><input id="ww-participant-search" placeholder="Search personnel…" oninput="filterWorkwheelParticipants(this.value)"><button class="btn btn-sm" type="button" onclick="setAllWorkwheelParticipants(true)">All</button><button class="btn btn-sm" type="button" onclick="setAllWorkwheelParticipants(false)">None</button></div><div id="ww-activity-participants" class="workwheel-participant-list"></div><div id="ww-conflict-warning" class="workwheel-conflict-warning" role="status"></div></div>
     <div class="form-row"><label>Notes</label><textarea id="ww-activity-notes" placeholder="Optional notes"></textarea></div>
-    <div class="modal-actions"><button class="btn btn-danger" id="ww-activity-delete" style="margin-right:auto;display:none" onclick="confirmDeleteWorkwheelActivity()">Delete</button><button class="btn" onclick="closeModal('workwheel-activity-modal')">Cancel</button><button class="btn btn-primary" onclick="saveWorkwheelActivity()">Save activity</button></div>
+    <div class="modal-actions"><button class="btn btn-danger" id="ww-activity-delete" style="margin-right:auto;display:none" onclick="confirmDeleteWorkwheelActivity()">Delete</button><button class="btn" onclick="closeModal('workwheel-activity-modal')">Cancel</button><button class="btn" id="ww-publish-schedule" type="button" style="display:none" onclick="publishCurrentWorkwheelActivity()">Publish to Schedule</button><button class="btn btn-primary" onclick="saveWorkwheelActivity()">Save activity</button></div>
   </div>
 </div>
 
@@ -641,7 +647,7 @@
     </div>
   </div>
 </div>
-<script src="app/workwheel.js?v=7"></script>
+<script src="app/workwheel.js?v=8"></script>
 <script src="app/app.js?v=32"></script>
 </body>
 </html>
