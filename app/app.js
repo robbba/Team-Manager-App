@@ -178,7 +178,7 @@ function loadSettings() {
     const raw = lsGet(SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? (parsed.appName === 'Team Manager' ? 'ATLAS' : parsed.appName) : 'ATLAS';
+      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? (parsed.appName === 'Team Manager' || parsed.appName === 'ATLAS' ? 'Organisation' : parsed.appName) : 'Organisation';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
       appSettings.showOnlyConfirmedActivities = parsed.showOnlyConfirmedActivities === true;
@@ -468,7 +468,7 @@ function loadSettings() {
     const raw = newRaw || legacyRaw;
     if (raw) {
       const parsed = JSON.parse(raw);
-      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? (parsed.appName === 'Team Manager' ? 'ATLAS' : parsed.appName) : 'ATLAS';
+      appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? (parsed.appName === 'Team Manager' || parsed.appName === 'ATLAS' ? 'Organisation' : parsed.appName) : 'Organisation';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
       appSettings.autoSyncEnabled = parsed.autoSyncEnabled !== false;
@@ -676,8 +676,12 @@ function toggleAutoSync() {
   updateSyncButton();
 }
 function applyAppName() {
-  document.getElementById('sb-app-name').textContent = appSettings.appName;
-  document.title = appSettings.appName;
+  const organisationName = appSettings.appName || 'Organisation';
+  document.getElementById('sb-app-name').textContent = 'ATLAS';
+  document.title = `ATLAS — ${organisationName}`;
+  document.querySelectorAll('.organisation-name-header').forEach((element) => {
+    element.textContent = organisationName;
+  });
 }
 
 function openSettings() {
@@ -2644,7 +2648,7 @@ function loadFromData(data) {
   if (normalized.appSettings) {
     const localSettings = Object.fromEntries(LOCAL_ONLY_APP_SETTING_KEYS.map(key => [key, appSettings[key]]));
     appSettings = { ...appSettings, ...normalized.appSettings, ...localSettings };
-    if (appSettings.appName === 'Team Manager') appSettings.appName = 'ATLAS';
+    if (appSettings.appName === 'Team Manager' || appSettings.appName === 'ATLAS') appSettings.appName = 'Organisation';
     appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(appSettings.coreWorkdayRange, '0730-1500');
     appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || 7.5;
     appSettings.shiftRotationEnabled = appSettings.shiftRotationEnabled === true;
@@ -4338,13 +4342,12 @@ function renderGrid() {
     <div id="grid-wrap" class="schedule-period-${gridPeriod}" style="min-height:0;--grid-day-width:${dayColumnWidth}px">
       <div class="grid-topbar">
         <div>
-          <div class="page-title">${esc(appSettings.appName)}</div>
-          <div class="atlas-full-name">Adaptive Timeline, Load &amp; Allocation System</div>
-          <div class="page-sub">Daily status with week numbers and activity timeline.</div>
+          <div class="page-title organisation-name-header">${esc(appSettings.appName || 'Organisation')}</div>
+          <div class="atlas-full-name">ATLAS - Adaptive Timeline, Load &amp; Allocation System</div>
         </div>
         <div class="flex items-center gap-2 schedule-topbar-controls">
           <button class="btn btn-sm" onclick="goToday()">Today</button>
-          <label class="btn btn-sm schedule-date-jump-button" title="Jump to a specific date"><span>Jump…</span>${svgIcon('teamSchedule')}<input id="schedule-date-jump-input" class="schedule-date-jump-input" type="date" value="${gridPeriod === 'year' ? `${gridYear}-01-01` : scheduleAnchorDate}" onchange="jumpToScheduleDate(this.value)" aria-label="Jump to date"></label>
+          <button class="btn btn-sm schedule-date-jump-button" type="button" title="Jump to a specific date" onclick="openScheduleDatePicker()"><span>Jump…</span>${svgIcon('teamSchedule')}<input id="schedule-date-jump-input" class="schedule-date-jump-input" type="date" value="${todayStr()}" onchange="jumpToScheduleDate(this.value)" aria-label="Jump to date" tabindex="-1"></button>
           <select class="plain-select" style="height:32px;padding:5px 7px;width:76px" onchange="applyAppZoom(this.value)" aria-label="Application zoom" title="Local application zoom">
             ${[80,90,100,110,125,150,175].map(value => `<option value="${value}" ${appZoom === value ? 'selected' : ''}>${value}%</option>`).join('')}
           </select>
@@ -4680,42 +4683,45 @@ function activityPageCapacity() {
   if (window.innerHeight <= 1200) return 9;
   return 10;
 }
-function changeActivityPage(direction) {
+function activityPageOffsetFor(direction) {
   const today = todayStr();
   const { start, end } = scheduleRange();
-  const yearActs = activities.filter(a => a.startDate <= end && a.endDate >= start);
+  const yearActs = activities.filter(a => a.startDate <= end && a.endDate >= start && activityVisibleForScheduleSection(a));
   const activityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
   const filteredYearActs = activityFilter === 'all'
     ? yearActs
     : yearActs.filter(a => activityStatus(a) === activityFilter);
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
-  const visibleActivities = [...pastActs, ...currentActs];
+  const visibleActivities = [...(pastActivitiesExpanded ? pastActs : []), ...currentActs];
   const maxOffset = Math.max(0, visibleActivities.length - activityPageSize);
-  activityPageOffset = Math.min(Math.max(0, activityPageOffset + direction), maxOffset);
+  return Math.min(Math.max(0, activityPageOffset + direction), maxOffset);
+}
+function changeActivityPage(direction) {
+  const nextOffset = activityPageOffsetFor(direction);
+  if (nextOffset === activityPageOffset) return false;
+  activityPageOffset = nextOffset;
+  const scroll = document.getElementById('grid-scroll');
+  const horizontalPosition = scroll?.scrollLeft || 0;
   renderGridBody(scheduleDays(), todayStr());
   requestAnimationFrame(() => {
-    const visible = [...document.querySelectorAll('tr.activity-grid-row')];
-    const target = direction > 0 ? visible.at(-1) : visible[0];
-    const cell = target?.querySelector('.activity-select-cell[data-date]');
-    if (cell) document.getElementById('grid-scroll')?.scrollTo({ left: Math.max(0, cell.offsetLeft - 260), behavior: 'smooth' });
+    const updatedScroll = document.getElementById('grid-scroll');
+    if (updatedScroll) updatedScroll.scrollLeft = horizontalPosition;
   });
+  return true;
 }
 let activityWheelLocked = false;
 function handleActivityListWheel(event) {
   if (gridViewMode === 'timeline' || Math.abs(event.deltaY) <= Math.abs(event.deltaX) || !event.target.closest?.('.activity-grid-row')) return;
-  // While the pointer is over an activity row, always swallow vertical wheel
-  // input so the surrounding page never scrolls, even mid-throttle during a
-  // fast scroll burst. Only the page-change action itself is throttled.
+  const scroll = document.getElementById('grid-scroll');
+  if (!scroll || scroll.scrollWidth <= scroll.clientWidth) return;
   event.preventDefault();
   event.stopPropagation();
-  if (activityWheelLocked) return;
-  const direction = event.deltaY > 0 ? 1 : -1;
-  const oldOffset = activityPageOffset;
-  changeActivityPage(direction);
-  if (activityPageOffset === oldOffset) return;
-  activityWheelLocked = true;
-  setTimeout(() => { activityWheelLocked = false; }, 120);
+  const maxScrollLeft = scroll.scrollWidth - scroll.clientWidth;
+  const wheelDelta = event.deltaY;
+  const nextScrollLeft = Math.max(0, Math.min(maxScrollLeft, scroll.scrollLeft + wheelDelta));
+  if (nextScrollLeft === scroll.scrollLeft) return;
+  scroll.scrollLeft = nextScrollLeft;
 }
 function scrollToActivityCell(rowKey, date) {
   const scroll = document.getElementById('grid-scroll');
@@ -5058,6 +5064,13 @@ function goToday() {
     renderPage();
     setTimeout(focusToday, 60);
   }
+}
+function openScheduleDatePicker() {
+  const input = document.getElementById('schedule-date-jump-input');
+  if (!input) return;
+  input.value = todayStr();
+  if (typeof input.showPicker === 'function') input.showPicker();
+  else input.click();
 }
 function jumpToScheduleDate(value) {
   if (!isValidIsoDate(value)) return;
