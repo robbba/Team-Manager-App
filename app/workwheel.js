@@ -1,6 +1,7 @@
 'use strict';
 
-// Workwheel prototype: intentionally independent from the main planner JSON.
+// Workwheel data is included in the planner snapshot; browser recovery and
+// optional Workwheel JSON import/export are maintained here.
 const WORKWHEEL_STORAGE_KEY = 'team-manager-workwheel-state';
 const WORKWHEEL_VIEW_KEY = 'team-manager-workwheel-view';
 let workwheelState = { version: 1, wheels: [], activities: [], availableActivities: [] };
@@ -58,9 +59,11 @@ function workwheelPlannerSnapshot() {
 }
 function saveWorkwheelState() {
   try { localStorage.setItem(WORKWHEEL_STORAGE_KEY, JSON.stringify(workwheelState)); } catch (error) { console.warn('Workwheel browser recovery is unavailable.', error); }
-  if (typeof scheduleAutoSave === 'function') scheduleAutoSave();
+  if (typeof scheduleWorkwheelAutoSave === 'function') scheduleWorkwheelAutoSave();
+  else if (typeof scheduleAutoSave === 'function') scheduleAutoSave();
   const status = document.getElementById('workwheel-file-status');
-  if (status) status.textContent = 'Browser recovery updated. Use Export JSON to create a portable file.';
+  if (status) status.textContent = 'Saved to browser recovery and the active planner file when automatic file saving is available. Use Export JSON for a portable copy.';
+  return Promise.resolve(true);
 }
 function workwheelResponsible(activity) {
   const employee = typeof empById === 'function' && activity.responsibleId ? empById(Number(activity.responsibleId)) : null;
@@ -408,15 +411,7 @@ function openWorkwheelActivity(id = null) {
   document.getElementById('ww-activity-start-time').value = activity?.startTime || '';
   document.getElementById('ww-activity-end-time').value = activity?.endTime || '';
   document.getElementById('ww-activity-location').value = activity?.location || '';
-  const typeSelect = document.getElementById('ww-activity-type');
-  const activityType = activity?.type || 'meeting';
-  if (activityType && ![...typeSelect.options].some(option => option.value === activityType)) {
-    const importedTypeOption = document.createElement('option');
-    importedTypeOption.value = activityType;
-    importedTypeOption.textContent = activityType;
-    typeSelect.appendChild(importedTypeOption);
-  }
-  typeSelect.value = activityType;
+  document.getElementById('ww-activity-type').value = activity?.type || 'Meeting';
   document.getElementById('ww-activity-recurrence').value = activity?.recurrence || 'none';
   document.getElementById('ww-activity-weekday').value = String(activity?.weekday ?? new Date(`${activity?.date || workwheelLocalDate(new Date())}T00:00:00`).getDay());
   document.getElementById('ww-activity-color').value = activity?.color || '#3b82f6';
@@ -434,7 +429,7 @@ function openWorkwheelActivity(id = null) {
   document.getElementById('ww-activity-delete').style.display = activity ? '' : 'none';
   const publishButton = document.getElementById('ww-publish-schedule');
   if (publishButton) publishButton.style.display = activity ? '' : 'none';
-  if (publishButton) publishButton.textContent = activity?.linkedScheduleActivityId ? 'Update Schedule' : 'Publish to Schedule';
+  if (publishButton) publishButton.textContent = 'Add to Schedule';
   document.getElementById('workwheel-activity-modal').classList.add('open');
   toggleWorkwheelWeekday();
   ['ww-activity-date', 'ww-activity-start-time', 'ww-activity-end-time', 'ww-activity-recurrence'].forEach(inputId => document.getElementById(inputId)?.addEventListener('input', refreshWorkwheelConflictWarning));
