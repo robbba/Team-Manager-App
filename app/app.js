@@ -2794,6 +2794,7 @@ function loadFromData(data) {
     phonePrivate: e.phonePrivate || '',
     birthday: e.birthday || '',
     homeAddress: e.homeAddress || '',
+    level: String(e.level || e.rank || '').trim(),
     subdepartment: e.subdepartment || e.team || '',
     categoryIds: Array.isArray(e.categoryIds) && e.categoryIds.length
       ? e.categoryIds.map(Number).filter(Number.isFinite)
@@ -3307,8 +3308,8 @@ function activityPhysicalShift(act, assignment) {
   if (!shift) return '';
   return `${shift.label}${shift.range ? ` (${shift.range})` : ''}`;
 }
-function activityAssignmentInfo(act, empId, date) {
-  if (activityStatus(act) !== 'confirmed') return null;
+function activityAssignmentInfo(act, empId, date, includeTentative = false) {
+  if (activityStatus(act) !== 'confirmed' && !(includeTentative && activityStatus(act) === 'tentative')) return null;
   const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId)
     || (assignment.shift === 'normal' ? { id: null, name: 'Normal Working Hours', abbreviation: 'NA', color: act.color } : null);
@@ -3726,13 +3727,13 @@ function employeeNameForDisplay(employee, maxLength = 30) {
   return `${characters.slice(0, Math.max(1, maxLength - 1)).join('')}…`;
 }
 function displayEmployeeName(employee) {
-  const rank = appSettings.showLevelRankInSchedule !== false ? String(employee?.level || '').trim() : '';
+  const rank = appSettings.showLevelRankInSchedule !== false ? String(employee?.level || employee?.rank || '').trim() : '';
   return [rank, employeeNameForDisplay(employee)].filter(Boolean).join(' ');
 }
 function displayEmployeeNameMarkup(employee) {
   const fullName = String(employee?.name || '').trim();
   const name = esc(employeeNameForDisplay(employee));
-  const rank = appSettings.showLevelRankInSchedule !== false ? String(employee?.level || '').trim() : '';
+  const rank = appSettings.showLevelRankInSchedule !== false ? String(employee?.level || employee?.rank || '').trim() : '';
   const content = rank ? `<strong class="employee-rank">${esc(rank)}</strong> ${name}` : name;
   return `<span title="${esc(fullName)}">${content}</span>`;
 }
@@ -4197,7 +4198,7 @@ async function setRotationFromPicker(shift) {
     });
   });
   closePicker();
-  renderPage();
+  renderShiftRotationPreservingViewport();
 }
 function employeeHasRotation(empId, date) { return Boolean(rotationRecord(empId, date)?.shift); }
 function rotationConflictActivities(empId, date) {
@@ -4242,12 +4243,52 @@ async function setShiftRotation(empId, date, shift) {
       shiftRotationMap[`${empId}_${date}`] = { shift, ...(shift === 'overtime' ? { time } : {}) };
     } else shiftRotationMap[`${empId}_${date}`] = null;
   });
-  renderPage();
+  renderShiftRotationPreservingViewport();
 }
 let rotationSelectedCells = new Set();
 let rotationSelectionAnchor = null;
 let suppressRotationCellClick = false;
 let shiftRotationInitialScrollPending = true;
+function scrollRotationDateIntoView(date) {
+  const viewport = document.querySelector('.rotation-scroll');
+  const target = viewport?.querySelector(`.rotation-day-head[data-date="${date}"]`);
+  if (!viewport || !target) return;
+  const viewportRect = viewport.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const stickyColumnWidth = viewport.querySelector('.rotation-table .rotation-employee')?.getBoundingClientRect().width || 0;
+  const targetCenter = viewport.scrollLeft + targetRect.left - viewportRect.left + targetRect.width / 2;
+  const visibleCenter = (viewport.clientWidth + stickyColumnWidth) / 2;
+  viewport.scrollLeft = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, targetCenter - visibleCenter));
+}
+function syncShiftRotationScrollbar() {
+  const viewport = document.getElementById('rotation-scroll');
+  const control = document.getElementById('rotation-horizontal-scroll');
+  if (!viewport || !control) return;
+  const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+  control.max = String(maxScroll);
+  control.value = String(Math.min(maxScroll, viewport.scrollLeft));
+  control.disabled = maxScroll === 0;
+  const visibleRatio = viewport.clientWidth / Math.max(1, viewport.scrollWidth);
+  control.style.setProperty('--rotation-thumb-width', `${Math.max(32, control.clientWidth * visibleRatio)}px`);
+}
+function setShiftRotationScroll(value) {
+  const viewport = document.getElementById('rotation-scroll');
+  if (viewport) viewport.scrollLeft = Number(value);
+}
+window.addEventListener('resize', syncShiftRotationScrollbar, { passive: true });
+function renderShiftRotationPreservingViewport() {
+  const viewport = document.querySelector('.rotation-scroll');
+  if (!viewport) { renderPage(); return; }
+  const scrollLeft = viewport.scrollLeft;
+  const scrollTop = viewport.scrollTop;
+  renderPage();
+  requestAnimationFrame(() => {
+    const updatedViewport = document.querySelector('.rotation-scroll');
+    if (!updatedViewport) return;
+    updatedViewport.scrollLeft = scrollLeft;
+    updatedViewport.scrollTop = scrollTop;
+  });
+}
 function rotationCellKey(empId, date) { return `${empId}_${date}`; }
 function updateRotationSelectionVisuals() {
   document.querySelectorAll('.rotation-cell[data-empid][data-date]').forEach(cell => {
@@ -4328,7 +4369,7 @@ async function applyRotationSelection(shift) {
       else shiftRotationMap[`${empId}_${date}`] = null;
     });
   });
-  renderPage();
+  renderShiftRotationPreservingViewport();
   rotationSelectedCells.clear();
   updateRotationSelectionVisuals();
 }
@@ -4337,6 +4378,19 @@ function rotationDateHeader(date) {
   const dateValue = fmt(d);
   const today = dateValue === todayStr();
   return `<th class="rotation-day-head${isWknd(d) ? ' weekend' : ''}${today ? ' today-col' : ''}" data-date="${dateValue}" title="${today ? 'Today' : ''}"><span>${d.toLocaleDateString('en-US', { weekday: 'short' })}</span><b>${d.getDate()}</b></th>`;
+}
+function rotationPeriodHeaderCells(days, period) {
+  const groups = [];
+  for (const date of days) {
+    const week = isoWeek(date);
+    const key = period === 'month' ? `${date.getFullYear()}-${date.getMonth()}` : isoWeekStringFromDate(date);
+    const label = period === 'month' ? date.toLocaleDateString('en-US', { month: 'short' }) : `W${week}`;
+    const group = groups[groups.length - 1];
+    if (group?.key === key) group.span++;
+    else groups.push({ key, label, span: 1, alternate: period === 'month' ? date.getMonth() % 2 === 1 : week % 2 === 0 });
+  }
+  const className = period === 'month' ? 'rotation-month-head' : 'rotation-week-head';
+  return groups.map(group => `<th class="${className}${group.alternate ? ' period-alt' : ''}" colspan="${group.span}">${esc(group.label)}</th>`).join('');
 }
 function renderShiftRotation() {
   if (appSettings.shiftRotationEnabled !== true) { nav('grid'); return; }
@@ -4382,11 +4436,12 @@ function renderShiftRotation() {
     const organisationPath = [emp.department, emp.section || emp.subdepartment, emp.process, emp.team].filter(Boolean).join(' / ');
     return `${shiftTeamHeader}<tr><th class="rotation-employee sticky-left" style="border-left:4px solid ${teamColor};background:color-mix(in srgb,${teamColor} 14%,var(--surface));"><b>${displayEmployeeNameMarkup(emp)}</b><small>${esc(emp.role || '')}</small></th>${cells}</tr>`;
   }).join('');
-  content.innerHTML = `<div class="rotation-wrap" style="--rotation-day-width:${rotationDayWidth}px"><div class="rotation-topbar"><div><h1 class="page-title">Shift Rotation</h1><p class="page-sub">Plan eligible employees. Every rotation date counts as normal working hours.</p></div><div class="flex items-center gap-1"><button class="btn btn-sm${gridPeriod === 'week' ? ' btn-primary' : ''}" onclick="setGridPeriod('week')">Week</button><button class="btn btn-sm${gridPeriod === 'month' ? ' btn-primary' : ''}" onclick="setGridPeriod('month')">Month</button><button class="btn btn-sm${gridPeriod === 'year' ? ' btn-primary' : ''}" onclick="setGridPeriod('year')">Year</button><button class="btn btn-sm" onclick="changeGridPeriod(-1)" aria-label="Previous period">‹</button><strong class="rotation-year">${esc(range.label)}</strong><button class="btn btn-sm" onclick="changeGridPeriod(1)" aria-label="Next period">›</button><button class="btn btn-sm" onclick="goToday()">Today</button><button class="btn btn-sm" onclick="openShiftRotationPrintDialog()">Print / PDF</button></div></div>${eligible.length ? `<div class="rotation-scroll"><table class="rotation-table"><thead><tr><th class="rotation-employee sticky-left">Employee</th>${days.map(rotationDateHeader).join('')}</tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="card rotation-empty-state">No employees are included in Shift Rotation. Enable employees from People.</div>'}</div>`;
-  if (appSettings.jumpToTodayOnGridChange !== false && shiftRotationInitialScrollPending) setTimeout(() => {
-    document.querySelector(`.rotation-day-head[data-date="${todayStr()}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  content.innerHTML = `<div class="rotation-wrap" style="--rotation-day-width:${rotationDayWidth}px"><div class="rotation-topbar"><div><h1 class="page-title">Shift Rotation</h1><p class="page-sub">Plan eligible employees. Every rotation date counts as normal working hours.</p></div><div class="flex items-center gap-1"><button class="btn btn-sm${gridPeriod === 'week' ? ' btn-primary' : ''}" onclick="setGridPeriod('week')">Week</button><button class="btn btn-sm${gridPeriod === 'month' ? ' btn-primary' : ''}" onclick="setGridPeriod('month')">Month</button><button class="btn btn-sm${gridPeriod === 'year' ? ' btn-primary' : ''}" onclick="setGridPeriod('year')">Year</button><button class="btn btn-sm" onclick="changeGridPeriod(-1)" aria-label="Previous period">‹</button><strong class="rotation-year">${esc(range.label)}</strong><button class="btn btn-sm" onclick="changeGridPeriod(1)" aria-label="Next period">›</button><button class="btn btn-sm" onclick="goToday()">Today</button><button class="btn btn-sm" onclick="openShiftRotationPrintDialog()">Print / PDF</button></div></div>${eligible.length ? `<div class="rotation-scroll" id="rotation-scroll" onscroll="syncShiftRotationScrollbar()"><table class="rotation-table"><thead><tr><th class="rotation-employee sticky-left" rowspan="3">Employee</th>${rotationPeriodHeaderCells(days, 'month')}</tr><tr>${rotationPeriodHeaderCells(days, 'week')}</tr><tr>${days.map(rotationDateHeader).join('')}</tr></thead><tbody>${rows}</tbody></table></div><div class="rotation-scroll-control"><input class="rotation-horizontal-scroll" id="rotation-horizontal-scroll" type="range" min="0" max="0" value="0" step="1" aria-label="Scroll Shift Rotation dates" oninput="setShiftRotationScroll(this.value)"></div>` : '<div class="card rotation-empty-state">No employees are included in Shift Rotation. Enable employees from People.</div>'}</div>`;
+  requestAnimationFrame(syncShiftRotationScrollbar);
+  if (shiftRotationInitialScrollPending) {
     shiftRotationInitialScrollPending = false;
-  }, 60);
+    if (appSettings.jumpToTodayOnGridChange !== false) requestAnimationFrame(() => scrollRotationDateIntoView(todayStr()));
+  }
 }
 function openShiftRotationPrintDialog() {
   const range = scheduleRange();
@@ -6361,6 +6416,21 @@ function toggleParticipant(id, checked) {
   else selectedParticipants = selectedParticipants.filter(p => p.id !== id);
   buildParticipantPicker();
 }
+function selectAllActivityParticipants() {
+  const relevance = {
+    departments: [...document.getElementById('af-relevance-departments').selectedOptions].map(option => option.value),
+    sections: [...document.getElementById('af-relevance-sections').selectedOptions].map(option => option.value),
+    processes: [...document.getElementById('af-relevance-processes').selectedOptions].map(option => option.value),
+  };
+  selectedParticipants = sortedEmployees()
+    .filter(emp => activityRelevantToEmployee({ relevance }, emp))
+    .map(emp => ({ id: emp.id }));
+  buildParticipantPicker();
+}
+function clearActivityParticipants() {
+  selectedParticipants = [];
+  buildParticipantPicker();
+}
 function openActModal(id) {
   editingActId = id || null;
   const act = id ? activities.find(a => a.id === id) : null;
@@ -6578,7 +6648,7 @@ function activityReportHasAssignment(act, empId, date) {
   return assignment.assigned === true && assignment.excluded !== true && Boolean(assignment.shift);
 }
 function activityReportCellInfo(act, emp, date) {
-  const info = activityAssignmentInfo(act, emp.id, date);
+  const info = activityAssignmentInfo(act, emp.id, date, true);
   const weekend = isWknd(new Date(`${date}T00:00:00`));
   if (!info) {
     return {
@@ -6639,9 +6709,9 @@ function activityReportRows(act) {
     const emp = empById(participant.id);
     if (!emp) return;
     dates.forEach(date => {
-      const info = activityAssignmentInfo(act, emp.id, date);
+      const info = activityAssignmentInfo(act, emp.id, date, true);
       rows.push({
-        employee: emp.name,
+        employee: displayEmployeeName(emp),
         department: emp.department,
         date,
         shiftType: info ? `${info.workCode.abbreviation} (${info.administrativeValue})` : '',
@@ -6669,7 +6739,7 @@ function openActivityReport(id) {
       <thead><tr style="text-align:left;border-bottom:2px solid var(--border)">
         <th style="padding:7px 8px;min-width:150px">Employee</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 8px;min-width:92px;background:${weekend ? 'var(--weekend-bg)' : 'transparent'};color:${weekend ? 'var(--weekend-text)' : 'inherit'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}
       </tr></thead>
-      <tbody>${participantGroups.length ? participantGroups.map(group => `<tr><td colspan="${dates.length + 1}" style="padding:7px 8px;background:${group.color}18;border-bottom:1px solid ${group.color}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${group.color};margin-right:5px"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${esc(emp.name)}</td>${dates.map(date => {
+      <tbody>${participantGroups.length ? participantGroups.map(group => `<tr><td colspan="${dates.length + 1}" style="padding:7px 8px;background:${group.color}18;border-bottom:1px solid ${group.color}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${group.color};margin-right:5px"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${displayEmployeeNameMarkup(emp)}</td>${dates.map(date => {
           const cell = activityReportCellInfo(act, emp, date);
           const deviation = dailyDeviationLabel(emp.id, date);
           const details = deviation ? `<div style="font-size:10px;margin-top:3px;color:var(--destructive)">${esc(deviation)}</div>` : '';
@@ -6731,7 +6801,7 @@ function printActivityReport() {
       <table><thead><tr><th class="employee-column">Employee</th>${chunkDates.map(date => {
         const weekend = isWknd(new Date(`${date}T00:00:00`));
         return `<th class="date-column${weekend ? ' weekend' : ''}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted">${fmtShort(date)}</div></th>`;
-      }).join('')}</tr></thead><tbody>${visibleGroups.length ? visibleGroups.map(group => `<tr class="section-row"><td colspan="${chunkDates.length + 1}" style="background:${group.color}18;border-bottom-color:${group.color}"><span class="section-dot" style="background-color:${group.color}"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr><td><b>${esc(emp.name)}</b></td>${chunkDates.map(date => {
+      }).join('')}</tr></thead><tbody>${visibleGroups.length ? visibleGroups.map(group => `<tr class="section-row"><td colspan="${chunkDates.length + 1}" style="background:${group.color}18;border-bottom-color:${group.color}"><span class="section-dot" style="background-color:${group.color}"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr><td>${displayEmployeeNameMarkup(emp)}</td>${chunkDates.map(date => {
           const cell = activityReportCellInfo(act, emp, date);
           return `<td class="${cell.className}" style="${cell.style}">${cell.html}</td>`;
         }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${chunkDates.length + 1}" class="empty-note">${hideInactiveByWeek ? 'No personnel scheduled this week.' : 'No participants assigned.'}</td></tr>`}</tbody></table>

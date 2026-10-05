@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ATLAS — Adaptive Timeline, Load &amp; Allocation System</title>
-<link rel="stylesheet" href="css/styles.css?v=33">
+<link rel="stylesheet" href="css/styles.css?v=35">
 </head>
 <body>
 <aside id="sidebar">
@@ -319,7 +319,7 @@
       <div class="swatches" id="af-swatches"></div>
     </div>
     <div class="form-row">
-      <label>Participants <span id="af-participant-count" class="muted" style="font-weight:400"></span></label>
+      <div class="flex items-center justify-between gap-2" style="margin-bottom:6px"><label style="margin:0">Participants <span id="af-participant-count" class="muted" style="font-weight:400"></span></label><span class="flex gap-2"><button class="btn btn-sm" type="button" title="Select all personnel matching the activity targets" onclick="selectAllActivityParticipants()">Select all</button><button class="btn btn-sm" type="button" onclick="clearActivityParticipants()">Clear</button></span></div>
       <div id="af-participants" class="participant-list"></div>
     </div>
     <label style="display:flex;align-items:flex-start;gap:7px;font-size:12.5px;cursor:pointer;margin:2px 0 12px">
@@ -668,6 +668,6 @@
   </div>
 </div>
 <script src="app/workwheel.js?v=9"></script>
-<script src="app/app.js?v=42"></script>
+<script src="app/app.js?v=47"></script>
 </body>
 </html>
