@@ -5314,9 +5314,10 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;border-color:${holiday.color || '#ef4444'}55;${weekend ? 'filter:brightness(.86);' : ''}`
     : '';
   const birthdayBadge = birthday ? `<span class="birthday-cake" title="${esc(`Birthday: ${emp.name}${birthdayAge !== null ? ` · turns ${birthdayAge}` : ''}`)}" aria-label="${esc(`Birthday: ${emp.name}${birthdayAge !== null ? ` · turns ${birthdayAge}` : ''}`)}">${svgIcon('cake', 'Birthday')}</span>` : '';
-  const workwheelMarker = appSettings.showWorkwheelCellMarkers !== false && workwheelEvents.length ? `<span class="workwheel-cell-marker" style="--workwheel-color:${esc(workwheelEvents[0].color || '#3b82f6')}" title="${esc(workwheelEvents.map(event => event.title).join('\n'))}">◉${workwheelEvents.length > 1 ? `<small>${workwheelEvents.length}</small>` : ''}</span>` : '';
+  let workwheelMarker = appSettings.showWorkwheelCellMarkers !== false && workwheelEvents.length ? `<span class="workwheel-cell-marker" style="--workwheel-color:${esc(workwheelEvents[0].color || '#3b82f6')}" title="${esc(workwheelEvents.map(event => event.title).join('\n'))}">◉${workwheelEvents.length > 1 ? `<small>${workwheelEvents.length}</small>` : ''}</span>` : '';
+  if (cellNote && !primaryActivity && !rotation && !cellText) workwheelMarker += `<span class="cell-note-indicator" role="img" aria-label="Cell note" title="Cell note: ${esc(cellNote)}">N</span>`;
   const overtimeBadge = overtime
-    ? `<span class="overtime-badge" title="Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` · ${esc(overtime.note)}` : ''}">OT ${formatHoursNumber(overtime.hours)}h</span>`
+    ? `<span class="overtime-badge${!primaryActivity && !rotation && !cellText ? ' overtime-badge-empty' : ''}" title="Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` · ${esc(overtime.note)}` : ''}">OT ${formatHoursNumber(overtime.hours)}h</span>`
     : '';
   const workScheduleCheckBadge = checkedActivity || checkedStatus ? `<span class="work-schedule-check" title="Checked in external work system">✓</span>` : '';
 

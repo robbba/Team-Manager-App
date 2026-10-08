@@ -357,6 +357,9 @@ function renderWorkwheel() {
   if (wheelSelect && !toolbar.querySelector('.workwheel-zoom')) {
     wheelSelect.insertAdjacentHTML('afterend', `<label class="workwheel-zoom">Zoom <select class="plain-select" onchange="setWorkwheelZoom(this.value)">${[75, 100, 125, 150, 175, 200].map(value => `<option value="${value}" ${value === workwheelZoom ? 'selected' : ''}>${value}%</option>`).join('')}</select></label>`);
   }
+  if (wheel && !toolbar.querySelector('.workwheel-delete')) {
+    toolbar.querySelector('.workwheel-zoom')?.insertAdjacentHTML('afterend', '<button type="button" class="btn btn-sm btn-danger workwheel-delete" onclick="confirmDeleteWorkwheel()">Delete wheel</button>');
+  }
   if (wheel && focusPanel) content.querySelector('.workwheel-layout')?.insertAdjacentHTML('afterend', focusPanel);
 }
 function selectWorkwheel(id) { workwheelSelectedId = id; renderWorkwheel(); }
@@ -390,6 +393,18 @@ function addWorkwheel() {
   if (section) section.value = '';
   document.getElementById('workwheel-create-modal')?.classList.add('open');
   setTimeout(() => name?.focus(), 30);
+}
+function confirmDeleteWorkwheel() {
+  const wheel = workwheelState.wheels.find(item => item.id === workwheelSelectedId);
+  if (!wheel) return;
+  const activityCount = workwheelState.activities.filter(activity => activity.wheelId === wheel.id).length;
+  const activityLabel = activityCount === 1 ? 'activity' : 'activities';
+  if (!confirm(`Delete "${wheel.name}" and its ${activityCount} Workwheel ${activityLabel}? Items already published to Schedule will remain there.`)) return;
+  workwheelState.wheels = workwheelState.wheels.filter(item => item.id !== wheel.id);
+  workwheelState.activities = workwheelState.activities.filter(activity => activity.wheelId !== wheel.id);
+  workwheelSelectedId = workwheelState.wheels[0]?.id || '';
+  saveWorkwheelState();
+  renderWorkwheel();
 }
 function saveNewWorkwheel() {
   const name = document.getElementById('workwheel-name-input')?.value.trim();
