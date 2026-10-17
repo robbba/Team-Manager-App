@@ -331,6 +331,15 @@ function scheduleEmployeeMatchesScope(employee) {
   if (!scope.level) return true;
   return scope.level === 'department' ? String(employee?.department || (employeeSection(employee) ? 'Independent sections' : '')).trim() === scope.value : employeeSection(employee) === scope.value;
 }
+function meetingMatchesScheduleScope(meeting) {
+  const scope = scheduleScopeParts();
+  if (!scope.level) return true;
+  const participantIds = [...new Set([...(meeting?.participantIds || []), ...(meeting?.responsibleId ? [Number(meeting.responsibleId)] : [])])];
+  return participantIds.some(id => {
+    const employee = employees.find(item => Number(item.id) === Number(id));
+    return employee && scheduleEmployeeMatchesScope(employee);
+  });
+}
 function activityVisibleForScheduleSection(activity) {
   const scope = scheduleScopeParts();
   if (!scope.level) return true;
