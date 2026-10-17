@@ -79,22 +79,55 @@ function toggleWorkwheelResponsibleMode() {
 function populateWorkwheelResponsibleOptions(selectedId = '') {
   const select = document.getElementById('ww-activity-responsible-id');
   if (!select) return;
-  const people = typeof employees !== 'undefined' ? [...employees].sort((a, b) => a.name.localeCompare(b.name)) : [];
-  select.innerHTML = '<option value="">Unassigned</option>' + people.map(person => `<option value="${Number(person.id)}" ${String(person.id) === String(selectedId) ? 'selected' : ''}>${workwheelEsc(person.name)}${person.department ? ` · ${workwheelEsc(person.department)}` : ''}</option>`).join('');
+  const people = typeof employees !== 'undefined' ? [...employees].sort((a, b) => typeof comparePersonnelHierarchy === 'function' ? comparePersonnelHierarchy(a, b) : a.name.localeCompare(b.name)) : [];
+  select.innerHTML = '<option value="">Unassigned</option>' + people.map(person => `<option value="${Number(person.id)}" ${String(person.id) === String(selectedId) ? 'selected' : ''}>${workwheelEsc(person.name)}${[person.department, person.section, person.process, person.team].filter(Boolean).map(workwheelEsc).map(value => ` · ${value}`).join('')}</option>`).join('');
 }
 function populateWorkwheelParticipants(selectedIds = []) {
   const list = document.getElementById('ww-activity-participants');
   if (!list) return;
   const selected = new Set((selectedIds || []).map(Number));
-  const people = typeof employees !== 'undefined' ? [...employees].sort((a, b) => a.name.localeCompare(b.name)) : [];
-  list.innerHTML = people.length ? people.map(person => `<label><input type="checkbox" value="${Number(person.id)}" ${selected.has(Number(person.id)) ? 'checked' : ''} onchange="refreshWorkwheelConflictWarning()"><span>${workwheelEsc(person.name)}${person.department ? ` · ${workwheelEsc(person.department)}` : ''}</span></label>`).join('') : '<div class="form-hint">No personnel records available.</div>';
+  workwheelParticipantSelection = selected;
+  if (!selectedIds?.length) {
+    workwheelParticipantFilters.search = '';
+    for (const field of ['department', 'section', 'process', 'team']) { workwheelParticipantFilters[field] = ''; workwheelParticipantScopeOptions[field] = ''; }
+    const search = document.getElementById('ww-participant-search');
+    if (search) search.value = '';
+  }
+  if (typeof populatePersonnelPickerFilters === 'function') populatePersonnelPickerFilters('ww-filter', employees || [], workwheelParticipantFilters);
+  filterWorkwheelParticipants();
 }
-function filterWorkwheelParticipants(query = '') {
-  const needle = String(query).trim().toLowerCase();
-  document.querySelectorAll('#ww-activity-participants label').forEach(label => { label.style.display = !needle || label.textContent.toLowerCase().includes(needle) ? '' : 'none'; });
+let workwheelParticipantSelection = new Set();
+const workwheelParticipantFilters = { search: '', department: '', section: '', process: '', team: '' };
+const workwheelParticipantScopeOptions = { department: '', section: '', process: '', team: '' };
+function filteredWorkwheelParticipants() {
+  workwheelParticipantFilters.search = document.getElementById('ww-participant-search')?.value || '';
+  for (const field of ['department', 'section', 'process', 'team']) workwheelParticipantFilters[field] = workwheelParticipantScopeOptions[field] || document.getElementById(`ww-filter-${field}`)?.value || '';
+  return (typeof employees !== 'undefined' ? [...employees] : []).sort((a, b) => typeof comparePersonnelHierarchy === 'function' ? comparePersonnelHierarchy(a, b) : String(a.name).localeCompare(String(b.name))).filter(person => typeof personnelPickerMatches !== 'function' || personnelPickerMatches(person, workwheelParticipantFilters));
+}
+function setWorkwheelParticipantFilter(field, value) {
+  if (!['department','section','process','team'].includes(field)) return;
+  workwheelParticipantScopeOptions[field] = String(value || '');
+  workwheelParticipantFilters[field] = workwheelParticipantScopeOptions[field];
+  filterWorkwheelParticipants();
+}
+function filterWorkwheelParticipants(query) {
+  if (typeof query === 'string') {
+    const input = document.getElementById('ww-participant-search');
+    if (input) input.value = query;
+  }
+  const list = document.getElementById('ww-activity-participants');
+  if (!list) return;
+  const people = filteredWorkwheelParticipants();
+  list.innerHTML = people.length ? people.map(person => `<label><input type="checkbox" value="${Number(person.id)}" ${workwheelParticipantSelection.has(Number(person.id)) ? 'checked' : ''} onchange="toggleWorkwheelParticipant(${Number(person.id)},this.checked)"><span>${workwheelEsc(person.name)}<small>${workwheelEsc([person.role, person.department, person.section, person.process, person.team].filter(Boolean).join(' · '))}</small></span></label>`).join('') : '<div class="form-hint">No personnel match these filters.</div>';
+}
+function toggleWorkwheelParticipant(employeeId, selected) {
+  if (selected) workwheelParticipantSelection.add(Number(employeeId));
+  else workwheelParticipantSelection.delete(Number(employeeId));
+  refreshWorkwheelConflictWarning();
 }
 function setAllWorkwheelParticipants(selected) {
-  document.querySelectorAll('#ww-activity-participants label').forEach(label => { if (label.style.display !== 'none') label.querySelector('input').checked = selected; });
+  filteredWorkwheelParticipants().forEach(person => selected ? workwheelParticipantSelection.add(Number(person.id)) : workwheelParticipantSelection.delete(Number(person.id)));
+  filterWorkwheelParticipants();
   refreshWorkwheelConflictWarning();
 }
 function workwheelTimeOverlaps(firstStart, firstEnd, secondStart, secondEnd) {
@@ -105,7 +138,7 @@ function workwheelCurrentConflicts() {
   const date = document.getElementById('ww-activity-date')?.value || '';
   const startTime = document.getElementById('ww-activity-start-time')?.value || '';
   const endTime = document.getElementById('ww-activity-end-time')?.value || '';
-  const participantIds = new Set([...document.querySelectorAll('#ww-activity-participants input:checked')].map(input => Number(input.value)).filter(Number.isFinite));
+  const participantIds = new Set(workwheelParticipantSelection);
   if (!date || !participantIds.size) return [];
   const conflicts = [];
   const editingActivity = workwheelState.activities.find(item => item.id === workwheelEditingId);
@@ -481,7 +514,7 @@ function saveWorkwheelActivity() {
   const responsibleEmailField = document.getElementById('ww-responsible-email');
   const responsibleEmail = responsibleEmailField.value.trim();
   if (responsibleMode === 'external' && responsibleEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(responsibleEmail)) { responsibleEmailField.setCustomValidity('Enter an email in the format name@domain.tld, or leave it blank.'); responsibleEmailField.reportValidity(); responsibleEmailField.addEventListener('input', () => responsibleEmailField.setCustomValidity(''), { once: true }); return; }
-  const participantIds = [...document.querySelectorAll('#ww-activity-participants input:checked')].map(input => Number(input.value)).filter(Number.isFinite);
+  const participantIds = [...workwheelParticipantSelection];
   const conflicts = refreshWorkwheelConflictWarning();
   if (conflicts.length && !confirm(`Potential conflicts found:\n\n${conflicts.map(item => `${item.title} · ${item.date} · ${item.time}`).join('\n')}\n\nSave anyway?`)) return;
   Object.assign(activity, { title, wheelId: workwheelSelectedId, participantIds, date, endDate: recurrence === 'none' ? endDate : '', time: startTime && endTime ? `${startTime.replace(':', '')}-${endTime.replace(':', '')}` : '', startTime, endTime, location: document.getElementById('ww-activity-location').value.trim(), type: document.getElementById('ww-activity-type').value, recurrence, publishToEmployeeGrid: document.getElementById('ww-activity-publish-grid-markers').checked === true, weekday: recurrence === 'weekly' ? Number(document.getElementById('ww-activity-weekday').value) : new Date(`${date}T00:00:00`).getDay(), color: document.getElementById('ww-activity-color').value || '#3b82f6', responsibleMode, responsibleId: responsibleMode === 'internal' ? document.getElementById('ww-activity-responsible-id').value : '', responsibleName: responsibleMode === 'external' ? responsibleName : '', responsibleOrganization: responsibleMode === 'external' ? document.getElementById('ww-responsible-organization').value.trim() : '', responsibleEmail: responsibleMode === 'external' ? responsibleEmail : '', responsiblePhone: responsibleMode === 'external' ? document.getElementById('ww-responsible-phone').value.trim() : '', notes: document.getElementById('ww-activity-notes').value.trim() });

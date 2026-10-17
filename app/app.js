@@ -1,6 +1,6 @@
 'use strict';
 
-// ═══ CONSTANTS ═══════════════════════════════════════════════════════════════
+// ═══ CONSTANTS ══════════════════════════════════════════════════════════════
 const PALETTE = [
   '#2563eb','#3b82f6','#4f46e5','#6366f1','#7c3aed','#8b5cf6',
   '#a855f7','#c026d3','#db2777','#ec4899','#f43f5e','#e11d48',
@@ -9,10 +9,10 @@ const PALETTE = [
   '#06b6d4','#0ea5e9','#0284c7','#64748b','#475569'
 ];
 const SHIFT_PRESETS = ['0000-0800','0800-1600','1600-0000','0600-1800','0700-1900'];
-const DEPT_BG_LIGHT  = ['#f0fdf4','#eff6ff','#fdf4ff','#fff7ed','#f0f9ff','#fefce8','#fdf2f8','#f7fee7','#fff1f2','#f5f3ff','#ecfdf5','#e0f2fe'];
+const DEPT_BG_LIGHT = ['#f0fdf4','#eff6ff','#fdf4ff','#fff7ed','#f0f9ff','#fefce8','#fdf2f8','#f7fee7','#fff1f2','#f5f3ff','#ecfdf5','#e0f2fe'];
 const DEPT_ACC_LIGHT = ['#86efac','#93c5fd','#d8b4fe','#fdba74','#7dd3fc','#fde047','#f9a8d4','#a3e635','#fda4af','#c4b5fd','#6ee7b7','#7dd3fc'];
-const DEPT_BG_DARK   = ['#052e16','#1e3a5f','#2e1065','#431407','#082f49','#422006','#500724','#1a2e05','#4c0519','#1e1b4b','#064e3b','#0c2340'];
-const DEPT_ACC_DARK  = ['#166534','#1d4ed8','#6d28d9','#c2410c','#0369a1','#a16207','#be185d','#4d7c0f','#be123c','#4c1d95','#065f46','#0e7490'];
+const DEPT_BG_DARK = ['#052e16','#1e3a5f','#2e1065','#431407','#082f49','#422006','#500724','#1a2e05','#4c0519','#1e1b4b','#064e3b','#0c2340'];
+const DEPT_ACC_DARK = ['#166534','#1d4ed8','#6d28d9','#c2410c','#0369a1','#a16207','#be185d','#4d7c0f','#be123c','#4c1d95','#065f46','#0e7490'];
 const SETTINGS_KEY = 'team-manager-app-settings';
 const LEGACY_SETTINGS_KEY = 'team-status-app-settings';
 const LEGACY_THEME_KEY = 'team-status-theme';
@@ -77,7 +77,7 @@ function lsSet(key, value) {
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
 const APP_VERSION = '0.3.2';
-const DATA_VERSION = 9;
+const DATA_VERSION = 11;
 const DEFAULT_WORK_CODES = [
   { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', staffingImpact: 'available', aggregationMode: 'hours', color: '#3b82f6' },
   { id: 'wc2', name: 'Turnusfri', abbreviation: 'TF', staffingImpact: 'available', aggregationMode: 'hours', color: '#64748b' },
@@ -91,49 +91,21 @@ const LOCAL_ONLY_APP_SETTING_KEYS = [
   'darkMode', 'autoSaveEnabled', 'autoSyncEnabled', 'showOnlyConfirmedActivities',
   'activityStatusFilter', 'jumpToTodayOnGridChange', 'autoActivityPageOnHorizontalScroll', 'specialDaysVisible',
 ];
-
 let appSettings = {
-  appName: 'ATLAS',
-  personnelOrganisationName: 'Organisation',
-  showWorkwheelCellMarkers: true,
-  darkMode: false,
-  autoSaveEnabled: true,
-  autoSyncEnabled: true,
-  showOnlyConfirmedActivities: false,
-  activityStatusFilter: 'all',
-  jumpToTodayOnGridChange: true,
-  autoActivityPageOnHorizontalScroll: true,
-  showLevelRankInSchedule: true,
-  coreHoursPerDay: 7.5,
-  coreWorkdayRange: '0730-1500',
-  lightMax: 70,
-  normalMax: 100,
-  highMax: 120,
-  planningHorizonDays: 14,
-  planningHorizonColor: '#ef4444',
-  holidays: [],
-  specialDays: { recurring: [], oneOff: [] },
-  specialDaysVisible: true,
-  adminPasswordHash: '',
-  departmentColors: {},
-  subdepartmentColors: {},
-  sectionColors: {},
-  processColors: {},
-  activityTypes: [],
-  workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })),
-  shiftTemplates: DEFAULT_SHIFT_TEMPLATES.map(shift => ({ ...shift })),
-  summaryColumns: null,
-  securityLabel: { enabled: false, text: 'BEGRENSET', color: '#16a34a' },
-  shiftRotationEnabled: false,
+  appName: 'ATLAS', personnelOrganisationName: 'Organisation', showWorkwheelCellMarkers: true, showMeetingCellMarkers: true,
+  darkMode: false, autoSaveEnabled: true, autoSyncEnabled: true, showOnlyConfirmedActivities: false,
+  activityStatusFilter: 'all', jumpToTodayOnGridChange: true, autoActivityPageOnHorizontalScroll: true,
+  showLevelRankInSchedule: true, coreHoursPerDay: 7.5, coreWorkdayRange: '0730-1500',
+  lightMax: 70, normalMax: 100, highMax: 120, planningHorizonDays: 14, planningHorizonColor: '#ef4444',
+  holidays: [], specialDays: { recurring: [], oneOff: [] }, specialDaysVisible: true, adminPasswordHash: '',
+  departmentColors: {}, subdepartmentColors: {}, sectionColors: {}, processColors: {}, activityTypes: [],
+  workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })), shiftTemplates: DEFAULT_SHIFT_TEMPLATES.map(shift => ({ ...shift })),
+  summaryColumns: null, securityLabel: { enabled: false, text: 'BEGRENSET', color: '#16a34a' },
+  billableWorkLockEnabled: true, meetingLookaheadDays: 14, shiftRotationEnabled: false,
   shiftRotationRanges: { normal: '0730-1500', day: '0730-2400', evening: '1200-2000', night: '0000-0730' },
   shiftRotationColors: { normal: '#64748b', day: '#f59e0b', evening: '#14b8a6', night: '#3b82f6', turn: '#8b5cf6', leave: '#b45309', overtime: '#dc2626' },
-  shiftTeams: [],
-  workwheelEnabled: false,
-  workwheelUpcomingDays: 14,
-  bugReportEnabled: false,
-  bugTracker: [],
+  shiftTeams: [], dutyTypes: [], workwheelEnabled: false, workwheelUpcomingDays: 14, bugReportEnabled: false, bugTracker: [],
 };
-
 function normalizeHexColor(color, fallback = '#3b82f6') {
   if (typeof color !== 'string') return fallback;
   const value = color.trim();
@@ -154,15 +126,7 @@ function normalizeShiftTemplates(value) {
     const start = String(shift.start || '').replace(':', '').padStart(4, '0');
     const end = String(shift.end || '').replace(':', '').padStart(4, '0');
     const calculatedHours = timeRangeHours(`${start}-${end}`);
-    return {
-      id: String(shift.id || `shift-${index + 1}`),
-      name: String(shift.name || 'Shift'),
-      start: /^\d{4}$/.test(start) ? start : '0700',
-      end: /^\d{4}$/.test(end) ? end : '1500',
-      category: String(shift.category || 'other'),
-      color: normalizeHexColor(shift.color, '#3b82f6'),
-      hours: Number.isFinite(Number(shift.hours)) ? Number(shift.hours) : (calculatedHours || 0),
-    };
+    return { id: String(shift.id || `shift-${index + 1}`), name: String(shift.name || 'Shift'), start: /^\d{4}$/.test(start) ? start : '0700', end: /^\d{4}$/.test(end) ? end : '1500', category: String(shift.category || 'other'), color: normalizeHexColor(shift.color, '#3b82f6'), hours: Number.isFinite(Number(shift.hours)) ? Number(shift.hours) : (calculatedHours || 0) };
   });
 }
 function normalizeSummaryColumns(value) {
@@ -184,27 +148,34 @@ function loadSettings() {
       appSettings.appName = typeof parsed.appName === 'string' && parsed.appName.trim() ? (parsed.appName === 'Team Manager' || parsed.appName === 'ATLAS' ? 'Organisation' : parsed.appName) : 'Organisation';
       appSettings.darkMode = parsed.darkMode === true;
       appSettings.autoSaveEnabled = parsed.autoSaveEnabled !== false;
+      appSettings.autoSyncEnabled = parsed.autoSyncEnabled !== false;
       appSettings.showOnlyConfirmedActivities = parsed.showOnlyConfirmedActivities === true;
       appSettings.activityStatusFilter = normalizeActivityStatusFilter(parsed.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
       appSettings.jumpToTodayOnGridChange = parsed.jumpToTodayOnGridChange !== false;
       appSettings.autoActivityPageOnHorizontalScroll = parsed.autoActivityPageOnHorizontalScroll !== false;
       appSettings.personnelOrganisationName = String(parsed.personnelOrganisationName || parsed.defaultPersonnelOrganisation || '').trim().slice(0, 120) || 'Organisation';
       appSettings.showWorkwheelCellMarkers = parsed.showWorkwheelCellMarkers !== false;
+      appSettings.showMeetingCellMarkers = parsed.showMeetingCellMarkers !== false;
       appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(parsed.coreWorkdayRange, '0730-1500');
       appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || (typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5);
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
       appSettings.normalMax = typeof parsed.normalMax === 'number' ? parsed.normalMax : 100;
       appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 120;
       appSettings.planningHorizonDays = Number.isFinite(Number(parsed.planningHorizonDays)) ? Math.max(0, Math.min(365, Math.round(Number(parsed.planningHorizonDays)))) : 14;
+      appSettings.billableWorkLockEnabled = parsed.billableWorkLockEnabled !== false;
+      appSettings.meetingLookaheadDays = [3, 7, 14, 30].includes(Number(parsed.meetingLookaheadDays)) ? Number(parsed.meetingLookaheadDays) : 14;
       appSettings.planningHorizonColor = normalizeHexColor(parsed.planningHorizonColor, '#ef4444');
       appSettings.holidays = Array.isArray(parsed.holidays) ? parsed.holidays : [];
       appSettings.specialDays = normalizeSpecialDays(parsed.specialDays);
       appSettings.specialDaysVisible = parsed.specialDaysVisible !== false;
-        appSettings.adminPasswordHash = String(parsed.adminPasswordHash || '');
+      appSettings.adminPasswordHash = String(parsed.adminPasswordHash || '');
+      appSettings.showLevelRankInSchedule = parsed.showLevelRankInSchedule !== false;
       appSettings.activityTypes = normalizeActivityTypes(parsed.activityTypes);
       appSettings.workCodes = normalizeWorkCodes(parsed.workCodes);
       appSettings.shiftTemplates = normalizeShiftTemplates(parsed.shiftTemplates);
       appSettings.summaryColumns = normalizeSummaryColumns(parsed.summaryColumns);
+      appSettings.workwheelEnabled = parsed.workwheelEnabled === true;
+      appSettings.workwheelUpcomingDays = Number.isFinite(Number(parsed.workwheelUpcomingDays)) ? Math.max(1, Math.min(365, Math.round(Number(parsed.workwheelUpcomingDays)))) : 14;
       appSettings.departmentColors = parsed.departmentColors && typeof parsed.departmentColors === 'object'
         ? Object.fromEntries(Object.entries(parsed.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
         : {};
@@ -222,10 +193,7 @@ function loadSettings() {
       appSettings.shiftRotationRanges = normalizeShiftRotationRanges(parsed.shiftRotationRanges);
       appSettings.shiftRotationColors = normalizeShiftRotationColors(parsed.shiftRotationColors);
       appSettings.shiftTeams = normalizeShiftTeams(parsed.shiftTeams);
-      appSettings.bugReportEnabled = parsed.bugReportEnabled === true;
-      appSettings.bugTracker = normalizeBugTracker(parsed.bugTracker);
-      appSettings.workwheelEnabled = parsed.workwheelEnabled === true;
-      appSettings.workwheelUpcomingDays = Number.isFinite(Number(parsed.workwheelUpcomingDays)) ? Math.max(1, Math.min(365, Math.round(Number(parsed.workwheelUpcomingDays)))) : 14;
+      appSettings.dutyTypes = normalizeDutyTypes(parsed.dutyTypes);
       appSettings.bugReportEnabled = parsed.bugReportEnabled === true;
       appSettings.bugTracker = normalizeBugTracker(parsed.bugTracker);
       return;
@@ -261,14 +229,19 @@ function normalizeCoreWorkdayRange(value, fallback = '0730-1500') {
   const canonical = `${String(startHour).padStart(2, '0')}${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}${String(endMinute).padStart(2, '0')}`;
   return timeRangeHours(canonical) ? canonical : fallback;
 }
+function planningHorizonDate() {
+  const days = Number(appSettings.planningHorizonDays);
+  if (!Number.isFinite(days) || days <= 0) return '';
+  const date = new Date(`${todayStr()}T00:00:00`);
+  date.setDate(date.getDate() + Math.round(days));
+  return fmt(date);
+}
+function planningHorizonStyle(date) {
+  return date === planningHorizonDate() ? `;box-shadow:inset 2px 0 0 ${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;` : '';
+}
 function normalizeShiftRotationRanges(value) {
   const source = value && typeof value === 'object' ? value : {};
-  return {
-    normal: normalizeShiftRotationRange(source.normal, '0730-1500'),
-    day: normalizeShiftRotationRange(source.day, '0730-2400'),
-    evening: normalizeShiftRotationRange(source.evening, '1200-2000'),
-    night: normalizeShiftRotationRange(source.night, '0000-0730'),
-  };
+  return { normal: normalizeShiftRotationRange(source.normal, '0730-1500'), day: normalizeShiftRotationRange(source.day, '0730-2400'), evening: normalizeShiftRotationRange(source.evening, '1200-2000'), night: normalizeShiftRotationRange(source.night, '0000-0730') };
 }
 function normalizeShiftRotationColors(value) {
   const source = value && typeof value === 'object' ? value : {};
@@ -276,19 +249,13 @@ function normalizeShiftRotationColors(value) {
   return Object.fromEntries(Object.keys(defaults).map(key => [key, normalizeHexColor(source[key], defaults[key])]));
 }
 function normalizeShiftTeams(value) {
-  return (Array.isArray(value) ? value : []).map((team, index) => ({
-    id: String(team?.id || `shift-team-${index + 1}`),
-    name: String(team?.name || '').trim(),
-    color: normalizeHexColor(team?.color, PALETTE[index % PALETTE.length]),
-    order: Number.isFinite(Number(team?.order)) ? Number(team.order) : (index + 1) * 10,
-  })).filter(team => team.name).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+  return (Array.isArray(value) ? value : []).map((team, index) => ({ id: String(team?.id || `shift-team-${index + 1}`), name: String(team?.name || '').trim(), color: normalizeHexColor(team?.color, PALETTE[index % PALETTE.length]), order: Number.isFinite(Number(team?.order)) ? Number(team.order) : (index + 1) * 10 })).filter(team => team.name).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 }
 function normalizeShiftRotationRange(value, fallback = '') {
   const normalized = String(value || '').trim().replace(/\s+/g, '').replace('–', '-');
   const match = normalized.match(/^(\d{1,2}):?(\d{2})-(\d{1,2}):?(\d{2})$/);
   if (!match) return fallback;
-  const startHour = Number(match[1]), startMinute = Number(match[2]);
-  const endHour = Number(match[3]), endMinute = Number(match[4]);
+  const startHour = Number(match[1]), startMinute = Number(match[2]), endHour = Number(match[3]), endMinute = Number(match[4]);
   if (startHour > 23 || startMinute > 59 || endHour > 24 || endMinute > 59 || (endHour === 24 && endMinute !== 0)) return fallback;
   const canonical = `${String(startHour).padStart(2, '0')}${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}${String(endMinute).padStart(2, '0')}`;
   return timeRangeHours(canonical) ? canonical : fallback;
@@ -297,37 +264,61 @@ function cleanShiftRotationMap(map, employeeList = employees) {
   if (!map || typeof map !== 'object' || Array.isArray(map)) return {};
   const employeeIds = new Set((employeeList || []).map(employee => Number(employee?.id)).filter(Number.isFinite));
   return Object.fromEntries(Object.entries(map).filter(([key, value]) => {
-    const parts = String(key).split('_');
-    const shift = typeof value === 'string' ? value : value?.shift;
-    return parts.length === 2 && employeeIds.has(Number(parts[0])) && isValidIsoDate(parts[1]) &&
-        ['normal', 'day', 'evening', 'night', 'turn', 'leave', 'overtime'].includes(shift) &&
-        (shift !== 'overtime' || Boolean(timeRangeHours(value?.time)));
-      }).map(([key, value]) => [key, typeof value === 'string' ? { shift: value } : { ...value, shift: value.shift }]));
+    const parts = String(key).split('_'), shift = typeof value === 'string' ? value : value?.shift;
+    return parts.length === 2 && employeeIds.has(Number(parts[0])) && isValidIsoDate(parts[1]) && ['normal', 'day', 'evening', 'night', 'turn', 'leave', 'overtime'].includes(shift) && (shift !== 'overtime' || Boolean(timeRangeHours(value?.time)));
+  }).map(([key, value]) => [key, typeof value === 'string' ? { shift: value } : { ...value, shift: value.shift }]));
+}
+function normalizeDutyTypes(value) {
+  return (Array.isArray(value) ? value : []).map((type, index) => ({
+    id: String(type?.id || `duty-type-${index + 1}`), name: String(type?.name || '').trim(),
+    color: normalizeHexColor(type?.color, PALETTE[index % PALETTE.length]),
+    order: Number.isFinite(Number(type?.order)) ? Number(type.order) : (index + 1) * 10,
+    eligibleEmployeeIds: [...new Set((Array.isArray(type?.eligibleEmployeeIds) ? type.eligibleEmployeeIds : []).map(Number).filter(Number.isFinite))],
+    workCodeId: type?.workCodeId == null || type.workCodeId === '' ? '' : String(type.workCodeId),
+    defaultStartTime: normalizeDutyTime(type?.defaultStartTime || type?.defaultEndTime || '07:00', '07:00'),
+    defaultEndTime: normalizeDutyTime(type?.defaultStartTime || '07:00', '07:00'),
+    weekdayHours: Number.isFinite(Number(type?.weekdayHours)) ? Math.max(0, Math.min(48, Number(type.weekdayHours))) : 12,
+    nonWorkingHours: Number.isFinite(Number(type?.nonWorkingHours)) ? Math.max(0, Math.min(48, Number(type.nonWorkingHours))) : 24,
+    showInSchedule: type?.showInSchedule !== false, retired: type?.retired === true,
+  })).filter(type => type.name).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'nb'));
+}
+function normalizeDutyTime(value, fallback) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || ''));
+  if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) return fallback;
+  return `${String(Number(match[1])).padStart(2, '0')}:${match[2]}`;
+}
+function normalizeDutyAssignments(value, employeeList = employees, dutyTypes = appSettings.dutyTypes) {
+  if (!Array.isArray(value)) return [];
+  const employeeIds = new Set((employeeList || []).map(employee => Number(employee.id)));
+  const typeIds = new Set((dutyTypes || []).map(type => String(type.id)));
+  const seen = new Set();
+  return value.map((item, index) => {
+    const id = String(item?.id || `duty-${index + 1}`).trim().slice(0, 100);
+    const dutyTypeId = String(item?.dutyTypeId || ''), employeeId = Number(item?.employeeId), date = String(item?.date || '');
+    if (!id || seen.has(id) || !typeIds.has(dutyTypeId) || !employeeIds.has(employeeId) || !isValidIsoDate(date)) return null;
+    seen.add(id);
+    const dutyType = (dutyTypes || []).find(type => String(type.id) === dutyTypeId);
+    const startTime = normalizeDutyTime(dutyType?.defaultStartTime, '07:00');
+    const endTime = startTime;
+    const intervalHours = timeRangeHours(`${startTime.replace(':', '')}-${endTime.replace(':', '')}`);
+    if (!Number.isFinite(intervalHours) || intervalHours <= 0 || intervalHours > 24) return null;
+    return { id, dutyTypeId, employeeId, date, startTime, endTime, status: item?.status === 'confirmed' ? 'confirmed' : 'planned' };
+  });
 }
 function normalizeActivityTypes(value) {
-  return (Array.isArray(value) ? value : []).map((type, index) => ({
-    id: String(type.id || `at${index + 1}`),
-    key: String(type.key || type.name || type.label || `activity_type_${index + 1}`).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''),
-    name: String(type.name || type.label || 'Activity Type').trim(),
-    abbreviation: String(type.abbreviation || type.abbr || '').trim().toUpperCase().slice(0, 8),
-    color: normalizeHexColor(type.color),
-  }));
+  return (Array.isArray(value) ? value : []).map((type, index) => ({ id: String(type.id || `at${index + 1}`), key: String(type.key || type.name || type.label || `activity_type_${index + 1}`).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''), name: String(type.name || type.label || 'Activity Type').trim(), abbreviation: String(type.abbreviation || type.abbr || '').trim().toUpperCase().slice(0, 8), color: normalizeHexColor(type.color) }));
 }
 function normalizeActivityRelevance(value) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const values = item => [...new Set((Array.isArray(item) ? item : []).map(value => String(value || '').trim()).filter(Boolean))];
   return { departments: values(source.departments), sections: values(source.sections), processes: values(source.processes) };
 }
-function activityRelevance(activity) {
-  return normalizeActivityRelevance(activity?.relevance || { departments: activity?.departments, sections: activity?.sections, processes: activity?.processes });
-}
+function activityRelevance(activity) { return normalizeActivityRelevance(activity?.relevance || { departments: activity?.departments, sections: activity?.sections, processes: activity?.processes }); }
 function employeeSection(employee) { return String(employee?.section || employee?.subdepartment || '').trim(); }
 function activityRelevantToEmployee(activity, employee) {
   if (!activity || !employee) return false;
   const relevance = activityRelevance(activity);
-  return (!relevance.departments.length || relevance.departments.includes(String(employee.department || '').trim()))
-    && (!relevance.sections.length || relevance.sections.includes(employeeSection(employee)))
-    && (!relevance.processes.length || relevance.processes.includes(String(employee.process || '').trim()));
+  return (!relevance.departments.length || relevance.departments.includes(String(employee.department || '').trim())) && (!relevance.sections.length || relevance.sections.includes(employeeSection(employee))) && (!relevance.processes.length || relevance.processes.includes(String(employee.process || '').trim()));
 }
 function scheduleScopeParts() {
   const match = /^(department|section)::([\s\S]+)$/.exec(scheduleSectionFilter);
@@ -338,21 +329,16 @@ function isScheduleScopeValue(value) { return /^(department|section)::/.test(Str
 function scheduleEmployeeMatchesScope(employee) {
   const scope = scheduleScopeParts();
   if (!scope.level) return true;
-  return scope.level === 'department'
-    ? String(employee?.department || (employeeSection(employee) ? 'Independent sections' : '')).trim() === scope.value
-    : employeeSection(employee) === scope.value;
+  return scope.level === 'department' ? String(employee?.department || (employeeSection(employee) ? 'Independent sections' : '')).trim() === scope.value : employeeSection(employee) === scope.value;
 }
 function activityVisibleForScheduleSection(activity) {
   const scope = scheduleScopeParts();
   if (!scope.level) return true;
-  const relevance = activityRelevance(activity);
-  const matchingEmployees = employees.filter(scheduleEmployeeMatchesScope);
+  const relevance = activityRelevance(activity), matchingEmployees = employees.filter(scheduleEmployeeMatchesScope);
   const hasTargets = relevance.departments.length || relevance.sections.length || relevance.processes.length;
   return !hasTargets || matchingEmployees.some(employee => activityRelevantToEmployee(activity, employee));
 }
-function syncActivityRelevanceScope() {
-  buildParticipantPicker();
-}
+function syncActivityRelevanceScope() { buildParticipantPicker(); }
 function clearActivityRelevanceScope() {
   ['af-relevance-departments', 'af-relevance-sections', 'af-relevance-processes'].forEach(id => {
     const select = document.getElementById(id);
@@ -364,57 +350,10 @@ function clearActivityRelevanceScope() {
 function normalizeWorkCodes(value) {
   const source = Array.isArray(value) && value.length ? value : DEFAULT_WORK_CODES;
   return source.map((code, index) => {
-    const name = String(code.name || 'Work Code').trim();
-    const abbreviation = String(code.abbreviation || code.abbr || '').trim().toUpperCase().slice(0, 12);
-    const legacyFixedDayCode = !code.durationMode && ['ATF', 'VAKT'].includes(abbreviation);
-    const durationMode = code.durationMode === 'fixed' || legacyFixedDayCode ? 'fixed' : 'entered';
-    return {
-      id: String(code.id || `wc${index + 1}`),
-      name,
-      abbreviation,
-      staffingImpact: code.staffingImpact === 'unavailable' ? 'unavailable' : 'available',
-      aggregationMode: code.aggregationMode === 'units' || code.aggregationMode === 'days' ? 'days' : 'hours',
-      durationMode,
-      fixedHours: durationMode === 'fixed' ? (Number(code.fixedHours) > 0 ? Number(code.fixedHours) : 24) : null,
-      color: normalizeHexColor(code.color, '#3b82f6'),
-    };
+    const name = String(code.name || 'Work Code').trim(), abbreviation = String(code.abbreviation || code.abbr || '').trim().toUpperCase().slice(0, 12);
+    const legacyFixedDayCode = !code.durationMode && ['ATF', 'VAKT'].includes(abbreviation), durationMode = code.durationMode === 'fixed' || legacyFixedDayCode ? 'fixed' : 'entered';
+    return { id: String(code.id || `wc${index + 1}`), name, abbreviation, staffingImpact: code.staffingImpact === 'unavailable' ? 'unavailable' : 'available', aggregationMode: code.aggregationMode === 'units' || code.aggregationMode === 'days' ? 'days' : 'hours', durationMode, fixedHours: durationMode === 'fixed' ? (Number(code.fixedHours) > 0 ? Number(code.fixedHours) : 24) : null, color: normalizeHexColor(code.color, '#3b82f6') };
   });
-}
-function normalizeAnnualRequirements(raw) {
-  const existingRequirements = Array.isArray(raw.requirements)
-    ? raw.requirements.map((requirement, index) => ({
-        id: Number.isFinite(Number(requirement.id)) ? Number(requirement.id) : index + 1,
-        name: String(requirement.name || `Requirement ${index + 1}`).trim(),
-        kind: requirement.kind === 'test' ? 'test' : 'requirement',
-        section: String(requirement.section || '').trim(),
-      }))
-    : null;
-  if (existingRequirements) {
-    return {
-      requirements: existingRequirements,
-      requirementRecords: raw.requirementRecords && typeof raw.requirementRecords === 'object' ? { ...raw.requirementRecords } : {},
-    };
-  }
-
-  const legacy = raw.fitnessTests && typeof raw.fitnessTests === 'object' ? raw.fitnessTests : null;
-  if (!legacy) return { requirements: [], requirementRecords: {} };
-  const requirements = [{ id: 1, name: 'Condition', kind: 'test', section: '' }, { id: 2, name: 'Strength', kind: 'test', section: '' }];
-  const requirementRecords = {};
-  Object.entries(legacy).forEach(([key, record]) => {
-    const match = key.match(/^(\d+)_(condition|strength)$/);
-    if (!match || !record || typeof record !== 'object') return;
-    const employeeId = Number(match[1]);
-    const requirementId = match[2] === 'condition' ? 1 : 2;
-    const completedDate = /^\d{4}-\d{2}-\d{2}$/.test(record.date || '') ? record.date : '';
-    const year = completedDate ? Number(completedDate.slice(0, 4)) : new Date().getFullYear();
-    requirementRecords[`${requirementId}_${employeeId}_${year}`] = {
-      completedDate,
-      dueDate: '',
-      result: record.grade ? `Grade ${record.grade}` : '',
-      required: record.required !== false,
-    };
-  });
-  return { requirements, requirementRecords };
 }
 function migrateLegacyDailyStatuses(activityTypes) {
   let migrated = 0;
@@ -461,6 +400,16 @@ function normalizeStateVersion(data) {
   normalized.appVersion = raw.appVersion || APP_VERSION;
   normalized.appSettings = raw.appSettings && typeof raw.appSettings === 'object' ? { ...raw.appSettings } : null;
   normalized.activityTypes = normalizeActivityTypes(raw.activityTypes || raw.appSettings?.activityTypes || []);
+  normalized.meetingTypes = normalizeMeetingTypes(raw.meetingTypes || raw.appSettings?.meetingTypes || [
+    { id: 'meeting', name: 'Meeting', color: '#2563eb' },
+    { id: 'briefing', name: 'Briefing', color: '#0f766e' },
+    { id: 'orientation', name: 'Orientation', color: '#7c3aed' },
+    { id: 'other', name: 'Other', color: '#64748b' },
+  ]);
+  normalized.meetings = normalizeMeetings(raw.meetings || []);
+  normalized.dutyAssignments = Array.isArray(raw.dutyAssignments) ? raw.dutyAssignments : [];
+  normalized.workScheduleHistory = normalizeWorkScheduleHistory(raw.workScheduleHistory || {});
+  normalized.changeLog = normalizeChangeLog(raw.changeLog || []);
   normalized.workCodes = normalizeWorkCodes(raw.workCodes || raw.appSettings?.workCodes);
   normalized.shiftTemplates = normalizeShiftTemplates(raw.shiftTemplates || raw.appSettings?.shiftTemplates);
   normalized.summaryColumns = normalizeSummaryColumns(raw.summaryColumns ?? raw.appSettings?.summaryColumns);
@@ -470,15 +419,45 @@ function normalizeStateVersion(data) {
   if (!normalized.departmentColors || typeof normalized.departmentColors !== 'object') normalized.departmentColors = {};
   normalized.departmentColors = Object.fromEntries(Object.entries(normalized.departmentColors || {}).map(([dept, value]) => [String(dept), normalizeHexColor(value)]));
   if (!normalized.subdepartmentColors || typeof normalized.subdepartmentColors !== 'object') normalized.subdepartmentColors = {};
-  normalized.subdepartmentColors = Object.fromEntries(Object.entries(normalized.subdepartmentColors).map(([key, value]) => [String(key), normalizeHexColor(value)]));
+  normalized.subdepartmentColors = Object.fromEntries(Object.entries(normalized.subdepartmentColors || {}).map(([key, value]) => [String(key), normalizeHexColor(value)]));
   if (!normalized.sectionColors || typeof normalized.sectionColors !== 'object') normalized.sectionColors = {};
-  normalized.sectionColors = Object.fromEntries(Object.entries(normalized.sectionColors).map(([key, value]) => [String(key), normalizeHexColor(value)]));
+  normalized.sectionColors = Object.fromEntries(Object.entries(normalized.sectionColors || {}).map(([key, value]) => [String(key), normalizeHexColor(value)]));
   if (!normalized.processColors || typeof normalized.processColors !== 'object') normalized.processColors = {};
-  normalized.processColors = Object.fromEntries(Object.entries(normalized.processColors).map(([key, value]) => [String(key), normalizeHexColor(value)]));
+  normalized.processColors = Object.fromEntries(Object.entries(normalized.processColors || {}).map(([key, value]) => [String(key), normalizeHexColor(value)]));
   normalized.departmentOrder = normalizeHierarchyOrder(raw.departmentOrder);
   normalized.subdepartmentOrder = normalizeHierarchyOrder(raw.subdepartmentOrder || raw.subteamOrder);
   normalized.hierarchyOrder = normalizeHierarchyOrderTree(raw.hierarchyOrder);
   return normalized;
+}
+function normalizeAnnualRequirements(raw) {
+  const existingRequirements = Array.isArray(raw.requirements)
+    ? raw.requirements.map((requirement, index) => ({
+        id: Number.isFinite(Number(requirement.id)) ? Number(requirement.id) : index + 1,
+        name: String(requirement.name || `Requirement ${index + 1}`).trim(),
+        kind: requirement.kind === 'test' ? 'test' : 'requirement',
+        section: String(requirement.section || '').trim(),
+      }))
+    : null;
+  if (existingRequirements) {
+    return {
+      requirements: existingRequirements,
+      requirementRecords: raw.requirementRecords && typeof raw.requirementRecords === 'object' ? { ...raw.requirementRecords } : {},
+    };
+  }
+  const legacy = raw.fitnessTests && typeof raw.fitnessTests === 'object' ? raw.fitnessTests : null;
+  if (!legacy) return { requirements: [], requirementRecords: {} };
+  const requirements = [{ id: 1, name: 'Condition', kind: 'test', section: '' }, { id: 2, name: 'Strength', kind: 'test', section: '' }];
+  const requirementRecords = {};
+  Object.entries(legacy).forEach(([key, record]) => {
+    const match = key.match(/^(\d+)_(condition|strength)$/);
+    if (!match || !record || typeof record !== 'object') return;
+    const employeeId = Number(match[1]);
+    const requirementId = match[2] === 'condition' ? 1 : 2;
+    const completedDate = /^\d{4}-\d{2}-\d{2}$/.test(record.date || '') ? record.date : '';
+    const year = completedDate ? Number(completedDate.slice(0, 4)) : new Date().getFullYear();
+    requirementRecords[`${requirementId}_${employeeId}_${year}`] = { completedDate, dueDate: '', result: record.grade ? `Grade ${record.grade}` : '', required: record.required !== false };
+  });
+  return { requirements, requirementRecords };
 }
 
 function normalizeHierarchyOrder(value) {
@@ -494,6 +473,92 @@ function normalizeHierarchyOrderTree(value) {
     result[level] = normalizeHierarchyOrder(source[level]);
   }
   return result;
+}
+function normalizeWorkScheduleHistory(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).map(([activityId, revisions]) => [
+    String(activityId),
+    (Array.isArray(revisions) ? revisions : []).filter(revision => revision && typeof revision === 'object' && revision.snapshot && typeof revision.snapshot === 'object')
+      .map(revision => ({
+        id: String(revision.id || `work-schedule-revision-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+        printedAt: String(revision.printedAt || ''),
+        activityName: String(revision.activityName || revision.snapshot.activity?.name || ''),
+        reportOptions: revision.reportOptions && typeof revision.reportOptions === 'object' ? { hideInactiveByWeek: revision.reportOptions.hideInactiveByWeek === true } : { hideInactiveByWeek: false },
+        diffFromPrevious: revision.diffFromPrevious && typeof revision.diffFromPrevious === 'object' ? revision.diffFromPrevious : null,
+        snapshot: revision.snapshot,
+      }))
+      .slice(-20),
+  ]).filter(([, revisions]) => revisions.length));
+}
+function normalizeChangeLog(value) {
+  return (Array.isArray(value) ? value : []).filter(entry => entry && typeof entry === 'object')
+    .map(entry => ({
+      id: String(entry.id || `change-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+      timestamp: String(entry.timestamp || ''),
+      category: String(entry.category || 'cell'),
+      summary: String(entry.summary || 'Planner change'),
+      employeeId: Number.isFinite(Number(entry.employeeId)) ? Number(entry.employeeId) : null,
+      employeeName: String(entry.employeeName || ''),
+      date: entry.date && isValidIsoDate(entry.date) ? entry.date : '',
+      activityId: entry.activityId != null && Number.isFinite(Number(entry.activityId)) ? Number(entry.activityId) : null,
+      activityName: String(entry.activityName || ''),
+      changeType: ['added', 'removed', 'changed'].includes(entry.changeType) ? entry.changeType : '',
+    }))
+    .slice(-1000);
+}
+function normalizeMeetingTypes(value) {
+  const source = Array.isArray(value) ? value : meetingTypes;
+  const seen = new Set();
+  const normalized = source.map((item, index) => {
+    const id = String(item?.id || `meeting-type-${index + 1}`).trim().slice(0, 64);
+    const name = String(item?.name || '').trim().slice(0, 48);
+    if (!id || !name || seen.has(id)) return null;
+    seen.add(id);
+    return { id, name, color: normalizeHexColor(item?.color, '#64748b') };
+  }).filter(Boolean);
+  return normalized.length ? normalized : [
+    { id: 'meeting', name: 'Meeting', color: '#2563eb' },
+    { id: 'briefing', name: 'Briefing', color: '#0f766e' },
+    { id: 'orientation', name: 'Orientation', color: '#7c3aed' },
+    { id: 'other', name: 'Other', color: '#64748b' },
+  ];
+}
+function normalizeMeetings(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value.map((item, index) => {
+    const id = String(item?.id || `meeting-${index + 1}`).trim().slice(0, 80);
+    const title = String(item?.title || '').trim().slice(0, 120);
+    const date = String(item?.date || '');
+    if (!id || !title || !isValidIsoDate(date) || seen.has(id)) return null;
+    seen.add(id);
+    const participants = [...new Set((Array.isArray(item.participantIds) ? item.participantIds : []).map(Number).filter(Number.isFinite))];
+    const recurrence = ['none', 'daily', 'weekly', 'fortnightly', 'monthly'].includes(item.recurrence) ? item.recurrence : 'none';
+    const rawAttendees = item.externalAttendees ?? item.attendees;
+    const externalAttendees = Array.isArray(rawAttendees)
+      ? rawAttendees.map(attendee => typeof attendee === 'string' ? attendee : attendee?.name).filter(Boolean).join(', ')
+      : String(rawAttendees || '').trim();
+    return {
+      id,
+      title,
+      typeId: String(item.typeId || 'meeting').slice(0, 64),
+      date,
+      endDate: recurrence === 'none' ? (isValidIsoDate(item.endDate) && item.endDate >= date ? item.endDate : date) : (isValidIsoDate(item.endDate) && item.endDate > date ? item.endDate : ''),
+      startTime: String(item.startTime || '').trim().slice(0, 5),
+      endTime: String(item.endTime || '').trim().slice(0, 5),
+      allDay: item.allDay === true,
+      location: String(item.location || '').trim().slice(0, 160),
+      notes: String(item.notes || '').trim().slice(0, 1000),
+      status: ['planned', 'confirmed', 'cancelled'].includes(item.status) ? item.status : 'planned',
+      showInEmployeeGrid: item.showInEmployeeGrid !== false,
+      participantIds: participants,
+      responsibleId: Number.isFinite(Number(item.responsibleId)) ? Number(item.responsibleId) : null,
+      externalAttendees: externalAttendees.slice(0, 500),
+      recurrence,
+      weekday: Number.isInteger(Number(item.weekday)) ? Number(item.weekday) : new Date(`${date}T00:00:00`).getDay(),
+      color: normalizeHexColor(item.color, '#2563eb'),
+    };
+  }).filter(Boolean);
 }
 
 function loadSettings() {
@@ -511,12 +576,16 @@ function loadSettings() {
       appSettings.activityStatusFilter = normalizeActivityStatusFilter(parsed.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
       appSettings.jumpToTodayOnGridChange = parsed.jumpToTodayOnGridChange !== false;
       appSettings.autoActivityPageOnHorizontalScroll = parsed.autoActivityPageOnHorizontalScroll !== false;
+      appSettings.showWorkwheelCellMarkers = parsed.showWorkwheelCellMarkers !== false;
+      appSettings.showMeetingCellMarkers = parsed.showMeetingCellMarkers !== false;
       appSettings.coreWorkdayRange = normalizeCoreWorkdayRange(parsed.coreWorkdayRange, '0730-1500');
       appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || (typeof parsed.coreHoursPerDay === 'number' && parsed.coreHoursPerDay > 0 ? parsed.coreHoursPerDay : 7.5);
       appSettings.lightMax = typeof parsed.lightMax === 'number' ? parsed.lightMax : 70;
       appSettings.normalMax = typeof parsed.normalMax === 'number' ? parsed.normalMax : 100;
       appSettings.highMax = typeof parsed.highMax === 'number' ? parsed.highMax : 120;
       appSettings.planningHorizonDays = Number.isFinite(Number(parsed.planningHorizonDays)) ? Math.max(0, Math.min(365, Math.round(Number(parsed.planningHorizonDays)))) : 14;
+      appSettings.billableWorkLockEnabled = parsed.billableWorkLockEnabled !== false;
+      appSettings.meetingLookaheadDays = [3, 7, 14, 30].includes(Number(parsed.meetingLookaheadDays)) ? Number(parsed.meetingLookaheadDays) : 14;
       appSettings.planningHorizonColor = normalizeHexColor(parsed.planningHorizonColor, '#ef4444');
       appSettings.holidays = Array.isArray(parsed.holidays) ? parsed.holidays : [];
       appSettings.specialDays = normalizeSpecialDays(parsed.specialDays);
@@ -532,6 +601,7 @@ function loadSettings() {
       appSettings.shiftRotationRanges = normalizeShiftRotationRanges(parsed.shiftRotationRanges);
       appSettings.shiftRotationColors = normalizeShiftRotationColors(parsed.shiftRotationColors);
       appSettings.shiftTeams = normalizeShiftTeams(parsed.shiftTeams);
+      appSettings.dutyTypes = normalizeDutyTypes(parsed.dutyTypes);
       if (legacyRaw) {
         lsSet(SETTINGS_KEY, JSON.stringify(appSettings));
         lsRemove(LEGACY_SETTINGS_KEY);
@@ -733,6 +803,8 @@ function applyAppName() {
 function openSettings() {
   document.getElementById('set-app-name').value = appSettings.appName;
   document.getElementById('set-workwheel-cell-markers').checked = appSettings.showWorkwheelCellMarkers !== false;
+  document.getElementById('set-meeting-cell-markers').checked = appSettings.showMeetingCellMarkers !== false;
+  document.getElementById('set-meeting-lookahead-days').value = String(appSettings.meetingLookaheadDays || 14);
   const secLabel = normalizeSecurityLabel(appSettings.securityLabel);
   document.getElementById('set-security-label-enabled').checked = secLabel.enabled === true;
   document.getElementById('set-security-label-text').value = secLabel.text;
@@ -766,12 +838,18 @@ async function saveAdministrationSettings() {
 }
 function openScheduleSettings() {
   closeModal('settings-modal');
+  const lockToggle = document.getElementById('set-billable-work-lock-enabled');
+  if (lockToggle) {
+    lockToggle.disabled = !unlockedBossView();
+    lockToggle.title = unlockedBossView() ? 'Boss View can enable or disable this planner lock.' : 'Unlock Boss View to change this planner-wide lock.';
+  }
   document.getElementById('set-core-time').value = appSettings.coreWorkdayRange || '0730-1500';
   document.getElementById('set-jump-to-today').checked = appSettings.jumpToTodayOnGridChange !== false;
   document.getElementById('set-auto-activity-page-scroll').checked = appSettings.autoActivityPageOnHorizontalScroll !== false;
   document.getElementById('set-show-level-rank').checked = appSettings.showLevelRankInSchedule !== false;
   document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
   document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
+  document.getElementById('set-billable-work-lock-enabled').checked = appSettings.billableWorkLockEnabled !== false;
   document.getElementById('set-core-time').oninput = updateCoreHoursDisplayFromRangeInput;
   updateCoreHoursDisplayFromRangeInput();
   document.getElementById('schedule-settings-modal').classList.add('open');
@@ -1477,8 +1555,14 @@ async function confirmHolidayImport() {
   renderPage();
 }
 async function saveSettings() {
+  const lockToggle = document.getElementById('set-billable-work-lock-enabled');
+  const billableWorkLockEnabled = unlockedBossView()
+    ? lockToggle?.checked !== false
+    : appSettings.billableWorkLockEnabled !== false;
   const name = document.getElementById('set-app-name').value.trim();
   const showWorkwheelCellMarkers = document.getElementById('set-workwheel-cell-markers')?.checked === true;
+  const showMeetingCellMarkers = document.getElementById('set-meeting-cell-markers')?.checked === true;
+  const meetingLookaheadDays = [3, 7, 14, 30].includes(Number(document.getElementById('set-meeting-lookahead-days')?.value)) ? Number(document.getElementById('set-meeting-lookahead-days').value) : 14;
   const securityLabel = normalizeSecurityLabel({
     enabled: document.getElementById('set-security-label-enabled')?.checked === true,
     text: document.getElementById('set-security-label-text')?.value || '',
@@ -1490,6 +1574,9 @@ async function saveSettings() {
   await mutateState('saveSettings', () => {
     if (name) appSettings.appName = name;
     appSettings.showWorkwheelCellMarkers = showWorkwheelCellMarkers;
+    appSettings.showMeetingCellMarkers = showMeetingCellMarkers;
+    appSettings.meetingLookaheadDays = meetingLookaheadDays;
+    appSettings.billableWorkLockEnabled = billableWorkLockEnabled;
     appSettings.securityLabel = securityLabel;
     appSettings.workwheelEnabled = workwheelEnabled;
     appSettings.workwheelUpcomingDays = workwheelUpcomingDays;
@@ -1835,13 +1922,16 @@ async function checkForRemoteFileUpdate(options = {}) {
     const diskEntriesMap = isObjectMap(parsedDiskData.entriesMap);
     const diskOvertimeMap = isObjectMap(parsedDiskData.overtimeMap);
     const diskActivityShiftsMap = isObjectMap(parsedDiskData.activityShiftsMap);
+    const diskUnavailableMap = isObjectMap(parsedDiskData.unavailableMap);
     let diskShiftRotationMap = isObjectMap(parsedDiskData.shiftRotationMap);
     const mergedEntriesMap = { ...diskEntriesMap, ...isObjectMap(entriesMap) };
     const mergedOvertimeMap = { ...diskOvertimeMap, ...isObjectMap(overtimeMap) };
     const mergedActivityShiftsMap = { ...diskActivityShiftsMap, ...isObjectMap(activityShiftsMap) };
+    const mergedUnavailableMap = { ...diskUnavailableMap, ...isObjectMap(unavailableMap) };
     for (const key of Object.keys(mergedEntriesMap)) if (mergedEntriesMap[key] === null) delete mergedEntriesMap[key];
     for (const key of Object.keys(mergedOvertimeMap)) if (mergedOvertimeMap[key] === null) delete mergedOvertimeMap[key];
     for (const key of Object.keys(mergedActivityShiftsMap)) if (mergedActivityShiftsMap[key] === null) delete mergedActivityShiftsMap[key];
+    for (const key of Object.keys(mergedUnavailableMap)) if (mergedUnavailableMap[key] === null) delete mergedUnavailableMap[key];
 
     const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
     const employeeMerge = mergeEntityArray(baseSnapshot?.employees, employees, parsedDiskData.employees, 'id', allocateId);
@@ -1849,8 +1939,8 @@ async function checkForRemoteFileUpdate(options = {}) {
     diskShiftRotationMap = remapLeadingRelationIds(diskShiftRotationMap, employeeMerge.theirsIdRemap);
     const mergedShiftRotationMap = { ...diskShiftRotationMap, ...isObjectMap(shiftRotationMap) };
 
-    const before = stableJson({ entriesMap: isObjectMap(entriesMap), overtimeMap: isObjectMap(overtimeMap), activityShiftsMap: isObjectMap(activityShiftsMap), shiftRotationMap: isObjectMap(shiftRotationMap), employees, activities });
-    const after = stableJson({ entriesMap: mergedEntriesMap, overtimeMap: mergedOvertimeMap, activityShiftsMap: mergedActivityShiftsMap, shiftRotationMap: mergedShiftRotationMap, employees: employeeMerge.merged, activities: activityMerge.merged });
+    const before = stableJson({ entriesMap: isObjectMap(entriesMap), overtimeMap: isObjectMap(overtimeMap), activityShiftsMap: isObjectMap(activityShiftsMap), unavailableMap: isObjectMap(unavailableMap), shiftRotationMap: isObjectMap(shiftRotationMap), employees, activities });
+    const after = stableJson({ entriesMap: mergedEntriesMap, overtimeMap: mergedOvertimeMap, activityShiftsMap: mergedActivityShiftsMap, unavailableMap: mergedUnavailableMap, shiftRotationMap: mergedShiftRotationMap, employees: employeeMerge.merged, activities: activityMerge.merged });
     if (before === after) {
       lastSyncTime = parsedDiskData.savedAt;
       setSyncStatusState('updated');
@@ -1860,6 +1950,7 @@ async function checkForRemoteFileUpdate(options = {}) {
     entriesMap = mergedEntriesMap;
     overtimeMap = mergedOvertimeMap;
     activityShiftsMap = mergedActivityShiftsMap;
+    unavailableMap = mergedUnavailableMap;
     shiftRotationMap = mergedShiftRotationMap;
     employees = employeeMerge.merged.sort((a, b) => a.name.localeCompare(b.name));
     activities = activityMerge.merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -2099,14 +2190,17 @@ async function writeLocalBackupFile(handle) {
         const diskEntriesMap = isObjectMap(parsedDiskData.entriesMap);
         const diskOvertimeMap = isObjectMap(parsedDiskData.overtimeMap);
         const diskActivityShiftsMap = isObjectMap(parsedDiskData.activityShiftsMap);
+        const diskUnavailableMap = isObjectMap(parsedDiskData.unavailableMap);
         let diskShiftRotationMap = isObjectMap(parsedDiskData.shiftRotationMap);
 
         const mergedEntriesMap = { ...diskEntriesMap, ...isObjectMap(entriesMap) };
         const mergedOvertimeMap = { ...diskOvertimeMap, ...isObjectMap(overtimeMap) };
         const mergedActivityShiftsMap = { ...diskActivityShiftsMap, ...isObjectMap(activityShiftsMap) };
+        const mergedUnavailableMap = { ...diskUnavailableMap, ...isObjectMap(unavailableMap) };
         for (const key of Object.keys(mergedEntriesMap)) if (mergedEntriesMap[key] === null) delete mergedEntriesMap[key];
         for (const key of Object.keys(mergedOvertimeMap)) if (mergedOvertimeMap[key] === null) delete mergedOvertimeMap[key];
         for (const key of Object.keys(mergedActivityShiftsMap)) if (mergedActivityShiftsMap[key] === null) delete mergedActivityShiftsMap[key];
+        for (const key of Object.keys(mergedUnavailableMap)) if (mergedUnavailableMap[key] === null) delete mergedUnavailableMap[key];
 
         const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
         const employeeMerge = mergeEntityArray(baseSnapshot?.employees, employees, parsedDiskData.employees, 'id', allocateId);
@@ -2119,6 +2213,7 @@ async function writeLocalBackupFile(handle) {
           entriesMap: isObjectMap(entriesMap),
           overtimeMap: isObjectMap(overtimeMap),
           activityShiftsMap: isObjectMap(activityShiftsMap),
+          unavailableMap: isObjectMap(unavailableMap),
           shiftRotationMap: isObjectMap(shiftRotationMap),
           employees, activities,
         };
@@ -2126,6 +2221,7 @@ async function writeLocalBackupFile(handle) {
           entriesMap: mergedEntriesMap,
           overtimeMap: mergedOvertimeMap,
           activityShiftsMap: mergedActivityShiftsMap,
+          unavailableMap: mergedUnavailableMap,
           shiftRotationMap: mergedShiftRotationMap,
           employees: employeeMerge.merged, activities: activityMerge.merged,
         };
@@ -2134,6 +2230,7 @@ async function writeLocalBackupFile(handle) {
           entriesMap = mergedEntriesMap;
           overtimeMap = mergedOvertimeMap;
           activityShiftsMap = mergedActivityShiftsMap;
+          unavailableMap = mergedUnavailableMap;
           shiftRotationMap = mergedShiftRotationMap;
           employees = employeeMerge.merged.sort((a, b) => a.name.localeCompare(b.name));
           activities = activityMerge.merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -2148,6 +2245,7 @@ async function writeLocalBackupFile(handle) {
   for (const key of Object.keys(entriesMap)) if (entriesMap[key] === null) delete entriesMap[key];
   for (const key of Object.keys(overtimeMap)) if (overtimeMap[key] === null) delete overtimeMap[key];
   for (const key of Object.keys(activityShiftsMap)) if (activityShiftsMap[key] === null) delete activityShiftsMap[key];
+  for (const key of Object.keys(unavailableMap)) if (unavailableMap[key] === null) delete unavailableMap[key];
   const persistedShiftRotationMap = withoutNullMap(shiftRotationMap);
 
   const saveTimestamp = new Date().toISOString();
@@ -2158,6 +2256,7 @@ async function writeLocalBackupFile(handle) {
     entriesMap: isObjectMap(entriesMap),
     overtimeMap: isObjectMap(overtimeMap),
     activityShiftsMap: isObjectMap(activityShiftsMap),
+    unavailableMap: isObjectMap(unavailableMap),
     shiftRotationMap: persistedShiftRotationMap,
   };
   const payload = validatedPlannerPayload(payloadData);
@@ -2305,7 +2404,258 @@ async function saveDataAs() {
   }
 }
 
+let pendingPlannerImport = null;
+function plannerImportIdentity(value) {
+  return String(value || '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('nb-NO');
+}
+function plannerImportEmployeeKey(employee) {
+  const email = plannerImportIdentity(employee?.email);
+  if (email) return `email:${email}`;
+  const profile = [employee?.name, employee?.department, employeeSection(employee), employee?.role].map(plannerImportIdentity);
+  return profile.some(Boolean) ? `profile:${profile.join('|')}` : '';
+}
+function plannerImportActivityKey(activity) {
+  const relevance = activityRelevance(activity);
+  const name = plannerImportIdentity(activity?.name);
+  if (!name || !isValidIsoDate(activity?.startDate) || !isValidIsoDate(activity?.endDate)) return '';
+  return [name, activity.startDate, activity.endDate, plannerImportIdentity(activity.project),
+    ...['departments', 'sections', 'processes'].map(key => [...relevance[key]].map(plannerImportIdentity).sort().join(','))].join('\u0000');
+}
+function buildPlannerImportPlan(source, options = {}) {
+  const includePersonnel = options.includePersonnel === true;
+  const includeActivities = options.includeActivities === true;
+  const from = String(options.from || '').trim();
+  const to = String(options.to || '').trim();
+  if (!isValidIsoDate(from) || (to && !isValidIsoDate(to)) || (to && to < from)) throw new Error('Choose a valid activity date range.');
+  let employeeId = nextEmpId;
+  let categoryId = nextCatId;
+  let activityId = nextActId;
+  const employeeIdMap = new Map();
+  const existingEmployeesByKey = new Map();
+  employees.forEach(employee => {
+    const key = plannerImportEmployeeKey(employee);
+    if (key && !existingEmployeesByKey.has(key)) existingEmployeesByKey.set(key, employee);
+  });
+  const categoryIdMap = new Map();
+  const existingCategoriesByKey = new Map();
+  const sourceCategoriesByEmployee = new Map();
+  (source.employeeCategories || []).forEach(link => {
+    const sourceEmployeeId = Number(link?.employeeId);
+    const sourceCategoryId = Number(link?.categoryId);
+    if (Number.isFinite(sourceEmployeeId) && Number.isFinite(sourceCategoryId)) {
+      const values = sourceCategoriesByEmployee.get(sourceEmployeeId) || [];
+      values.push(sourceCategoryId);
+      sourceCategoriesByEmployee.set(sourceEmployeeId, values);
+    }
+  });
+  categories.forEach(category => {
+    const key = plannerImportIdentity(category.name || category.label);
+    if (key && !existingCategoriesByKey.has(key)) existingCategoriesByKey.set(key, category);
+  });
+  const newCategories = [];
+  if (includePersonnel) (source.categories || []).forEach(category => {
+    const key = plannerImportIdentity(category?.name || category?.label);
+    if (!key) return;
+    let destination = existingCategoriesByKey.get(key);
+    if (!destination) {
+      destination = { ...category, id: categoryId++ };
+      newCategories.push(destination);
+      existingCategoriesByKey.set(key, destination);
+    }
+    if (Number.isFinite(Number(category.id))) categoryIdMap.set(Number(category.id), destination.id);
+  });
+  const newEmployees = [];
+  let skippedPersonnel = 0;
+  (source.employees || []).forEach(employee => {
+    const sourceId = Number(employee.id);
+    const key = plannerImportEmployeeKey(employee);
+    const match = key ? existingEmployeesByKey.get(key) : null;
+    if (match) {
+      employeeIdMap.set(sourceId, Number(match.id));
+      skippedPersonnel++;
+      return;
+    }
+    if (!includePersonnel || !key) return;
+    const sourceCategoryIds = Array.isArray(employee.categoryIds) && employee.categoryIds.length
+      ? employee.categoryIds
+      : (sourceCategoriesByEmployee.get(sourceId) || []);
+    const mappedCategories = sourceCategoryIds.map(id => categoryIdMap.get(Number(id))).filter(Number.isFinite);
+    const sourceShiftTeam = (source.appSettings?.shiftTeams || []).find(team => String(team.id) === String(employee.shiftTeamId));
+    const targetShiftTeam = sourceShiftTeam && (appSettings.shiftTeams || []).find(team => plannerImportIdentity(team.name) === plannerImportIdentity(sourceShiftTeam.name));
+    const importedEmployee = { ...employee, id: employeeId++, organisation: appSettings.personnelOrganisationName || appSettings.appName || 'Organisation', categoryIds: mappedCategories, shiftTeamId: targetShiftTeam?.id || '' };
+    newEmployees.push(importedEmployee);
+    employeeIdMap.set(sourceId, importedEmployee.id);
+    existingEmployeesByKey.set(key, importedEmployee);
+  });
+
+  const activityIdMap = new Map();
+  const existingActivitiesByKey = new Map();
+  activities.forEach(activity => {
+    const key = plannerImportActivityKey(activity);
+    if (key && !existingActivitiesByKey.has(key)) existingActivitiesByKey.set(key, activity);
+  });
+  const newActivities = [];
+  const newActivitySourceIds = new Set();
+  let skippedActivities = 0, outsideDateRange = 0, invalidActivities = 0, unmatchedParticipants = 0;
+  if (includeActivities) (source.activities || source.projects || []).forEach(activity => {
+    if (!isValidIsoDate(activity.startDate) || !isValidIsoDate(activity.endDate) || activity.endDate < activity.startDate) { invalidActivities++; return; }
+    if (activity.endDate < from || (to && activity.startDate > to)) { outsideDateRange++; return; }
+    const key = plannerImportActivityKey(activity);
+    const match = key ? existingActivitiesByKey.get(key) : null;
+    if (match) { activityIdMap.set(Number(activity.id), Number(match.id)); skippedActivities++; return; }
+    const sourceParticipants = Array.isArray(activity.participants) ? activity.participants : (activity.employeeIds || []).map(id => ({ id }));
+    const mappedParticipants = [];
+    const participantIds = new Set();
+    sourceParticipants.forEach(participant => {
+      const mappedId = employeeIdMap.get(Number(participant?.id));
+      if (mappedId === undefined) { unmatchedParticipants++; return; }
+      if (!participantIds.has(mappedId)) { participantIds.add(mappedId); mappedParticipants.push({ id: mappedId }); }
+    });
+    const importedActivity = { ...activity, id: activityId++, participants: mappedParticipants,
+      relevance: normalizeActivityRelevance(activity.relevance || { departments: activity.departments, sections: activity.sections, processes: activity.processes }) };
+    newActivities.push(importedActivity);
+    newActivitySourceIds.add(Number(activity.id));
+    activityIdMap.set(Number(activity.id), importedActivity.id);
+    if (key) existingActivitiesByKey.set(key, importedActivity);
+  });
+
+  const destinationWorkCodes = [...(appSettings.workCodes || [])];
+  const sourceWorkCodes = source.workCodes || source.appSettings?.workCodes || [];
+  const newWorkCodes = [];
+  const sourceWorkCodeMap = new Map();
+  let unmappedWorkCodes = 0;
+  const mapWorkCode = sourceId => {
+    const sourceKey = String(sourceId || '');
+    if (!sourceKey) return null;
+    if (sourceWorkCodeMap.has(sourceKey)) return sourceWorkCodeMap.get(sourceKey);
+    const sourceCode = sourceWorkCodes.find(code => String(code.id) === sourceKey);
+    if (!sourceCode) { unmappedWorkCodes++; sourceWorkCodeMap.set(sourceKey, null); return null; }
+    const existing = destinationWorkCodes.find(code => plannerImportIdentity(code.name) === plannerImportIdentity(sourceCode.name));
+    if (existing) { sourceWorkCodeMap.set(sourceKey, existing.id); return existing.id; }
+    const normalized = normalizeWorkCodes([sourceCode])[0];
+    const usedIds = new Set(destinationWorkCodes.map(code => String(code.id)));
+    const baseId = String(normalized.id || 'imported');
+    let importedId = baseId, suffix = 2;
+    while (usedIds.has(importedId)) importedId = `import-${baseId}-${suffix++}`;
+    const imported = { ...normalized, id: importedId };
+    destinationWorkCodes.push(imported);
+    newWorkCodes.push(imported);
+    sourceWorkCodeMap.set(sourceKey, importedId);
+    return importedId;
+  };
+  const sourceAssignments = source.activityShiftsMap && typeof source.activityShiftsMap === 'object'
+    ? source.activityShiftsMap
+    : Object.fromEntries((source.activityShifts || []).filter(assignment => assignment?.date).map(assignment => [`${Number(assignment.employeeId)}_${assignment.date}_${Number(assignment.activityId ?? assignment.projectId)}`, {
+      shift: assignment.shift || 'normal', workCodeId: assignment.workCodeId || null, administrativeTime: String(assignment.administrativeTime || ''),
+      assigned: assignment.excluded === true ? false : assignment.assigned !== false, excluded: assignment.excluded === true,
+    }]));
+  const newAssignments = {};
+  let skippedAssignments = 0;
+  Object.entries(sourceAssignments).forEach(([key, value]) => {
+    if (value == null) return;
+    const [sourceEmployeeId, date, sourceActivityId] = key.split('_');
+    const sourceActivityNumber = Number(sourceActivityId);
+    if (!newActivitySourceIds.has(sourceActivityNumber) || !isValidIsoDate(date) || date < from || (to && date > to)) return;
+    const mappedEmployeeId = employeeIdMap.get(Number(sourceEmployeeId));
+    const mappedActivityId = activityIdMap.get(sourceActivityNumber);
+    if (mappedEmployeeId === undefined || mappedActivityId === undefined) { skippedAssignments++; return; }
+    const destinationKey = `${mappedEmployeeId}_${date}_${mappedActivityId}`;
+    if (Object.prototype.hasOwnProperty.call(activityShiftsMap, destinationKey) && activityShiftsMap[destinationKey] != null) { skippedAssignments++; return; }
+    const assignment = typeof value === 'string' ? { shift: value } : { ...value };
+    assignment.workCodeId = mapWorkCode(assignment.workCodeId);
+    newAssignments[destinationKey] = assignment;
+  });
+  const activityTypeKeys = new Set((appSettings.activityTypes || []).map(type => String(type.key || '')));
+  const usedActivityTypeKeys = new Set(newActivities.map(activity => String(activity.type || '')).filter(Boolean));
+  const newActivityTypes = normalizeActivityTypes(source.activityTypes || source.appSettings?.activityTypes)
+    .filter(type => usedActivityTypeKeys.has(type.key) && !activityTypeKeys.has(type.key));
+  return { newCategories, newEmployees, newActivities, newAssignments, newWorkCodes, newActivityTypes,
+    skippedPersonnel, skippedActivities, outsideDateRange, invalidActivities, unmatchedParticipants, skippedAssignments, unmappedWorkCodes,
+    nextEmpId: employeeId, nextCatId: categoryId, nextActId: activityId };
+}
+function updatePlannerImportPreview() {
+  const preview = document.getElementById('planner-import-preview');
+  const submit = document.getElementById('planner-import-submit');
+  const activitiesEnabled = document.getElementById('planner-import-activities').checked;
+  document.getElementById('planner-import-from').disabled = !activitiesEnabled;
+  document.getElementById('planner-import-to').disabled = !activitiesEnabled;
+  if (!pendingPlannerImport) { preview.textContent = 'Choose a planner file to preview the import.'; submit.disabled = true; return; }
+  try {
+    const includePersonnel = document.getElementById('planner-import-personnel').checked;
+    const plan = buildPlannerImportPlan(pendingPlannerImport.data, { includePersonnel, includeActivities: activitiesEnabled, from: document.getElementById('planner-import-from').value, to: document.getElementById('planner-import-to').value });
+    const rows = [];
+    if (includePersonnel) rows.push(`Personnel: ${plan.newEmployees.length} to add; ${plan.skippedPersonnel} matching records skipped; ${plan.newCategories.length} categories added.`);
+    if (activitiesEnabled) rows.push(`Activities: ${plan.newActivities.length} to add; ${plan.skippedActivities} duplicates skipped; ${plan.outsideDateRange} outside the date range; ${plan.invalidActivities} invalid dates skipped.`);
+    if (activitiesEnabled) rows.push(`Dependencies: ${plan.newActivityTypes.length} activity types and ${plan.newWorkCodes.length} work codes added. Activity cell assignments: ${Object.keys(plan.newAssignments).length} to add; ${plan.unmatchedParticipants} participant links, ${plan.skippedAssignments} assignments, and ${plan.unmappedWorkCodes} unknown work-code references skipped.`);
+    preview.textContent = rows.join(' ') || 'Select Personnel or Activities to import.';
+    submit.disabled = !plan.newEmployees.length && !plan.newActivities.length;
+  } catch (error) { preview.textContent = error.message; submit.disabled = true; }
+}
+function openPlannerImport() {
+  pendingPlannerImport = null;
+  document.getElementById('planner-import-json-file').value = '';
+  document.getElementById('planner-import-file-name').textContent = 'No file selected';
+  document.getElementById('planner-import-error').textContent = '';
+  document.getElementById('planner-import-personnel').checked = true;
+  document.getElementById('planner-import-activities').checked = true;
+  document.getElementById('planner-import-from').value = todayStr();
+  document.getElementById('planner-import-to').value = '';
+  updatePlannerImportPreview();
+  document.querySelectorAll('.modal-bg.open').forEach(modal => closeModal(modal.id));
+  document.getElementById('planner-import-modal').classList.add('open');
+}
+function closePlannerImport() { pendingPlannerImport = null; closeModal('planner-import-modal'); }
+async function handlePlannerImportFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const error = document.getElementById('planner-import-error');
+  error.textContent = '';
+  try {
+    const source = JSON.parse(await file.text());
+    validatePlannerData(source);
+    pendingPlannerImport = { data: source, fileName: file.name };
+    document.getElementById('planner-import-file-name').textContent = file.name;
+    updatePlannerImportPreview();
+  } catch (err) {
+    pendingPlannerImport = null;
+    error.textContent = `Could not read planner file: ${err?.message || 'Check the JSON format.'}`;
+    updatePlannerImportPreview();
+  } finally { event.target.value = ''; }
+}
+async function commitPlannerImport() {
+  if (!pendingPlannerImport) return;
+  let plan;
+  try {
+    plan = buildPlannerImportPlan(pendingPlannerImport.data, {
+      includePersonnel: document.getElementById('planner-import-personnel').checked,
+      includeActivities: document.getElementById('planner-import-activities').checked,
+      from: document.getElementById('planner-import-from').value,
+      to: document.getElementById('planner-import-to').value,
+    });
+    if (!plan.newEmployees.length && !plan.newActivities.length) return;
+    await mutateState('importSelectedPlannerData', () => {
+      categories.push(...plan.newCategories);
+      employees.push(...plan.newEmployees);
+      activities.push(...plan.newActivities);
+      appSettings.workCodes = normalizeWorkCodes([...(appSettings.workCodes || []), ...plan.newWorkCodes]);
+      appSettings.activityTypes = normalizeActivityTypes([...(appSettings.activityTypes || []), ...plan.newActivityTypes]);
+      activityShiftsMap = { ...activityShiftsMap, ...plan.newAssignments };
+      nextEmpId = plan.nextEmpId; nextCatId = plan.nextCatId; nextActId = plan.nextActId;
+      ensureEmployeeSortOrders(employees); ensureDepartmentOrders(); ensureSubdepartmentOrders();
+      employees.sort((a, b) => a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
+      activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
+    }, { saveDisk: true });
+  } catch (err) {
+    document.getElementById('planner-import-error').textContent = `Import failed: ${err?.message || 'The planner could not be saved.'}`;
+    return;
+  }
+  const addedPersonnel = plan.newEmployees.length, addedActivities = plan.newActivities.length;
+  closePlannerImport(); renderPage();
+  showToast(`Imported ${addedPersonnel} personnel and ${addedActivities} activities. Existing records were kept.`, 6000);
+}
 function importData(options = {}) {
+  if (!options.replace && !options.required) { openPlannerImport(); return false; }
+  if (options.replace && !confirm('Replace all active planner data with the selected full planner file? This cannot be undone from this import dialog.')) return false;
   document.querySelectorAll('.modal-bg.open').forEach(modal => closeModal(modal.id));
   if (!preferBrowserJsonFileInput && typeof window.showOpenFilePicker === 'function') {
     void importDataWithPicker(options);
@@ -2399,6 +2749,37 @@ function validatePlannerData(data) {
   };
   const employeeIds = uniqueIds(employeeList, 'employee');
   const activityIds = uniqueIds(activityList, 'activity');
+  const dutyTypes = normalizeDutyTypes(data.appSettings?.dutyTypes || []);
+  const dutyTypeIds = new Set(dutyTypes.map(type => type.id));
+  if (data.dutyAssignments != null && !Array.isArray(data.dutyAssignments)) throw new Error('Invalid duty assignments');
+  const dutyAssignmentIds = new Set();
+  const dutySlotKeys = new Set();
+  for (const assignment of data.dutyAssignments || []) {
+    const id = String(assignment?.id || '');
+    const dutyTypeId = String(assignment?.dutyTypeId || '');
+    const employeeId = Number(assignment?.employeeId);
+    if (!id || dutyAssignmentIds.has(id) || !dutyTypeIds.has(dutyTypeId) || !employeeIds.has(employeeId) || !isValidIsoDate(assignment?.date)) throw new Error(`Invalid duty assignment "${id || '(missing ID)'}"`);
+    dutyAssignmentIds.add(id);
+    const slotKey = `${dutyTypeId}_${assignment.date}`;
+    if (dutySlotKeys.has(slotKey)) throw new Error(`Duplicate duty assignment for type/date "${slotKey}"`);
+    dutySlotKeys.add(slotKey);
+    const startTime = normalizeDutyTime(assignment.startTime, '07:00');
+    const endTime = normalizeDutyTime(assignment.endTime, '07:00');
+    const intervalHours = timeRangeHours(`${startTime.replace(':', '')}-${endTime.replace(':', '')}`);
+    if (!Number.isFinite(intervalHours) || intervalHours <= 0 || intervalHours > 24) throw new Error(`Duty assignment "${id}" has an invalid interval`);
+    if (assignment.status != null && !['planned', 'confirmed'].includes(assignment.status)) throw new Error(`Duty assignment "${id}" has an invalid status`);
+  }
+  const meetingIds = new Set();
+  if (data.meetings != null && !Array.isArray(data.meetings)) throw new Error('Invalid meetings');
+  for (const meeting of data.meetings || []) {
+    const meetingId = String(meeting?.id || '');
+    if (!meetingId || meetingIds.has(meetingId)) throw new Error('Invalid or duplicate meeting IDs');
+    meetingIds.add(meetingId);
+    if (!isValidIsoDate(meeting.date)) throw new Error(`Meeting "${meetingId}" has an invalid date`);
+    if (meeting.endDate && (!isValidIsoDate(meeting.endDate) || meeting.endDate < meeting.date)) throw new Error(`Meeting "${meetingId}" has an invalid end date`);
+    if ((meeting.participantIds || []).some(id => !employeeIds.has(Number(id))) || (meeting.responsibleId != null && !employeeIds.has(Number(meeting.responsibleId)))) throw new Error(`Meeting "${meetingId}" contains an unknown employee`);
+  }
+  if (data.meetingTypes != null && (!Array.isArray(data.meetingTypes) || data.meetingTypes.some(type => !type || typeof type.id !== 'string' || typeof type.name !== 'string'))) throw new Error('Invalid meeting types');
   const statusKeys = new Set();
   statusList.forEach(status => {
     if (!status || typeof status !== 'object' || Array.isArray(status)) throw new Error('Daily status contains invalid data');
@@ -2456,6 +2837,21 @@ function validatePlannerData(data) {
       }
     });
   }
+  if (data.unavailableMap != null && (typeof data.unavailableMap !== 'object' || Array.isArray(data.unavailableMap))) throw new Error('Invalid unavailability entries');
+  if (data.unavailableMap) {
+    Object.entries(data.unavailableMap).forEach(([key, value]) => {
+      const separator = key.indexOf('_');
+      const date = key.slice(separator + 1);
+      if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !isValidIsoDate(date)) {
+        delete data.unavailableMap[key];
+        return;
+      }
+      if (value === null) return;
+      if (typeof value === 'string') data.unavailableMap[key] = { reason: value.trim().slice(0, 240) };
+      else if (!value || typeof value !== 'object' || Array.isArray(value)) data.unavailableMap[key] = { reason: '' };
+      else data.unavailableMap[key] = { reason: String(value.reason || '').trim().slice(0, 240) };
+    });
+  }
   if (data.activityShiftsMap != null && (typeof data.activityShiftsMap !== 'object' || Array.isArray(data.activityShiftsMap))) throw new Error('Invalid activity assignments');
   // Auto-clean orphaned activity assignments (employee or activity no longer exists)
   if (data.activityShiftsMap) {
@@ -2463,7 +2859,16 @@ function validatePlannerData(data) {
       const parts = key.split('_');
       if (parts.length !== 3 || !employeeIds.has(Number(parts[0])) || !activityIds.has(Number(parts[2])) || !/^\d{4}-\d{2}-\d{2}$/.test(parts[1])) {
         delete data.activityShiftsMap[key];
+      } else if (data.activityShiftsMap[key] && typeof data.activityShiftsMap[key] === 'object') {
+        data.activityShiftsMap[key].lifecycle = data.activityShiftsMap[key].lifecycle === 'planned' ? 'planned' : 'confirmed';
       }
+    });
+  }
+  if (data.unavailableMap) {
+    Object.keys(data.unavailableMap).forEach(key => {
+      const separator = key.indexOf('_');
+      const date = key.slice(separator + 1);
+      if (separator < 1 || !employeeIds.has(Number(key.slice(0, separator))) || !isValidIsoDate(date)) delete data.unavailableMap[key];
     });
   }
   if (data.shiftRotationMap != null && (typeof data.shiftRotationMap !== 'object' || Array.isArray(data.shiftRotationMap))) throw new Error('Invalid shift rotation assignments');
@@ -2524,6 +2929,14 @@ function activityPageCapacity() {
   // Cap the activity panel at 12 rows, scaling down for shorter viewports.
   return Math.max(6, Math.min(12, Math.floor((window.innerHeight - 420) / 42)));
 }
+function setScheduleActivityCount() {
+  const yearStart = `${gridYear}-01-01`;
+  const yearEnd = `${gridYear}-12-31`;
+  const filter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
+  return activities.filter(activity => activity.startDate <= yearEnd && activity.endDate >= yearStart && activityVisibleForScheduleSection(activity)
+    && (filter === 'all' || activityStatus(activity) === filter)
+    && (pastActivitiesExpanded || activity.endDate >= todayStr())).length;
+}
 function scheduleActivityWindow() {
   const { start, end } = scheduleRange();
   const today = todayStr();
@@ -2531,7 +2944,7 @@ function scheduleActivityWindow() {
   const candidates = activities
     .filter(activity => activity.startDate <= end && activity.endDate >= start && activityVisibleForScheduleSection(activity))
     .filter(activity => (filter === 'all' || activityStatus(activity) === filter)
-      && (gridViewMode === 'timeline' || pastActivitiesExpanded || activity.endDate >= today))
+      && (pastActivitiesExpanded || activity.endDate >= today))
     .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate) || a.name.localeCompare(b.name));
   const pageSize = activityPageCapacity();
   const maxOffset = Math.max(0, candidates.length - pageSize);
@@ -2569,20 +2982,50 @@ function changeActivityPage(direction) {
 }
 let highlightedScheduleEmployeeId = null;
 let gridViewMode = 'all';
+let scheduleSubview = 'activities';
+let scheduleSubViewDates = { month: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`, selected: todayStr() };
+let meetingsScopeFilter = '';
+let meetings = [];
+let dutyAssignments = [];
+let selectedDutyTypeId = '';
+let workScheduleHistory = {};
+let changeLog = [];
+let meetingParticipantFilter = '';
+let meetingParticipantSearch = '';
+let meetingParticipantSelection = new Set();
+const meetingParticipantHierarchyFilters = { department: '', section: '', process: '', team: '' };
+const meetingParticipantResponsibleFilters = { search: '', department: '', section: '', process: '', team: '' };
+let meetingTypes = [
+  { id: 'meeting', name: 'Meeting', color: '#2563eb' },
+  { id: 'briefing', name: 'Briefing', color: '#0f766e' },
+  { id: 'orientation', name: 'Orientation', color: '#7c3aed' },
+  { id: 'other', name: 'Other', color: '#64748b' },
+];
 let gridPeriod = 'year';
 let scheduleAnchorDate = todayStr();
+let dutySelectedTypeId = '';
+let dutySelection = new Set();
+let dutySelectionAnchor = null;
+let suppressDutyCellClick = false;
+let dutyPlannerInitialScrollPending = true;
+let dutyEligibilityDraftIds = new Set();
+let dutyEligibilityOriginalIds = new Set();
+let dutyEligibilityForTypeId = '';
+const dutyEligibilityFilters = { search: '', department: '', section: '', process: '', team: '' };
 let appZoom = 100;
 let collapsedGridSections = { activities: false, holidays: false, employees: false };
 
 let employees = [], categories = [], statuses = [], activities = [], courses = [], courseStatuses = {}, requirements = [], requirementRecords = {};
 let departmentOrder = {}, subdepartmentOrder = {}, hierarchyOrder = normalizeHierarchyOrderTree();
-let entriesMap = {}, activityShiftsMap = {}, shiftRotationMap = {}, overtimeMap = {}, cellNotesMap = {}, workScheduleChecksMap = {};
+let entriesMap = {}, activityShiftsMap = {}, shiftRotationMap = {}, overtimeMap = {}, cellNotesMap = {}, unavailableMap = {}, workScheduleChecksMap = {};
 let rotationDragSelection = null;
 let nextEmpId = 1, nextActId = 1, nextStatusId = 1, nextCatId = 1;
 
 let pickerEmpId = null, pickerDate = null, pickerSelectedStatus = null;
 let pickerStatusLifecycle = 'confirmed';
+let pickerWorkTimeLifecycles = {};
 let pickerDates = [];
+let pickerOvertimeExpanded = false;
 let pendingActivityPreset = null;
 let quickActivityTypeReturn = false;
 let cellSelection = { active: false, empId: null, startDate: null, endDate: null, dates: [] };
@@ -2612,16 +3055,126 @@ let bossSessionActive = false;
 let teamReportSelectedActivityIds = null;
 
 // ═══ STATE MUTATION ENGINE ═══════════════════════════════════════════════════
+function changeLogSnapshot() {
+  return {
+    entriesMap: JSON.parse(JSON.stringify(entriesMap || {})),
+    activityShiftsMap: JSON.parse(JSON.stringify(activityShiftsMap || {})),
+    overtimeMap: JSON.parse(JSON.stringify(overtimeMap || {})),
+    cellNotesMap: JSON.parse(JSON.stringify(cellNotesMap || {})),
+    unavailableMap: JSON.parse(JSON.stringify(unavailableMap || {})),
+    activities: JSON.parse(JSON.stringify(activities || [])),
+  };
+}
+function changeLogEqual(left, right) { return JSON.stringify(left ?? null) === JSON.stringify(right ?? null); }
+function changeLogEmployeeName(id, snapshot) {
+  return employees.find(employee => Number(employee.id) === Number(id))?.name
+    || snapshot?.activities?.flatMap(activity => activity.participants || []).find(participant => Number(participant.id) === Number(id))?.name
+    || `Employee ${id}`;
+}
+function changeLogValuePresent(mapName, value) {
+  if (value == null || value === false || value === '') return false;
+  if (mapName === 'activityShiftsMap') return value.assigned !== false && value.excluded !== true;
+  return true;
+}
+function changeLogKind(entry) {
+  if (['added', 'removed', 'changed'].includes(entry.changeType)) return entry.changeType;
+  const summary = String(entry.summary || '').toLocaleLowerCase('nb-NO');
+  if (/\b(updated|changed|edited)\b/.test(summary) || summary.includes('added or updated')) return 'changed';
+  if (/\b(removed|cleared|deleted)\b/.test(summary)) return 'removed';
+  if (/\b(added|created)\b/.test(summary)) return 'added';
+  return 'changed';
+}
+function appendPlannerChangeLog(before, actionName) {
+  const entries = [];
+  let entryIndex = 0;
+  const addEntry = data => entries.push({ id: `change-${Date.now()}-${entryIndex++}-${Math.random().toString(36).slice(2, 8)}`, timestamp: new Date().toISOString(), ...data });
+  const readCellKey = key => {
+    const match = /^(\d+)_(\d{4}-\d{2}-\d{2})(?:_(\d+))?$/.exec(key);
+    return match ? { employeeId: Number(match[1]), date: match[2], activityId: match[3] ? Number(match[3]) : null } : {};
+  };
+  const maps = [
+    ['entriesMap', 'Daily status'], ['activityShiftsMap', 'Activity assignment'],
+    ['overtimeMap', 'Overtime'], ['cellNotesMap', 'Cell note'], ['unavailableMap', 'Unavailable'],
+  ];
+  const currentMaps = { entriesMap, activityShiftsMap, overtimeMap, cellNotesMap, unavailableMap };
+  maps.forEach(([mapName, label]) => {
+    const oldMap = before[mapName] || {};
+    const newMap = currentMaps[mapName] || {};
+    const keys = new Set([...Object.keys(oldMap), ...Object.keys(newMap)]);
+    keys.forEach(key => {
+      if (changeLogEqual(oldMap[key], newMap[key])) return;
+      const previousPresent = changeLogValuePresent(mapName, oldMap[key]);
+      const currentPresent = changeLogValuePresent(mapName, newMap[key]);
+      const changeType = !previousPresent && currentPresent ? 'added' : (previousPresent && !currentPresent ? 'removed' : 'changed');
+      const { employeeId, date, activityId } = readCellKey(key);
+      if (!employeeId || !date) return;
+      const employeeName = changeLogEmployeeName(employeeId, before);
+      const activity = activityId == null ? null : activities.find(item => Number(item.id) === activityId) || before.activities.find(item => Number(item.id) === activityId);
+      const activityName = activity?.name || '';
+      let detail = label;
+      if (mapName === 'entriesMap') {
+        const value = newMap[key];
+        const status = value ? siFor(value.status) : null;
+        detail = value ? `Daily status set${status ? ` to ${status.label}` : ''}` : 'Daily status cleared';
+      } else if (mapName === 'activityShiftsMap') {
+        const value = newMap[key];
+        const assignment = value ? activityAssignment(key) : null;
+        const code = assignment?.workCodeId ? (appSettings.workCodes || []).find(item => String(item.id) === String(assignment.workCodeId)) : null;
+        detail = value && assignment?.assigned && !assignment.excluded
+          ? `Work assignment set${code ? ` · ${code.abbreviation}` : ''}${assignment.shift ? ` · ${assignment.shift}` : ''}`
+          : 'Work assignment cleared';
+      } else if (mapName === 'overtimeMap') detail = newMap[key] ? `Overtime set · ${formatHoursNumber(newMap[key].hours)}h` : 'Overtime cleared';
+      else if (mapName === 'cellNotesMap') detail = newMap[key] ? 'Cell note added or updated' : 'Cell note cleared';
+      else if (mapName === 'unavailableMap') detail = newMap[key] ? 'Marked unavailable' : 'Unavailable cleared';
+      addEntry({ category: 'cell', changeType, summary: `${employeeName} · ${date}${activityName ? ` · ${activityName}` : ''}: ${detail}`, employeeId, employeeName, date, activityId, activityName });
+    });
+  });
+  const beforeActivities = new Map((before.activities || []).map(activity => [Number(activity.id), activity]));
+  const afterActivities = new Map((activities || []).map(activity => [Number(activity.id), activity]));
+  for (const [id, activity] of afterActivities) {
+    const previous = beforeActivities.get(id);
+    if (!previous) {
+      addEntry({ category: 'activity', changeType: 'added', summary: `Activity created: ${activity.name}`, date: activity.startDate, activityId: id, activityName: activity.name });
+      continue;
+    }
+    const oldIds = new Set((previous.participants || []).map(participant => Number(participant.id)));
+    const newIds = new Set((activity.participants || []).map(participant => Number(participant.id)));
+    [...newIds].filter(employeeId => !oldIds.has(employeeId)).forEach(employeeId => {
+      const name = changeLogEmployeeName(employeeId, before);
+      addEntry({ category: 'activity', changeType: 'added', summary: `${name} added to activity: ${activity.name}`, employeeId, employeeName: name, date: activity.startDate, activityId: id, activityName: activity.name });
+    });
+    [...oldIds].filter(employeeId => !newIds.has(employeeId)).forEach(employeeId => {
+      const name = changeLogEmployeeName(employeeId, before);
+      addEntry({ category: 'activity', changeType: 'removed', summary: `${name} removed from activity: ${activity.name}`, employeeId, employeeName: name, date: activity.startDate, activityId: id, activityName: activity.name });
+    });
+    const metadataChanged = ['name','startDate','endDate','project','order','billing'].some(key => String(previous[key] || '') !== String(activity[key] || ''));
+    if (metadataChanged) addEntry({ category: 'activity', changeType: 'changed', summary: `Activity details updated: ${activity.name}`, date: activity.startDate, activityId: id, activityName: activity.name });
+  }
+  for (const [id, activity] of beforeActivities) if (!afterActivities.has(id)) addEntry({ category: 'activity', changeType: 'removed', summary: `Activity deleted: ${activity.name}`, date: activity.startDate, activityId: id, activityName: activity.name });
+  if (!entries.length) return;
+  changeLog = normalizeChangeLog([...changeLog, ...entries]);
+  if (currentPage === 'grid' && scheduleSubview === 'activities') renderChangeLogPreview();
+}
 async function mutateState(actionName, updateFn, options = { saveDisk: true }) {
+  const before = changeLogSnapshot();
   recordUndo();
   try {
     await updateFn();
   } catch (err) {
     console.error(`Mutation failed: ${actionName}`, err);
-    return;
+    showToast(`Could not save ${actionName.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${err instanceof Error ? err.message : String(err)}`, 7000);
+    return false;
   }
+  appendPlannerChangeLog(before, actionName);
   markUnsaved();
-  await saveState();
+  try {
+    await saveState();
+  } catch (err) {
+    console.error(`Could not persist mutation: ${actionName}`, err);
+    showToast(`Change applied in memory, but could not be saved to browser recovery: ${err instanceof Error ? err.message : String(err)}`, 8000);
+    updateSbStatus();
+    return true;
+  }
 
   if (options.saveDisk || appSettings.autoSaveEnabled !== false) {
     if (canUseFileSystemSave() && localBackupFileHandle) {
@@ -2634,6 +3187,7 @@ async function mutateState(actionName, updateFn, options = { saveDisk: true }) {
     }
   }
   updateSbStatus();
+  return true;
 }
 
 function updateUndoButton() {
@@ -2644,8 +3198,8 @@ function updateUndoButton() {
 }
 function recordUndo() {
   undoStack.push(JSON.parse(JSON.stringify({
-    appSettings: { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } },
-    employees, departmentOrder, subdepartmentOrder, hierarchyOrder, categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, shiftRotationMap, overtimeMap, cellNotesMap, workScheduleChecksMap,
+    appSettings: { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) }, dutyTypes: normalizeDutyTypes(appSettings.dutyTypes) },
+    employees, departmentOrder, subdepartmentOrder, hierarchyOrder, categories, statuses, activities, meetings, dutyAssignments, meetingTypes, workScheduleHistory, changeLog, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, shiftRotationMap, overtimeMap, cellNotesMap, unavailableMap, workScheduleChecksMap,
     nextEmpId, nextActId, nextStatusId, nextCatId,
   })));
   if (undoStack.length > 20) undoStack.shift();
@@ -2654,9 +3208,15 @@ function recordUndo() {
 async function undoLastChange() {
   const previous = undoStack.pop();
   if (!previous) return;
-  ({ appSettings, employees, departmentOrder = {}, subdepartmentOrder = {}, hierarchyOrder = normalizeHierarchyOrderTree(), categories, statuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, shiftRotationMap, overtimeMap, cellNotesMap, workScheduleChecksMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
+  ({ appSettings, employees, departmentOrder = {}, subdepartmentOrder = {}, hierarchyOrder = normalizeHierarchyOrderTree(), categories, statuses, activities, meetings, dutyAssignments = [], meetingTypes, workScheduleHistory = {}, changeLog = [], courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, shiftRotationMap, overtimeMap, cellNotesMap, unavailableMap, workScheduleChecksMap, nextEmpId, nextActId, nextStatusId, nextCatId } = previous);
   shiftRotationMap ||= {};
   overtimeMap ||= {};
+  meetings = normalizeMeetings(meetings || []);
+  appSettings.dutyTypes = normalizeDutyTypes(appSettings.dutyTypes);
+  dutyAssignments = normalizeDutyAssignments(dutyAssignments, employees, appSettings.dutyTypes);
+  meetingTypes = normalizeMeetingTypes(meetingTypes || []);
+  workScheduleHistory = normalizeWorkScheduleHistory(workScheduleHistory);
+  changeLog = normalizeChangeLog(changeLog);
   if (appSettings && typeof appSettings === 'object') {
     const merged = { ...appSettings, departmentColors: { ...(appSettings.departmentColors || {}) } };
     Object.assign(appSettings, merged);
@@ -2730,6 +3290,11 @@ window.addEventListener('beforeunload', event => {
 function safeColor(c) { return /^#[0-9a-fA-F]{3,8}$/.test(String(c || '')) ? c : PALETTE[0]; }
 function loadFromData(data) {
   const normalized = normalizeStateVersion(data || {});
+  meetingTypes = normalizeMeetingTypes(normalized.meetingTypes);
+  meetings = normalizeMeetings(normalized.meetings);
+  appSettings.dutyTypes = normalizeDutyTypes(normalized.appSettings?.dutyTypes || appSettings.dutyTypes);
+  workScheduleHistory = normalizeWorkScheduleHistory(normalized.workScheduleHistory);
+  changeLog = normalizeChangeLog(normalized.changeLog);
   pendingRemoteRefreshData = null;
   pendingRemoteRefreshSavedAt = null;
   lastSyncTime = normalized.savedAt || new Date().toISOString();
@@ -2744,6 +3309,7 @@ function loadFromData(data) {
     appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || 7.5;
     appSettings.shiftRotationEnabled = appSettings.shiftRotationEnabled === true;
     appSettings.shiftRotationRanges = normalizeShiftRotationRanges(appSettings.shiftRotationRanges);
+    appSettings.dutyTypes = normalizeDutyTypes(appSettings.dutyTypes);
     appSettings.holidays = Array.isArray(appSettings.holidays) ? appSettings.holidays : [];
     appSettings.specialDays = normalizeSpecialDays(appSettings.specialDays);
   }
@@ -2803,6 +3369,20 @@ function loadFromData(data) {
     inactive: e.inactive === true,
     inactiveReason: String(e.inactiveReason || '').trim().slice(0, 240),
   }));
+  const employeeIds = new Set(employees.map(employee => Number(employee.id)));
+  appSettings.dutyTypes = normalizeDutyTypes(appSettings.dutyTypes).map(type => ({
+    ...type,
+    eligibleEmployeeIds: type.eligibleEmployeeIds.filter(id => employeeIds.has(Number(id))),
+  }));
+  dutyAssignments = normalizeDutyAssignments(normalized.dutyAssignments, employees, appSettings.dutyTypes);
+  appSettings.dutyTypes = normalizeDutyTypes(appSettings.dutyTypes);
+  meetings = meetings.map(meeting => ({
+    ...meeting,
+    participantIds: meeting.participantIds.filter(id => employeeIds.has(Number(id))),
+    responsibleId: employeeIds.has(Number(meeting.responsibleId)) ? Number(meeting.responsibleId) : null,
+  }));
+  const knownMeetingTypeIds = new Set(meetingTypes.map(type => type.id));
+  meetings = meetings.map(meeting => knownMeetingTypeIds.has(meeting.typeId) ? meeting : { ...meeting, typeId: '' });
   // Inactive status is stored with each employee; the display mode is local.
   ensureEmployeeSortOrders(employees);
   ensureDepartmentOrders();
@@ -2847,18 +3427,21 @@ function loadFromData(data) {
   cellNotesMap = normalized.cellNotesMap && typeof normalized.cellNotesMap === 'object' && !Array.isArray(normalized.cellNotesMap)
     ? Object.fromEntries(Object.entries(normalized.cellNotesMap).map(([key, value]) => [key, String(value || '').trim().slice(0, 240)]).filter(([, value]) => value))
     : {};
+  unavailableMap = normalized.unavailableMap && typeof normalized.unavailableMap === 'object' && !Array.isArray(normalized.unavailableMap)
+    ? Object.fromEntries(Object.entries(normalized.unavailableMap).filter(([, value]) => value !== null).map(([key, value]) => [key, { reason: String(value?.reason ?? value ?? '').trim().slice(0, 240) }]))
+    : {};
   workScheduleChecksMap = normalized.workScheduleChecksMap && typeof normalized.workScheduleChecksMap === 'object' && !Array.isArray(normalized.workScheduleChecksMap)
     ? Object.fromEntries(Object.entries(normalized.workScheduleChecksMap).filter(([, value]) => value === true))
     : {};
   if (normalized.activityShiftsMap && typeof normalized.activityShiftsMap === 'object' && !Array.isArray(normalized.activityShiftsMap)) {
     activityShiftsMap = Object.fromEntries(Object.entries(normalized.activityShiftsMap).map(([key, value]) => [key,
-      typeof value === 'string' ? { shift: value || 'normal', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), workCodeId: value?.workCodeId || null, administrativeTime: String(value?.administrativeTime || ''), staffingImpactOverride: null, assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
+      typeof value === 'string' ? { shift: value || 'normal', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, lifecycle: 'confirmed', assigned: true, excluded: false } : { shift: value?.shift || (value?.assigned !== false && value?.excluded !== true ? 'normal' : ''), workCodeId: value?.workCodeId || null, administrativeTime: String(value?.administrativeTime || ''), staffingImpactOverride: null, lifecycle: value?.lifecycle === 'planned' ? 'planned' : 'confirmed', assigned: value?.excluded === true ? false : value?.assigned !== false, excluded: value?.excluded === true }
     ]));
   } else if (Array.isArray(normalized.activityShifts)) {
     activityShiftsMap = {};
     normalized.activityShifts.forEach(s => {
       const eid = +s.employeeId, pid = +(s.activityId ?? s.projectId);
-      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: s.workCodeId || null, administrativeTime: String(s.administrativeTime || ''), staffingImpactOverride: null, assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
+      if (Number.isFinite(eid) && Number.isFinite(pid) && s.date) activityShiftsMap[`${eid}_${s.date}_${pid}`] = { shift: s.shift || (s.assigned !== false && s.excluded !== true ? 'normal' : ''), workCodeId: s.workCodeId || null, administrativeTime: String(s.administrativeTime || ''), staffingImpactOverride: null, lifecycle: s.lifecycle === 'planned' ? 'planned' : 'confirmed', assigned: s.excluded === true ? false : s.assigned !== false, excluded: s.excluded === true };
     });
   } else activityShiftsMap = {};
   shiftRotationMap = cleanShiftRotationMap(normalized.shiftRotationMap, employees);
@@ -2935,7 +3518,7 @@ function snapshotData() {
     version: DATA_VERSION,
     savedAt: new Date().toISOString(),
     dailyStatusesSeparated: true,
-    appSettings: plannerAppSettingsSnapshot(),
+    appSettings: { ...plannerAppSettingsSnapshot(), dutyTypes: normalizeDutyTypes(appSettings.dutyTypes) },
     departmentColors: appSettings.departmentColors || {},
     subdepartmentColors: appSettings.subdepartmentColors || {},
     sectionColors: appSettings.sectionColors || {},
@@ -2944,10 +3527,13 @@ function snapshotData() {
     subdepartmentOrder,
     hierarchyOrder,
     activityTypes: appSettings.activityTypes || [],
+    meetingTypes,
+    workScheduleHistory: normalizeWorkScheduleHistory(workScheduleHistory),
+    changeLog: normalizeChangeLog(changeLog),
     workCodes: appSettings.workCodes || [],
     shiftTemplates: appSettings.shiftTemplates || [],
     summaryColumns: appSettings.summaryColumns,
-    employees, categories, statuses: snapshotStatuses, activities, courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, shiftRotationMap, overtimeMap, cellNotesMap, workScheduleChecksMap,
+    employees, categories, statuses: snapshotStatuses, activities, meetings, dutyAssignments: normalizeDutyAssignments(dutyAssignments, employees, appSettings.dutyTypes), courses, courseStatuses, requirements, requirementRecords, entriesMap, activityShiftsMap, shiftRotationMap, overtimeMap, cellNotesMap, unavailableMap, workScheduleChecksMap,
       bugTracker: normalizeBugTracker(appSettings.bugTracker),
     nextEmpId, nextActId, nextStatusId, nextCatId,
     workwheelData: typeof workwheelPlannerSnapshot === 'function' ? workwheelPlannerSnapshot() : undefined,
@@ -3284,10 +3870,13 @@ function activityDefaultShift(shiftType, act = null) {
   if (shiftType === 'evening') return act?.eveningShift || '1200-2000';
   return act?.dayShift || '0730-2400';
 }
+function activityWorkTimeLifecycle(act, empId, date) {
+  return activityAssignment(`${empId}_${date}_${act.id}`).lifecycle || 'confirmed';
+}
 function activityShiftHours(act, empId, date) {
   if (activityStatus(act) !== 'confirmed') return 0;
   const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
-  if (!assignment.assigned || assignment.excluded || !assignment.shift) return 0;
+  if (!assignment.assigned || assignment.excluded || !assignment.shift || workTimeIsPlanned(assignment)) return 0;
   const shiftStr = assignment.shift || 'normal';
   if (shiftStr === 'turn') return 24;
   if (['normal', 'day', 'evening', 'night'].includes(shiftStr)) {
@@ -3311,6 +3900,7 @@ function activityPhysicalShift(act, assignment) {
 function activityAssignmentInfo(act, empId, date, includeTentative = false) {
   if (activityStatus(act) !== 'confirmed' && !(includeTentative && activityStatus(act) === 'tentative')) return null;
   const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
+  if (workTimeIsPlanned(assignment)) return null;
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId)
     || (assignment.shift === 'normal' ? { id: null, name: 'Normal Working Hours', abbreviation: 'NA', color: act.color } : null);
   if (!assignment.assigned || assignment.excluded || !assignment.shift || !workCode) return null;
@@ -3319,7 +3909,7 @@ function activityAssignmentInfo(act, empId, date, includeTentative = false) {
     : (assignment.shift || 'Not specified');
   const administrativeMeasure = activityAdministrativeMeasure(act, empId, date);
   const administrativeValue = formatCompactMeasure(administrativeMeasure.units, administrativeMeasure.hours);
-  return { assignment, workCode, physicalShift, physicalHours: activityShiftHours(act, empId, date), administrativeMeasure, administrativeValue };
+  return { assignment, workCode, physicalShift, physicalHours: activityShiftHours(act, empId, date), administrativeMeasure, administrativeValue, workTimeLifecycle: assignment.lifecycle || 'confirmed' };
 }
 function assignmentShiftType(shift, participant = null) {
   if (shift === 'normal' || shift === 'day' || shift === 'evening' || shift === 'night' || shift === 'turn') return shift;
@@ -3328,6 +3918,12 @@ function assignmentShiftType(shift, participant = null) {
 function activityCountsTowardLoad(act) {
   return act?.countsTowardLoad !== false;
 }
+function workTimeIsPlanned(assignment) {
+  return assignment?.lifecycle === 'planned';
+}
+function cellUnavailable(empId, date) {
+  return unavailableMap[`${empId}_${date}`] || null;
+}
 function effectiveStaffingImpact(assignment) {
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment?.workCodeId);
   return workCode?.staffingImpact === 'unavailable' ? 'unavailable' : 'available';
@@ -3335,7 +3931,7 @@ function effectiveStaffingImpact(assignment) {
 function assignmentMakesUnavailable(act, empId, date) {
   if (!act || activityStatus(act) !== 'confirmed' || date < act.startDate || date > act.endDate) return false;
   const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
-  return assignment.assigned === true && !assignment.excluded && Boolean(assignment.workCodeId) && effectiveStaffingImpact(assignment) === 'unavailable';
+  return assignment.assigned === true && !assignment.excluded && !workTimeIsPlanned(assignment) && Boolean(assignment.workCodeId) && effectiveStaffingImpact(assignment) === 'unavailable';
 }
 function unavailableActivityFor(empId, date) {
   return activities.find(act => assignmentMakesUnavailable(act, empId, date)) || null;
@@ -3360,10 +3956,10 @@ function activityDisplayColor(activity) {
 }
 function activityAssignment(key) {
   const value = activityShiftsMap[key];
-  if (!value) return { shift: '', workCodeId: null, staffingImpactOverride: null, assigned: false, excluded: false };
+  if (!value) return { shift: '', workCodeId: null, staffingImpactOverride: null, lifecycle: 'confirmed', assigned: false, excluded: false };
   return typeof value === 'string'
-    ? { shift: value, workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false }
-    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: value.workCodeId || null, administrativeTime: String(value.administrativeTime || ''), staffingImpactOverride: null, assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
+    ? { shift: value, workCodeId: null, administrativeTime: '', staffingImpactOverride: null, lifecycle: 'confirmed', assigned: true, excluded: false }
+    : { shift: value.shift || (value.assigned !== false && value.excluded !== true ? 'normal' : ''), workCodeId: value.workCodeId || null, administrativeTime: String(value.administrativeTime || ''), staffingImpactOverride: null, lifecycle: value.lifecycle === 'planned' ? 'planned' : 'confirmed', assigned: value.excluded === true ? false : value.assigned !== false, excluded: value.excluded === true };
 }
 function activityAssignmentShift(key) {
   return activityAssignment(key).shift;
@@ -3387,7 +3983,7 @@ function activityHasScheduledShift(act, empId, start, end) {
     // Respect includeWeekends flag: if activity is weekday-only, skip weekend shifts
     if (!act.includeWeekends && isWknd(new Date(`${date}T00:00:00`))) return false;
     const assignment = activityAssignment(key);
-    return assignment.assigned === true && assignment.excluded !== true && Boolean(assignment.shift);
+    return assignment.assigned === true && assignment.excluded !== true && Boolean(assignment.shift) && !workTimeIsPlanned(assignment);
   });
 }
 function pruneImplicitDefaultActivityShifts() {
@@ -3812,7 +4408,8 @@ async function toggleEmployeeVisibility(empId, forceState) {
   });
   if (hiddenEmployeesDraft) { rebuildEmployeePicker(); return; }
   saveGridPreferences();
-  renderPage();
+  if (currentPage === 'duty-planner') renderDutyPlannerPreservingViewport();
+  else renderPage();
 }
 function toggleEmployeeDepartment(deptName, forceState) {
   const targetSet = hiddenEmployeesDraft || hiddenEmployees;
@@ -3832,7 +4429,8 @@ function toggleEmployeeDepartment(deptName, forceState) {
   }
   if (hiddenEmployeesDraft) { setTimeout(rebuildEmployeePicker, 0); return; }
   saveGridPreferences();
-  renderPage();
+  if (currentPage === 'duty-planner') renderDutyPlannerPreservingViewport();
+  else renderPage();
 }
 function setEmployeeDepartmentVisibility(deptName, shouldShow) {
   toggleEmployeeDepartment(deptName, shouldShow === true);
@@ -3842,7 +4440,7 @@ function toggleEmployeeSubdepartment(subdeptKey, shouldShow) {
   const targetSet = hiddenEmployeesDraft || hiddenEmployees;
   employees.filter(emp => normalizeDepartmentName(emp.department) === normalizeDepartmentName(deptName) && (emp.section || emp.subdepartment || '') === subdeptName)
     .forEach(emp => shouldShow ? targetSet.delete(emp.id) : targetSet.add(emp.id));
-  if (hiddenEmployeesDraft) rebuildEmployeePicker(); else { saveGridPreferences(); renderPage(); }
+  if (hiddenEmployeesDraft) rebuildEmployeePicker(); else { saveGridPreferences(); if (currentPage === 'duty-planner') renderDutyPlannerPreservingViewport(); else renderPage(); }
 }
 function rebuildEmployeePicker() {
   const picker = document.getElementById('employee-picker');
@@ -3918,14 +4516,15 @@ function resetEmployeePickerSelection() {
 }
 function setInactiveEmployeeDisplayMode(mode) {
   const nextMode = normalizeInactiveEmployeeDisplayMode(mode);
-  const scroll = document.getElementById('grid-scroll');
+  const scroll = document.getElementById(currentPage === 'duty-planner' ? 'duty-scroll' : 'grid-scroll');
   const scrollLeft = scroll?.scrollLeft || 0;
   const scrollTop = scroll?.scrollTop || 0;
   inactiveEmployeeDisplayMode = nextMode;
   saveGridPreferences();
   rebuildEmployeePicker();
-  renderPage();
-  const updatedScroll = document.getElementById('grid-scroll');
+  if (currentPage === 'duty-planner') renderDutyPlanner();
+  else renderPage();
+  const updatedScroll = document.getElementById(currentPage === 'duty-planner' ? 'duty-scroll' : 'grid-scroll');
   if (updatedScroll) { updatedScroll.scrollLeft = scrollLeft; updatedScroll.scrollTop = scrollTop; }
 }
 function selectNoneEmployeePickerSelection() {
@@ -3939,11 +4538,12 @@ function applyEmployeePickerSelection() {
     saveGridPreferences();
   }
   closeEmployeePicker();
-  renderPage();
+  if (currentPage === 'duty-planner') renderDutyPlannerPreservingViewport();
+  else renderPage();
 }
 function openEmployeePicker(button) {
   const picker = document.getElementById('employee-picker');
-  const scroll = document.getElementById('grid-scroll');
+  const scroll = document.getElementById(currentPage === 'duty-planner' ? 'duty-scroll' : 'grid-scroll') || document.getElementById('content');
   if (!picker) return;
   if (!scroll) return;
   hiddenEmployeesDraft = new Set(hiddenEmployees);
@@ -4075,9 +4675,25 @@ async function loadExampleTestData() {
   showToast('Example test data added (3 employees, 3 activities).', 5000);
 }
 function nav(page) {
+  if (page === 'duty-planner' && currentPage !== 'duty-planner') {
+    dutyPlannerInitialScrollPending = true;
+    highlightedScheduleEmployeeId = null;
+    if (gridPeriod === 'year' && gridYear !== new Date().getFullYear()) gridYear = new Date().getFullYear();
+    else if (gridPeriod !== 'year') scheduleAnchorDate = todayStr();
+    saveGridPreferences();
+  }
   if (page === 'shift-rotation' && appSettings.shiftRotationEnabled !== true) page = 'grid';
+  if (page === 'duty-types' && !unlockedBossView()) {
+    showToast('Unlock Boss View to manage duty types.', 4000);
+    openSettings();
+    setTimeout(() => openAdministrationSettings(), 0);
+    return;
+  }
+  if (page === 'duty-planner') dutyPlannerInitialScrollPending = true;
   if (page === 'workwheel' && appSettings.workwheelEnabled !== true) page = 'grid';
   if (page === 'bug-report' && appSettings.bugReportEnabled !== true) page = 'grid';
+  if (page === 'grid' && currentPage !== 'grid') scheduleSubview = 'activities';
+  if (page === 'change-log') scheduleSubview = 'activities';
   if (page === 'shift-rotation' && currentPage !== 'shift-rotation') shiftRotationInitialScrollPending = true;
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
@@ -4088,6 +4704,11 @@ function updateShiftRotationNavigation() {
   document.querySelectorAll('.shift-rotation-nav').forEach(btn => {
     btn.style.display = appSettings.shiftRotationEnabled === true ? '' : 'none';
     btn.classList.toggle('active', currentPage === 'shift-rotation');
+  });
+}
+function updateDutyPlannerNavigation() {
+  document.querySelectorAll('.duty-planner-nav').forEach(button => {
+    button.classList.toggle('active', currentPage === 'duty-planner');
   });
 }
 function updateWorkwheelNavigation() {
@@ -4105,18 +4726,23 @@ function updateBugReportNavigation() {
 function renderPage() {
   renderSbToday();
   updateShiftRotationNavigation();
+  updateDutyPlannerNavigation();
   updateWorkwheelNavigation();
   updateBugReportNavigation();
   const content = document.getElementById('content');
-  if (currentPage === 'grid' || currentPage === 'shift-rotation') {
+  if (currentPage === 'grid' || currentPage === 'shift-rotation' || currentPage === 'duty-planner') {
     content.style.cssText = 'padding:0;overflow:hidden;display:flex;flex-direction:column;height:100%';
-    if (currentPage === 'grid') renderGrid();
   }
   else { content.style.cssText = 'flex:1;overflow:auto;padding:24px'; }
-  if (currentPage === 'dashboard') renderDashboard();
+  if (currentPage === 'grid') renderGrid();
+  else if (currentPage === 'dashboard') renderDashboard();
   else if (currentPage === 'employees') renderEmployees();
   else if (currentPage === 'summary') renderSummary();
+  else if (currentPage === 'change-log') renderChangeLogPage();
+  else if (currentPage === 'work-schedule-history') renderWorkScheduleHistoryPage();
   else if (currentPage === 'shift-rotation') renderShiftRotation();
+  else if (currentPage === 'duty-planner') renderDutyPlanner();
+  else if (currentPage === 'duty-types') renderDutyTypeSettingsPage();
   else if (currentPage === 'workwheel') renderWorkwheel();
   else if (currentPage === 'status-board') renderStatusBoard();
   else if (currentPage === 'bug-report') renderBugReport();
@@ -4126,6 +4752,280 @@ function renderBugReport() {
   const bugs = normalizeBugTracker(appSettings.bugTracker).sort((a, b) => b.date.localeCompare(a.date));
   const rows = bugs.length ? bugs.map(bug => '<tr><td>' + esc(bug.date) + '</td><td>' + esc(bug.poc) + '</td><td style="white-space:pre-wrap;min-width:360px">' + esc(bug.description) + '</td><td style="white-space:nowrap"><button class="btn btn-sm" onclick="editBugTrackerEntry(\'' + esc(bug.id) + '\')">Edit</button><button class="btn btn-sm btn-danger" style="margin-left:5px" onclick="deleteBugTrackerEntry(\'' + esc(bug.id) + '\')">Delete</button></td></tr>').join('') : '<tr><td colspan="4" class="empty-note">No bug reports recorded.</td></tr>';
   content.innerHTML = `<div class="page-title">Bug Tracker</div><div class="page-sub">Record software issues for follow-up.</div><div class="card" style="max-width:1000px;margin-top:20px"><div class="form-row-2"><div class="form-row" style="margin:0"><label>Date *</label><input id="bug-report-date" type="date" value="${todayStr()}"></div><div class="form-row" style="margin:0"><label>POC *</label><input id="bug-report-poc" placeholder="Person responsible"></div></div><div class="form-row"><label>Bug description *</label><textarea id="bug-report-description" rows="5" placeholder="Describe the issue and expected behavior."></textarea></div><div class="modal-actions"><button class="btn btn-primary" onclick="saveBugTrackerEntry()">Save</button><button class="btn" onclick="clearBugTrackerForm()">Cancel</button></div></div><div class="card" style="max-width:1000px;margin-top:16px;padding:0;overflow:hidden"><div style="overflow:auto"><table class="list-table"><thead><tr><th>Date</th><th>POC</th><th>Bug description</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+let changeLogPreviewOpen = false;
+function toggleChangeLogPreview() {
+  changeLogPreviewOpen = !changeLogPreviewOpen;
+  renderGrid();
+  if (changeLogPreviewOpen) document.getElementById('change-log-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function openChangeLogFromActivities() { nav('change-log'); }
+function renderChangeLogPreview() {
+  const panel = document.getElementById('change-log-panel');
+  if (!panel) return;
+  panel.hidden = !changeLogPreviewOpen;
+  const toggle = document.getElementById('change-log-preview-toggle');
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', String(changeLogPreviewOpen));
+    toggle.textContent = changeLogPreviewOpen ? 'Hide recent changes' : 'Recent changes';
+  }
+  if (!changeLogPreviewOpen) return;
+  const latest = [...changeLog].reverse().slice(0, 5);
+  panel.innerHTML = `<header class="change-log-preview-header"><div><div class="eyebrow">RECENT ACTIVITY</div><strong>Latest changes</strong><span class="change-log-count">${changeLog.length} total · keeps latest 1,000</span></div><button type="button" class="btn btn-sm btn-primary" onclick="nav('change-log')">View full audit</button></header>${latest.length ? `<div class="change-log-preview-list">${latest.map(changeLogPreviewRowMarkup).join('')}</div>` : '<div class="change-log-preview-empty">No planner changes recorded yet.</div>'}`;
+}
+function changeLogMarkerMarkup(entry) {
+  const kind = changeLogKind(entry);
+  const symbol = kind === 'added' ? '+' : (kind === 'removed' ? '−' : '↔');
+  const label = kind === 'added' ? 'Added' : (kind === 'removed' ? 'Removed' : 'Changed');
+  return `<span class="change-log-marker ${kind}" aria-label="${label}" title="${label}">${symbol}</span>`;
+}
+function changeLogRowMarkup(entry) {
+  const hasCellTarget = Boolean(entry.employeeId && entry.date && empById(entry.employeeId));
+  const hasActivityTarget = Boolean(entry.activityId && entry.date && activities.some(activity => Number(activity.id) === Number(entry.activityId)));
+  const clickable = hasCellTarget || hasActivityTarget;
+  const clickAttrs = clickable ? `class="change-log-entry-clickable" role="link" tabindex="0" onclick="openChangeLogEntry('${esc(entry.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openChangeLogEntry('${esc(entry.id)}')}" title="Show this change in the schedule"` : '';
+  return `<tr ${clickAttrs}><td class="change-log-marker-cell">${changeLogMarkerMarkup(entry)}</td><td class="change-log-time">${new Date(entry.timestamp).toLocaleString('en-GB')}</td><td><span class="change-log-category ${entry.category === 'activity' ? 'activity' : 'cell'}">${entry.category === 'activity' ? 'Activity' : 'Cell'}</span></td><td>${esc(entry.summary)}</td><td>${entry.date ? fmtMed(entry.date) : '—'}</td></tr>`;
+}
+function changeLogPreviewRowMarkup(entry) {
+  const hasCellTarget = Boolean(entry.employeeId && entry.date && empById(entry.employeeId));
+  const hasActivityTarget = Boolean(entry.activityId && entry.date && activities.some(activity => Number(activity.id) === Number(entry.activityId)));
+  const clickable = hasCellTarget || hasActivityTarget;
+  const content = `<span class="change-log-marker-cell">${changeLogMarkerMarkup(entry)}</span><span class="change-log-preview-time">${new Date(entry.timestamp).toLocaleString('en-GB')}</span><span class="change-log-preview-summary">${esc(entry.summary)}</span>`;
+  return clickable ? `<button type="button" class="change-log-preview-row" onclick="openChangeLogEntry('${esc(entry.id)}')">${content}</button>` : `<div class="change-log-preview-row static">${content}</div>`;
+}
+function renderChangeLogPage() {
+  const needle = changeLogSearch.trim().toLocaleLowerCase('nb-NO');
+  const filtered = [...changeLog].reverse().filter(entry => {
+    if (changeLogCategoryFilter && entry.category !== changeLogCategoryFilter) return false;
+    const day = entry.timestamp.slice(0, 10);
+    if (changeLogFromDate && day < changeLogFromDate) return false;
+    if (changeLogToDate && day > changeLogToDate) return false;
+    return !needle || `${entry.summary} ${entry.employeeName} ${entry.activityName} ${entry.date}`.toLocaleLowerCase('nb-NO').includes(needle);
+  });
+  const rows = filtered.map(changeLogRowMarkup).join('');
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="change-log-page"><header class="change-log-header"><div><div class="eyebrow">PLANNER / AUDIT TRAIL</div><h1 class="page-title">Change Log</h1><p class="page-sub">Cell updates and activity participant/detail changes recorded in this planner. No individual user identity is recorded.</p></div><div class="change-log-header-actions"><button type="button" class="btn" onclick="nav('grid')">Back to Activities</button>${unlockedBossView() ? '<button type="button" class="btn btn-danger" onclick="clearChangeLog()">Clear log</button>' : ''}</div></header><section class="card change-log-filters"><label>Search<input type="search" value="${esc(changeLogSearch)}" placeholder="Employee, activity, or change" oninput="setChangeLogSearch(this.value)"></label><label>Type<select class="plain-select" onchange="setChangeLogCategory(this.value)"><option value="" ${!changeLogCategoryFilter ? 'selected' : ''}>All changes</option><option value="cell" ${changeLogCategoryFilter === 'cell' ? 'selected' : ''}>Cell changes</option><option value="activity" ${changeLogCategoryFilter === 'activity' ? 'selected' : ''}>Activity changes</option></select></label><label>From<input type="date" value="${esc(changeLogFromDate)}" onchange="setChangeLogDateRange(this.value, 'from')"></label><label>To<input type="date" value="${esc(changeLogToDate)}" onchange="setChangeLogDateRange(this.value, 'to')"></label><span class="change-log-count">${filtered.length} of ${changeLog.length} entries · keeps latest 1,000</span></section><section class="card change-log-table-wrap"><table class="list-table change-log-table"><thead><tr><th></th><th>Time</th><th>Type</th><th>Change</th><th>Date</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="empty-note">No changes match these filters yet.</td></tr>'}</tbody></table></section></div>`;
+}
+function setChangeLogSearch(value) {
+  changeLogSearch = String(value || '');
+  renderChangeLogPage();
+  const input = document.querySelector('.change-log-filters input[type="search"]');
+  if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+}
+function setChangeLogCategory(value) { changeLogCategoryFilter = String(value || ''); renderChangeLogPage(); }
+function setChangeLogDateRange(value, edge) {
+  if (edge === 'from') changeLogFromDate = value;
+  else changeLogToDate = value;
+  renderChangeLogPage();
+}
+const CHANGE_LOG_CELL_HIGHLIGHT_MS = 5000;
+let highlightedChangeLogTarget = null;
+let highlightedChangeLogTargetSelector = '';
+let changeLogCellHighlightTimer = null;
+function applyChangeLogCellHighlight(cell) {
+  if (!cell) return;
+  clearTimeout(changeLogCellHighlightTimer);
+  document.querySelectorAll('.change-log-target-highlight').forEach(target => target.classList.remove('change-log-target-highlight'));
+  const employeeId = cell.dataset.empid;
+  const date = cell.dataset.date;
+  const rowKey = cell.dataset.rowKey;
+  highlightedChangeLogTargetSelector = employeeId
+    ? `td.status-cell[data-empid="${Number(employeeId)}"][data-date="${CSS.escape(date || '')}"]`
+    : (rowKey && date ? `td.activity-select-cell[data-row-key="${CSS.escape(rowKey)}"][data-date="${CSS.escape(date)}"]` : '');
+  cell.classList.add('change-log-target-highlight');
+  highlightedChangeLogTarget = cell;
+  changeLogCellHighlightTimer = setTimeout(() => {
+    document.querySelectorAll('.change-log-target-highlight').forEach(target => target.classList.remove('change-log-target-highlight'));
+    highlightedChangeLogTarget = null;
+    highlightedChangeLogTargetSelector = '';
+    changeLogCellHighlightTimer = null;
+  }, CHANGE_LOG_CELL_HIGHLIGHT_MS);
+}
+function reapplyChangeLogCellHighlight() {
+  if (!highlightedChangeLogTargetSelector) return;
+  const refreshedTarget = document.querySelector(highlightedChangeLogTargetSelector);
+  if (!refreshedTarget) return;
+  highlightedChangeLogTarget = refreshedTarget;
+  refreshedTarget.classList.add('change-log-target-highlight');
+}
+function preserveOrRevealScheduleScopeForEmployee(employeeId) {
+  const employee = empById(employeeId);
+  if (!employee || scheduleEmployeeMatchesScope(employee)) return;
+  const scope = scheduleScopeParts();
+  if (scope.level === 'department') {
+    const department = String(employee.department || (employeeSection(employee) ? 'Independent sections' : '')).trim();
+    scheduleSectionFilter = department ? scheduleScopeValue('department', department) : '';
+    return;
+  }
+  const section = employeeSection(employee);
+  if (section) {
+    scheduleSectionFilter = scheduleScopeValue('section', section);
+    return;
+  }
+  const department = String(employee.department || '').trim();
+  scheduleSectionFilter = department ? scheduleScopeValue('department', department) : '';
+}
+function openChangeLogEntry(entryId) {
+  const entry = changeLog.find(item => item.id === String(entryId));
+  if (!entry) return;
+  const targetDate = entry.date && isValidIsoDate(entry.date) ? entry.date : '';
+  const targetEmployeeId = entry.employeeId || (targetDate ? employees.find(employee => employee.name === entry.employeeName)?.id : null);
+  if (entry.activityId) {
+    const activity = activities.find(item => Number(item.id) === Number(entry.activityId));
+    if (activity) {
+      const start = targetDate || activity.startDate;
+      setScheduleAnchorToDate(start);
+      if (targetEmployeeId) preserveOrRevealScheduleScopeForEmployee(targetEmployeeId);
+      collapsedGridSections.activities = false;
+      pastActivitiesExpanded = true;
+      saveGridPreferences();
+      nav('grid');
+      setTimeout(() => {
+        const barCell = document.querySelector(`td.activity-select-cell[data-row-key="act-${Number(entry.activityId)}"][data-date="${CSS.escape(start)}"]`);
+        const fallbackCell = document.querySelector(`td.activity-select-cell[data-row-key="act-${Number(entry.activityId)}"]`);
+          const cell = targetEmployeeId && targetDate
+            ? document.querySelector(`td.status-cell[data-empid="${Number(targetEmployeeId)}"][data-date="${CSS.escape(targetDate)}"]`) || barCell || fallbackCell
+            : barCell || fallbackCell;
+        if (cell) {
+          cell.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+          applyChangeLogCellHighlight(cell);
+        }
+      }, 100);
+      return;
+    }
+  }
+  if (targetEmployeeId && targetDate) {
+    setScheduleAnchorToDate(targetDate);
+    preserveOrRevealScheduleScopeForEmployee(targetEmployeeId);
+    hiddenEmployees.delete(Number(targetEmployeeId));
+    collapsedGridSections.employees = false;
+    pastActivitiesExpanded = true;
+    saveGridPreferences();
+    nav('grid');
+    setTimeout(() => highlightScheduleEmployeeCell(targetEmployeeId, targetDate), 100);
+  }
+}
+function highlightScheduleEmployeeCell(employeeId, date) {
+  const cell = document.querySelector(`td.status-cell[data-empid="${Number(employeeId)}"][data-date="${CSS.escape(date)}"]`);
+  if (!cell) return;
+  cell.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+  applyChangeLogCellHighlight(cell);
+}
+function setScheduleAnchorToDate(date) {
+  const target = new Date(`${date}T00:00:00`);
+  if (gridPeriod === 'year') {
+    gridYear = target.getFullYear();
+    return;
+  }
+  if (gridPeriod === 'month') {
+    scheduleAnchorDate = `${date.slice(0, 7)}-01`;
+    return;
+  }
+  const weekStart = new Date(target);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  scheduleAnchorDate = fmt(weekStart);
+}
+async function clearChangeLog() {
+  if (!unlockedBossView()) { showToast('Unlock Boss View to clear the planner change log.', 4000); return; }
+  if (!changeLog.length || !confirm('Clear all change-log entries from this planner? This cannot be undone after the planner is saved.')) return;
+  await mutateState('clearChangeLog', () => { changeLog = []; });
+  renderChangeLogPage();
+}
+function renderWorkScheduleHistoryPage() {
+  const content = document.getElementById('content');
+  const availableActivities = activities
+    .filter(activity => (workScheduleHistory[String(activity.id)] || []).length || activityStatus(activity) !== 'cancelled')
+    .sort((left, right) => left.startDate.localeCompare(right.startDate) || left.endDate.localeCompare(right.endDate) || left.name.localeCompare(right.name, 'nb'));
+  if (!historySelectedActivityId || !availableActivities.some(activity => Number(activity.id) === Number(historySelectedActivityId))) {
+    historySelectedActivityId = availableActivities[0]?.id ?? null;
+    historySelectedRevisionId = '';
+  }
+  const selectedActivity = availableActivities.find(activity => Number(activity.id) === Number(historySelectedActivityId)) || null;
+  const revisions = selectedActivity ? [...(workScheduleHistory[String(selectedActivity.id)] || [])].reverse() : [];
+  const latestId = revisions[0]?.id || '';
+  const selectedRevision = revisions.find(revision => revision.id === historySelectedRevisionId) || revisions[0] || null;
+  const currentState = selectedActivity ? currentWorkScheduleChanges(selectedActivity.id) : null;
+  const latestCurrentDiff = currentState?.diff;
+  const revisionCapturedDiff = revision => {
+    if (revision?.diffFromPrevious) return revision.diffFromPrevious;
+    const index = revisions.findIndex(item => item.id === revision?.id);
+    if (index < 0) return null;
+    if (revisions[index + 1]) return workScheduleRevisionDiff(revisions[index + 1], revision.snapshot);
+    return { initial: true, added: revision.snapshot.rows.filter(row => row.assigned).length, removed: 0, changed: 0, metadata: [], addedParticipants: [], removedParticipants: [] };
+  };
+  const latestCapturedDiff = revisions[0] ? revisionCapturedDiff(revisions[0]) : null;
+  const today = todayStr();
+  const pastActivities = availableActivities.filter(activity => activity.endDate < today);
+  const currentActivities = availableActivities.filter(activity => activity.endDate >= today);
+  const activityOption = activity => `<option class="${activity.endDate < today ? 'work-schedule-past-option' : ''}" value="${activity.id}" ${Number(selectedActivity?.id) === Number(activity.id) ? 'selected' : ''}>${esc(activity.name)}${activityStatus(activity) === 'tentative' ? ' · Planned' : ''}${activity.endDate < today ? ' · Past' : ''}</option>`;
+  const activityOptions = `${pastActivities.length ? `<optgroup label="Past">${pastActivities.map(activityOption).join('')}</optgroup>` : ''}${currentActivities.length ? `<optgroup label="Current & upcoming">${currentActivities.map(activityOption).join('')}</optgroup>` : ''}`;
+  const diffSummary = diff => diff?.initial ? '<span class="ws-diff-initial">Initial export — no earlier PDF baseline.</span>' : diff ? `<span class="ws-diff-count">${diff.added} added</span><span class="ws-diff-count">${diff.removed} removed</span><span class="ws-diff-count">${diff.changed} changed</span>${diff.metadata.length ? `<span class="ws-diff-metadata">Details: ${diff.metadata.map(esc).join(', ')}</span>` : ''}${diff.addedParticipants?.length ? `<span class="ws-diff-metadata">Added participants: ${diff.addedParticipants.map(esc).join(', ')}</span>` : ''}${diff.removedParticipants?.length ? `<span class="ws-diff-metadata">Removed participants: ${diff.removedParticipants.map(esc).join(', ')}</span>` : ''}` : '<span>No exported baseline yet.</span>';
+  const snapshotRows = selectedRevision?.snapshot?.rows || [];
+  const assignedRows = snapshotRows.filter(row => row.assigned);
+  const previousRevision = selectedRevision ? revisions[revisions.findIndex(revision => revision.id === selectedRevision.id) + 1] || null : null;
+  const previousRowsByKey = new Map((previousRevision?.snapshot.rows || []).map(row => [`${row.employeeId}\u0000${row.date}`, row]));
+  const selectedRowsByKey = new Map(snapshotRows.map(row => [`${row.employeeId}\u0000${row.date}`, row]));
+  const addedRowKeys = new Set();
+  const changedRowKeys = new Set();
+  const removedRows = [];
+  if (previousRevision) {
+    for (const [key, row] of selectedRowsByKey) {
+      const previous = previousRowsByKey.get(key);
+      if (row.assigned && (!previous || !previous.assigned)) addedRowKeys.add(key);
+      else if (row.assigned && previous?.assigned && JSON.stringify([row.workCodeId, row.workCode, row.administrativeValue, row.physicalShift, row.deviation]) !== JSON.stringify([previous.workCodeId, previous.workCode, previous.administrativeValue, previous.physicalShift, previous.deviation])) changedRowKeys.add(key);
+    }
+    for (const [key, row] of previousRowsByKey) {
+      const current = selectedRowsByKey.get(key);
+      if (row.assigned && (!current || !current.assigned)) removedRows.push(row);
+    }
+  }
+  const currentChangedIds = new Set();
+  if (selectedActivity && selectedRevision?.id === latestId && latestCurrentDiff && !latestCurrentDiff.initial) {
+    const latestRows = new Map((selectedRevision.snapshot.rows || []).map(row => [`${row.employeeId}\u0000${row.date}`, row]));
+    const nowRows = new Map((currentState?.current.rows || []).map(row => [`${row.employeeId}\u0000${row.date}`, row]));
+    for (const [key, row] of nowRows) {
+      const prior = latestRows.get(key);
+      if (!prior || JSON.stringify([prior.assigned, prior.workCodeId, prior.workCode, prior.administrativeValue, prior.physicalShift, prior.deviation]) !== JSON.stringify([row.assigned, row.workCodeId, row.workCode, row.administrativeValue, row.physicalShift, row.deviation])) currentChangedIds.add(key);
+    }
+    for (const key of latestRows.keys()) if (!nowRows.has(key)) currentChangedIds.add(key);
+  }
+  content.innerHTML = `<div class="work-schedule-history-page">
+    <header class="work-schedule-history-header"><div><div class="eyebrow">PLANNING / REVISIONS</div><h1 class="page-title">Work Schedule History</h1><p class="page-sub">Each revision is captured when a PDF print is requested. The browser cannot confirm whether the PDF was saved or emailed.</p></div><button class="btn" type="button" onclick="nav('grid')">Back to Schedule</button></header>
+    ${availableActivities.length ? `<div class="work-schedule-history-layout">
+      <aside class="work-schedule-history-list card"><label class="form-row"><span>Activity</span><select class="plain-select" onchange="selectHistoryActivity(this.value)">${activityOptions}</select></label>
+        ${revisions.length ? `<div class="work-schedule-revisions">${revisions.map((revision,index) => {const revisionDiff=index===0?latestCurrentDiff:workScheduleRevisionDiff(revisions[index+1],revision.snapshot);return `<button type="button" class="work-schedule-revision${selectedRevision?.id===revision.id?' selected':''}" onclick="selectHistoryRevision('${esc(revision.id)}')"><strong>${new Date(revision.printedAt).toLocaleString('en-GB')}</strong><small>Print requested · ${revision.snapshot.rows.filter(row=>row.assigned).length} assigned cells</small><span class="work-schedule-revision-state">${index===0?`Current: ${latestCurrentDiff?.initial?'No baseline changes':(latestCurrentDiff?.added||0)+(latestCurrentDiff?.removed||0)+(latestCurrentDiff?.changed||0)+((latestCurrentDiff?.metadata||[]).length)} change(s)`:'Archived revision'}</span></button>`;}).join('')}</div>`:'<div class="work-schedule-history-empty">No PDF print requests recorded for this activity yet. Open its Work Schedule and select <b>Print / Save PDF</b> to create the first baseline.</div>'}
+      </aside>
+      <section class="work-schedule-history-detail card">${selectedRevision?`<div class="work-schedule-detail-heading"><div><span class="eyebrow">REVISION DETAILS</span><h2>${esc(selectedRevision.activityName || selectedRevision.snapshot.activity.name)}</h2><p class="page-sub">Print requested ${new Date(selectedRevision.printedAt).toLocaleString('en-GB')} · ${fmtMed(selectedRevision.snapshot.activity.startDate)} – ${fmtMed(selectedRevision.snapshot.activity.endDate)}</p></div><button class="btn btn-primary" type="button" onclick="printStoredWorkScheduleRevision('${esc(selectedActivity.id)}','${esc(selectedRevision.id)}')">Reprint this revision</button></div>
+        <div class="work-schedule-revision-metadata"><span><b>Cost center:</b> ${esc(selectedRevision.snapshot.activity.costCenter || 'Not specified')}</span><span><b>Order:</b> ${esc(selectedRevision.snapshot.activity.order || 'Not specified')}</span><span><b>Billing:</b> ${esc(selectedRevision.snapshot.activity.billing || 'No note')}</span><span><b>Report filter:</b> ${selectedRevision.reportOptions.hideInactiveByWeek?'Hide inactive each week':'Show all participants'}</span></div>
+        ${selectedRevision.id===latestId?`<div class="work-schedule-diff"><strong>Changes captured in this PDF vs previous PDF</strong><div>${diffSummary(latestCapturedDiff)}</div></div><div class="work-schedule-diff"><strong>Unexported changes since this PDF</strong><div>${diffSummary(latestCurrentDiff)}</div></div>`:`<div class="work-schedule-diff"><strong>Revision comparison</strong><div>${diffSummary(revisionCapturedDiff(selectedRevision))}</div><small>Historical reprints do not change the latest comparison baseline.</small></div>`}
+        <div class="work-schedule-snapshot-table-wrap"><table class="work-schedule-snapshot-table"><thead><tr><th>Change</th><th>Employee</th><th>Date</th><th>Work code</th><th>Administrative value</th><th>Physical shift</th><th>Daily deviation</th></tr></thead><tbody>${[...assignedRows.map(row=>{const key=`${row.employeeId}\u0000${row.date}`;const added=addedRowKeys.has(key);const changed=changedRowKeys.has(key)||currentChangedIds.has(key);return `<tr class="${added?'added':changed?'changed':''}"><td>${added?'<span class="ws-change-marker ws-added" aria-label="Added">+</span>':changed?'<span class="ws-change-marker ws-changed" aria-label="Changed">~</span>':''}</td><td>${esc(row.employee)}</td><td>${fmtMed(row.date)}</td><td>${esc(row.workCode||'—')}</td><td>${esc(row.administrativeValue||'—')}</td><td>${esc(row.physicalShift||'—')}</td><td>${esc(row.deviation||'—')}</td></tr>`;}),...removedRows.map(row=>`<tr class="removed"><td><span class="ws-change-marker ws-removed" aria-label="Removed">−</span></td><td>${esc(row.employee)}</td><td>${fmtMed(row.date)}</td><td>${esc(row.workCode||'—')}</td><td>${esc(row.administrativeValue||'—')}</td><td>${esc(row.physicalShift||'—')}</td><td>${esc(row.deviation||'—')}</td></tr>`)].join('')||'<tr><td colspan="7" class="empty-note">No assigned employee dates in this revision.</td></tr>'}</tbody></table></div>`:'<div class="work-schedule-history-empty">Select an activity with a printed work schedule to inspect its revision history.</div>'}</section>
+    </div>` : '<div class="work-schedule-history-empty">No activities are available.</div>'}
+  </div>`;
+}
+function selectHistoryActivity(value) {
+  historySelectedActivityId = Number(value) || null;
+  historySelectedRevisionId = '';
+  renderWorkScheduleHistoryPage();
+}
+function selectHistoryRevision(value) {
+  historySelectedRevisionId = String(value || '');
+  renderWorkScheduleHistoryPage();
+}
+function openWorkScheduleHistoryForActivity(activityId) {
+  historySelectedActivityId = Number(activityId) || null;
+  historySelectedRevisionId = '';
+  closeModal('activity-report-modal');
+  nav('work-schedule-history');
+}
+function printStoredWorkScheduleRevision(activityId, revisionId) {
+  const revision = (workScheduleHistory[String(activityId)] || []).find(item => item.id === String(revisionId));
+  if (!revision) return;
+  const printWindow = window.open('', '_blank', 'width=1400,height=900');
+  if (!printWindow) { alert('Please allow pop-ups to print the archived work schedule.'); return; }
+  printWindow.document.write(workScheduleSnapshotHtml(revision.snapshot, { historical: true }));
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
 }
 async function saveBugTrackerEntry() {
   const date = document.getElementById('bug-report-date')?.value || '';
@@ -4275,7 +5175,30 @@ function setShiftRotationScroll(value) {
   const viewport = document.getElementById('rotation-scroll');
   if (viewport) viewport.scrollLeft = Number(value);
 }
+function syncDutyPlannerScrollbar() {
+  const viewport = document.getElementById('duty-scroll');
+  const control = document.querySelector('.duty-planner-wrap .rotation-horizontal-scroll');
+  if (!viewport || !control) return;
+  const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+  control.max = String(maxScroll);
+  control.value = String(Math.min(maxScroll, viewport.scrollLeft));
+  control.disabled = maxScroll === 0;
+  control.style.setProperty('--rotation-thumb-width', `${Math.max(32, control.clientWidth * viewport.clientWidth / Math.max(1, viewport.scrollWidth))}px`);
+}
+function setDutyPlannerPeriodControls() {
+  document.querySelectorAll('.duty-period-controls button').forEach(button => {
+    const period = button.dataset.period;
+    if (period) button.classList.toggle('btn-primary', period === gridPeriod);
+  });
+  const label = document.querySelector('.duty-period-controls .rotation-year');
+  if (label) label.textContent = scheduleRange().label;
+}
+function setDutyPlannerScroll(value) {
+  const viewport = document.getElementById('duty-scroll');
+  if (viewport) viewport.scrollLeft = Number(value);
+}
 window.addEventListener('resize', syncShiftRotationScrollbar, { passive: true });
+window.addEventListener('resize', syncDutyPlannerScrollbar, { passive: true });
 function renderShiftRotationPreservingViewport() {
   const viewport = document.querySelector('.rotation-scroll');
   if (!viewport) { renderPage(); return; }
@@ -4450,46 +5373,565 @@ function openShiftRotationPrintDialog() {
   document.getElementById('shift-rotation-print-modal').classList.add('open');
 }
 function printShiftRotation() {
-  const start = document.getElementById('rotation-print-start')?.value;
-  const end = document.getElementById('rotation-print-end')?.value;
-  if (!isValidIsoDate(start) || !isValidIsoDate(end) || start > end) {
-    alert('Enter a valid timeframe.');
-    return;
-  }
-  const days = datesBetween(start, end);
-  const eligible = employees.filter(emp => emp.includeInShiftRotation === true).sort((a, b) => a.name.localeCompare(b.name));
-  const headers = days.map(date => {
-    const d = new Date(`${date}T00:00:00`);
-    const classes = [isWknd(d) ? 'weekend' : ''].filter(Boolean).join(' ');
-    return `<th class="${classes}">${d.toLocaleDateString('en-US', { weekday: 'short' })}<br>${d.getDate()} ${d.toLocaleDateString('en-US', { month: 'short' })}</th>`;
-  }).join('');
-  const rows = eligible.map(emp => { const teamColor = resolveSubdepartmentColor(emp.department || 'Unassigned', emp.team || '') || resolveProcessColor(emp.department || 'Unassigned', emp.section || emp.subdepartment || '', emp.process || '') || resolveSectionColor(emp.department || 'Unassigned', emp.section || emp.subdepartment || '') || resolveDeptColor(emp.department || '') || '#64748b'; return `<tr><th style="border-left:4px solid ${teamColor};background:${teamColor}22">${displayEmployeeNameMarkup(emp)}<small>${esc(emp.role || '')}</small></th>${days.map(date => {
-    const record = rotationRecord(emp.id, date);
-    const meta = rotationShiftMeta(record?.shift);
-    const label = record ? `${meta.label}${rotationRecordRange(record) ? ` (${rotationRecordRange(record)})` : ''}` : '—';
-    const day = new Date(`${date}T00:00:00`);
-    const classes = [isWknd(day) ? 'weekend' : ''].filter(Boolean).join(' ');
-    return `<td class="${classes}">${esc(label)}</td>`;
-  }).join('')}</tr>`; }).join('');
+  const start = document.getElementById('rotation-print-start')?.value, end = document.getElementById('rotation-print-end')?.value;
+  if (!isValidIsoDate(start) || !isValidIsoDate(end) || start > end) { alert('Enter a valid timeframe.'); return; }
+  const days = datesBetween(start, end), eligible = employees.filter(emp => emp.includeInShiftRotation === true).sort((a, b) => a.name.localeCompare(b.name));
+  const headers = days.map(date => { const d = new Date(`${date}T00:00:00`); return `<th class="${isWknd(d) ? 'weekend' : ''}">${d.toLocaleDateString('en-US', { weekday: 'short' })}<br>${d.getDate()} ${d.toLocaleDateString('en-US', { month: 'short' })}</th>`; }).join('');
+  const rows = eligible.map(emp => `<tr><th>${displayEmployeeNameMarkup(emp)}<small>${esc(emp.role || '')}</small></th>${days.map(date => { const record = rotationRecord(emp.id, date), meta = rotationShiftMeta(record?.shift), label = record ? `${meta.label}${rotationRecordRange(record) ? ` (${rotationRecordRange(record)})` : ''}` : '—'; return `<td class="${isWknd(new Date(`${date}T00:00:00`)) ? 'weekend' : ''}">${esc(label)}</td>`; }).join('')}</tr>`).join('');
   const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the Shift Rotation plan.'); return; }
-  printWindow.document.write(`<!doctype html><html><head><title>Shift Rotation ${start} to ${end}</title><style>@page{size:landscape;margin:8mm}body{font:11px system-ui;color:#111}h1{font-size:20px;margin:0 0 4px}p{margin:0 0 10px;color:#555}table{border-collapse:collapse;width:100%}th,td{border:1px solid #bbb;padding:5px;text-align:center}th:first-child,td:first-child{text-align:left;min-width:160px}th{background:#e5e7eb}.weekend{background:#fff7ed !important;color:#9a3412}small{display:block;font-weight:400;color:#666}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>Shift Rotation</h1><p>${esc(start)} – ${esc(end)}</p><table><thead><tr><th>Employee</th>${headers}</tr></thead><tbody>${rows}</tbody></table></body></html>`);
+  printWindow.document.write(`<!doctype html><html><head><title>Shift Rotation ${start} to ${end}</title><style>@page{size:landscape;margin:8mm}body{font:11px system-ui;color:#111}h1{font-size:20px;margin:0 0 4px}p{margin:0 0 10px;color:#555}table{border-collapse:collapse;width:100%}th,td{border:1px solid #bbb;padding:5px;text-align:center}th:first-child,td:first-child{text-align:left;min-width:160px}th{background:#e5e7eb}.weekend{background:#fff7ed!important;color:#9a3412}small{display:block;font-weight:400;color:#666}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>Shift Rotation</h1><p>${esc(start)} – ${esc(end)}</p><table><thead><tr><th>Employee</th>${headers}</tr></thead><tbody>${rows}</tbody></table></body></html>`);
+  printWindow.document.close(); printWindow.focus(); printWindow.print(); closeModal('shift-rotation-print-modal');
+}
+function dutyWorkCode(workCodeId) {
+  return (appSettings.workCodes || []).find(code => String(code.id) === String(workCodeId)) || null;
+}
+function openDutyWorkScheduleForType(typeId) {
+  dutySelectedTypeId = String(typeId || dutySelectedTypeId);
+  openDutyWorkSchedule();
+}
+function renderDutyTypeSettingsPage() {
+  if (!unlockedBossView()) { document.getElementById('content').innerHTML = '<div class="duty-types-page"><h1 class="page-title">Duty Types</h1><div class="card duty-types-locked">Unlock Boss View to configure duty types.</div><button class="btn" onclick="nav(\'duty-planner\')">Back to Duty Planner</button></div>'; return; }
+  const types = normalizeDutyTypes(appSettings.dutyTypes);
+  const rows = types.map(type => `<tr><td><span class="duty-type-swatch" style="--duty-color:${esc(type.color)}"></span>${esc(type.name)}</td><td>${type.eligibleEmployeeIds.length} eligible</td><td>${type.defaultStartTime}–${type.defaultEndTime} (+24h)</td><td>${esc(dutyWorkCode(type.workCodeId)?.abbreviation || '—')}</td><td>${formatHoursNumber(type.weekdayHours)}h / ${formatHoursNumber(type.nonWorkingHours)}h</td><td>${type.showInSchedule ? 'Shown' : 'Hidden'}</td><td>${type.retired ? 'Retired' : 'Active'}</td><td><div class="flex gap-2"><button class="btn btn-sm" type="button" onclick="openDutyWorkScheduleForType('${esc(type.id)}')">Schedule</button><button class="btn btn-sm" type="button" onclick="openDutyTypeEditor('${esc(type.id)}')">Edit</button></div></td></tr>`).join('');
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="duty-types-page"><header class="duty-types-header"><div><div class="eyebrow">DUTY PLANNING</div><h1 class="page-title">Duty Types</h1><p class="page-sub">Configure eligible personnel, duty interval, work time code, workload credits, and main Schedule display.</p></div><div class="flex gap-2"><button type="button" class="btn" onclick="nav('duty-planner')">Open Duty Planner</button>${unlockedBossView() ? '<button type="button" class="btn btn-primary" onclick="openDutyTypeEditor()">Add duty type</button>' : ''}</div></header>${unlockedBossView() ? '' : '<div class="card duty-types-locked">Unlock Boss View to manage duty types.</div>'}<section class="card duty-types-table-wrap"><table class="list-table duty-types-table"><thead><tr><th>Duty type</th><th>Eligibility</th><th>Fixed interval</th><th>Work time code</th><th>Workload credit (weekday / non-working)</th><th>Main Schedule</th><th>Status</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="empty-note">No duty types configured yet. Unlock Boss View to add a type.</td></tr>'}</tbody></table></section></div>`;
+}
+function openDutyTypeEditor(typeId = '') {
+  if (!unlockedBossView()) { showToast('Unlock Boss View to manage duty types.', 4000); return; }
+  const type = normalizeDutyTypes(appSettings.dutyTypes).find(item => item.id === String(typeId)) || null;
+  document.getElementById('duty-type-id').value = type?.id || '';
+  document.getElementById('duty-type-name').value = type?.name || '';
+  document.getElementById('duty-type-color').value = type?.color || '#2563eb';
+  document.getElementById('duty-type-start').value = type?.defaultStartTime || '07:00';
+  const dutyCodeSelect = document.getElementById('duty-type-work-code');
+  dutyCodeSelect.innerHTML = `<option value="">Select work time code</option>${(appSettings.workCodes || []).map(code => `<option value="${esc(code.id)}">${esc([code.abbreviation, code.name].filter(Boolean).join(' · '))}</option>`).join('')}`;
+  dutyCodeSelect.value = type?.workCodeId || '';
+  document.getElementById('duty-type-weekday-hours').value = String(type?.weekdayHours ?? 12);
+  document.getElementById('duty-type-nonworking-hours').value = String(type?.nonWorkingHours ?? 24);
+  document.getElementById('duty-type-show-schedule').checked = type?.showInSchedule !== false;
+  document.getElementById('duty-type-retired').checked = type?.retired === true;
+  const eligible = new Set(type?.eligibleEmployeeIds || []);
+  dutyEligibilityForTypeId = type?.id || '';
+  dutyEligibilityDraftIds = new Set(eligible);
+  dutyEligibilityOriginalIds = new Set(eligible);
+  renderDutyEligibilitySummary();
+  document.getElementById('duty-type-modal-title').textContent = type ? 'Edit duty type' : 'Add duty type';
+  document.getElementById('duty-type-modal').classList.add('open');
+}
+function editDutyType(typeId) { openDutyTypeEditor(typeId); }
+async function saveDutyType() {
+  if (!unlockedBossView()) { showToast('Unlock Boss View to manage duty types.', 4000); return; }
+  const id = document.getElementById('duty-type-id').value;
+  const name = document.getElementById('duty-type-name').value.trim();
+  const startTime = document.getElementById('duty-type-start').value;
+  const workCodeId = document.getElementById('duty-type-work-code').value;
+  if (!workCodeId || !dutyWorkCode(workCodeId)) { alert('Select a work time code for the Duty Work Schedule.'); return; }
+  const normalizedStartTime = normalizeDutyTime(startTime, '07:00');
+  const endTime = normalizedStartTime;
+  const interval = timeRangeHours(`${normalizedStartTime.replace(':', '')}-${endTime.replace(':', '')}`);
+  const weekdayHours = Number(document.getElementById('duty-type-weekday-hours').value);
+  const nonWorkingHours = Number(document.getElementById('duty-type-nonworking-hours').value);
+  if (!name) { alert('Enter a duty type name.'); return; }
+  if (interval !== 24) { alert('Enter a valid duty start time. Duties last exactly 24 hours.'); return; }
+  if (![weekdayHours, nonWorkingHours].every(hours => Number.isFinite(hours) && hours >= 0 && hours <= 48)) { alert('Workload credits must be between 0 and 48 hours.'); return; }
+  const types = normalizeDutyTypes(appSettings.dutyTypes);
+  if (types.some(type => type.id !== id && type.name.toLocaleLowerCase('nb-NO') === name.toLocaleLowerCase('nb-NO'))) { alert('A duty type with that name already exists.'); return; }
+  const prior = types.find(type => type.id === id);
+  const eligibleEmployeeIds = [...dutyEligibilityDraftIds].map(Number).filter(Number.isFinite);
+  const type = { id: id || `duty-type-${globalThis.crypto?.randomUUID?.() || Date.now()}`, name, color: normalizeHexColor(document.getElementById('duty-type-color').value, '#2563eb'), order: prior?.order || (types.length + 1) * 10, eligibleEmployeeIds, workCodeId, defaultStartTime: normalizedStartTime, defaultEndTime: endTime, weekdayHours, nonWorkingHours, showInSchedule: document.getElementById('duty-type-show-schedule').checked, retired: document.getElementById('duty-type-retired').checked };
+  await mutateState('saveDutyType', () => {
+    appSettings.dutyTypes = normalizeDutyTypes(prior ? types.map(item => item.id === id ? type : item) : [...types, type]);
+    persistSettings();
+  });
+  closeModal('duty-type-modal');
+  renderDutyTypeSettingsPage();
+}
+function dutyEligibilityOptionValues(field) {
+  const values = new Map();
+  employees.forEach(employee => {
+    const value = field === 'department' ? activityParticipantDepartment(employee)
+      : field === 'section' ? employeeSection(employee)
+        : String(employee[field] || '').trim();
+    if (!value) return;
+    const parent = field === 'department' ? '' : [employee.department || 'Unassigned department', ...(field === 'process' || field === 'team' ? [employeeSection(employee) || 'Unassigned section'] : []), ...(field === 'team' ? [employee.process || 'Unassigned process'] : [])].join(' / ');
+    const key = `${parent}\u0000${value}`;
+    if (!values.has(key)) values.set(key, { value, parent });
+  });
+  return [...values.values()].sort((a, b) => a.parent.localeCompare(b.parent, 'nb') || a.value.localeCompare(b.value, 'nb'));
+}
+function openDutyEligibilityPicker() {
+  dutyEligibilityForTypeId = document.getElementById('duty-type-id').value;
+  dutyEligibilityOriginalIds = new Set(dutyEligibilityDraftIds);
+  dutyEligibilityFilters.search = '';
+  for (const field of ['department', 'section', 'process', 'team']) {
+    dutyEligibilityFilters[field] = '';
+    dutyEligibilityScopeOptions[field] = '';
+  }
+  populatePersonnelPickerFilters('duty-eligibility', employees, dutyEligibilityFilters);
+  document.getElementById('duty-eligibility-search').value = '';
+  renderDutyEligibilityPicker();
+  const modal = document.getElementById('duty-eligibility-picker-modal');
+  modal.classList.add('open');
+  modal.style.zIndex = '140';
+  document.getElementById('duty-type-modal').style.zIndex = '110';
+  modal.querySelector('.duty-eligibility-picker-dialog')?.scrollTo(0, 0);
+  setTimeout(() => document.getElementById('duty-eligibility-search')?.focus(), 30);
+}
+function filteredDutyEligibilityEmployees() {
+  dutyEligibilityFilters.search = String(document.getElementById('duty-eligibility-search')?.value || '');
+  for (const field of ['department', 'section', 'process', 'team']) dutyEligibilityFilters[field] = dutyEligibilityScopeOptions[field] || document.getElementById(`duty-eligibility-${field}`)?.value || '';
+  return [...employees].sort(comparePersonnelHierarchy).filter(employee => personnelPickerMatches(employee, dutyEligibilityFilters));
+}
+function renderDutyEligibilitySummary() {
+  const host = document.getElementById('duty-type-eligible-list');
+  if (!host) return;
+  const selected = employees.filter(employee => dutyEligibilityDraftIds.has(Number(employee.id))).sort(comparePersonnelHierarchy);
+  const count = document.getElementById('duty-eligible-count');
+  if (count) count.textContent = `${selected.length} personnel selected`;
+  host.innerHTML = selected.length ? selected.map(employee => `<span class="duty-eligible-chip">${esc(employee.name)}<small>${esc([employee.department, employeeSection(employee), employee.process, employee.team].filter(Boolean).join(' · '))}</small></span>`).join('') : '<span class="empty-note">No eligible personnel selected.</span>';
+}
+function renderDutyEligibilityPicker() {
+  const container = document.getElementById('duty-eligibility-picker-list');
+  if (!container) return;
+  dutyEligibilityFilters.search = String(document.getElementById('duty-eligibility-search')?.value || '');
+  for (const field of ['department', 'section', 'process', 'team']) {
+    const select = document.getElementById(`duty-eligibility-${field}`);
+    if (select?.value) dutyEligibilityFilters[field] = select.value;
+  }
+  const visible = filteredDutyEligibilityEmployees();
+  const count = document.getElementById('duty-eligibility-picker-count');
+  if (count) count.textContent = `Showing ${visible.length} of ${employees.length} · ${dutyEligibilityDraftIds.size} selected`;
+  container.innerHTML = visible.length ? visible.map(employee => {
+    const selected = dutyEligibilityDraftIds.has(Number(employee.id));
+    const path = [employee.department || 'Unassigned department', employeeSection(employee), employee.process, employee.team].filter(Boolean).join(' · ');
+    return `<label class="participant-option${selected ? ' sel' : ''}"><span class="participant-head"><input type="checkbox" ${selected ? 'checked' : ''} onchange="toggleDutyEligibility(${employee.id},this.checked)"><span><b>${esc(employee.name)}</b><small>${esc([employee.role, path].filter(Boolean).join(' · '))}</small></span></span></label>`;
+  }).join('') : '<div class="muted text-sm" style="padding:12px">No personnel match these filters.</div>';
+}
+const dutyEligibilityScopeOptions = { department: '', section: '', process: '', team: '' };
+function setDutyEligibilityFilter(field, value) {
+  if (!['department','section','process','team'].includes(field)) return;
+  dutyEligibilityScopeOptions[field] = String(value || '');
+  dutyEligibilityFilters[field] = dutyEligibilityScopeOptions[field];
+  renderDutyEligibilityPicker();
+}
+function toggleDutyEligibility(employeeId, selected) {
+  if (selected) dutyEligibilityDraftIds.add(Number(employeeId));
+  else dutyEligibilityDraftIds.delete(Number(employeeId));
+  renderDutyEligibilityPicker();
+}
+function setDutyEligibilityVisible(selected) {
+  const ids = filteredDutyEligibilityEmployees().map(employee => Number(employee.id));
+  ids.forEach(id => selected ? dutyEligibilityDraftIds.add(id) : dutyEligibilityDraftIds.delete(id));
+  renderDutyEligibilityPicker();
+}
+function clearDutyEligibilitySelection() {
+  dutyEligibilityDraftIds.clear();
+  renderDutyEligibilityPicker();
+}
+function closeDutyEligibilityPicker(apply = false) {
+  if (!apply) dutyEligibilityDraftIds = new Set(dutyEligibilityOriginalIds);
+  else renderDutyEligibilitySummary();
+  document.getElementById('duty-eligibility-picker-modal')?.classList.remove('open');
+  document.getElementById('duty-eligibility-picker-modal')?.style.removeProperty('z-index');
+  document.getElementById('duty-type-modal')?.style.removeProperty('z-index');
+  if (document.getElementById('duty-type-modal')?.classList.contains('open')) setTimeout(() => document.querySelector('#duty-type-modal input:not([type="hidden"])')?.focus(), 0);
+}
+function dutyPlannerRange() {
+  const range = scheduleRange();
+  return { ...range, days: range.days || datesBetween(range.start, range.end) };
+}
+function dutyStatusLabel(status) { return status === 'confirmed' ? 'Confirmed' : 'Planned'; }
+function dutyTypeInterval(type) {
+  const startTime = normalizeDutyTime(type?.defaultStartTime, '07:00');
+  return { startTime, endTime: startTime };
+}
+function dutyAssignmentInterval(assignment) {
+  const type = appSettings.dutyTypes.find(item => item.id === assignment?.dutyTypeId);
+  const fallback = dutyTypeInterval(type);
+  return { startTime: normalizeDutyTime(assignment?.startTime, fallback.startTime), endTime: normalizeDutyTime(assignment?.endTime, fallback.endTime) };
+}
+function dutyCellExistingWorkCodes(employeeId, date) {
+  const matches = [];
+  for (const [key, value] of Object.entries(activityShiftsMap || {})) {
+    const [assignedEmployeeId, assignedDate, activityId] = key.split('_');
+    if (Number(assignedEmployeeId) !== Number(employeeId) || assignedDate !== date) continue;
+    const assignment = activityAssignment(key);
+    if (!assignment.assigned || assignment.excluded || !assignment.workCodeId) continue;
+    if (assignment.lifecycle === 'planned') continue;
+    const activity = activities.find(item => Number(item.id) === Number(activityId));
+    const activityInfo = activity ? activityAssignmentInfo(activity, employeeId, date, true) : null;
+    const code = activityInfo?.workCode || (appSettings.workCodes || []).find(item => String(item.id) === String(assignment.workCodeId));
+    const shift = activityInfo?.physicalShift || (['normal', 'day', 'evening', 'night'].includes(assignment.shift)
+      ? activityDefaultShift(assignment.shift, activity)
+      : String(assignment.shift || ''));
+    matches.push({
+      activityName: activity?.name || 'Activity',
+      codeName: code?.name || code?.abbreviation || 'Work Time Code',
+      codeAbbreviation: String(code?.abbreviation || code?.name || 'CODE').trim().slice(0, 5),
+      shift,
+      administrativeTime: assignment.administrativeTime || '',
+    });
+  }
+  return matches;
+}
+function dutyScheduleRecords(typeId, startDate, endDate) {
+  return dutyAssignments.filter(assignment => assignment.dutyTypeId === String(typeId) && assignment.date >= startDate && assignment.date <= endDate)
+    .map(assignment => {
+      const type = appSettings.dutyTypes.find(item => item.id === assignment.dutyTypeId);
+      const employee = empById(assignment.employeeId);
+      const interval = dutyAssignmentInterval(assignment);
+      const code = dutyWorkCode(type?.workCodeId);
+      return { assignment, type, employee, interval, code };
+    })
+    .filter(record => record.type && record.employee)
+    .sort((left, right) => left.assignment.date.localeCompare(right.assignment.date) || comparePersonnelHierarchy(left.employee, right.employee));
+}
+function openDutyWorkSchedule() {
+  const range = dutyPlannerRange();
+  document.getElementById('duty-report-type').value = dutySelectedTypeId;
+  document.getElementById('duty-report-start').value = range.start;
+  document.getElementById('duty-report-end').value = range.end;
+  document.getElementById('duty-work-schedule-modal').classList.add('open');
+  renderDutyWorkSchedulePreview();
+}
+function renderDutyWorkSchedulePreview() {
+  const selectedTypeId = document.getElementById('duty-report-type')?.value || dutySelectedTypeId;
+  const start = document.getElementById('duty-report-start')?.value || '';
+  const end = document.getElementById('duty-report-end')?.value || '';
+  const container = document.getElementById('duty-work-schedule-preview');
+  if (!container) return;
+  if (!isValidIsoDate(start) || !isValidIsoDate(end) || start > end) { container.innerHTML = '<div class="empty-note">Choose a valid date range.</div>'; return; }
+  const rows = dutyScheduleRecords(selectedTypeId, start, end);
+  container.innerHTML = rows.length ? `<div class="duty-report-table-wrap"><table class="list-table duty-report-table"><thead><tr><th>Date</th><th>Personnel</th><th>Duty</th><th>Status</th><th>Work time code</th><th>Fixed interval</th></tr></thead><tbody>${rows.map(({ assignment, type, employee, interval, code }) => `<tr><td>${fmtMed(assignment.date)}</td><td>${esc(employee.name)}</td><td>${esc(type.name)}</td><td><span class="duty-status-label ${assignment.status}">${esc(dutyStatusLabel(assignment.status))}</span></td><td>${esc(code ? `${code.abbreviation || ''}${code.abbreviation && code.name ? ' · ' : ''}${code.name || ''}` : '—')}</td><td>${esc(interval.startTime)}–${esc(interval.endTime)} (+24h)</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty-note">No duty assignments in this date range.</div>';
+}
+function printDutyWorkSchedule() {
+  const selectedTypeId = document.getElementById('duty-report-type')?.value || dutySelectedTypeId;
+  const start = document.getElementById('duty-report-start')?.value || '', end = document.getElementById('duty-report-end')?.value || '';
+  if (!isValidIsoDate(start) || !isValidIsoDate(end) || start > end) { alert('Choose a valid date range.'); return; }
+  const type = appSettings.dutyTypes.find(item => item.id === selectedTypeId);
+  const rows = dutyScheduleRecords(selectedTypeId, start, end);
+  const printWindow = window.open('', '_blank', 'width=1100,height=850');
+  if (!printWindow) { alert('Please allow pop-ups to print the Duty Work Schedule.'); return; }
+  const tableRows = rows.map(({ assignment, employee, interval, code }) => `<tr><td>${fmtMed(assignment.date)}</td><td>${esc(employee.name)}</td><td>${esc(dutyStatusLabel(assignment.status))}</td><td>${esc(code ? `${code.abbreviation || ''}${code.abbreviation && code.name ? ' · ' : ''}${code.name || ''}` : '—')}</td><td>${esc(interval.startTime)}–${esc(interval.endTime)} (+24h)</td></tr>`).join('');
+  printWindow.document.write(`<!doctype html><html><head><title>Duty Work Schedule · ${esc(type?.name || '')}</title><style>@page{size:landscape;margin:12mm}body{font:12px system-ui;color:#172033}h1{margin:0 0 5px;font-size:20px}p{margin:0 0 14px;color:#596579}table{border-collapse:collapse;width:100%}th,td{border:1px solid #cbd2dc;padding:7px;text-align:left}th{background:#e9eef5}tr:nth-child(even){background:#f7f9fc}</style></head><body><h1>Duty Work Schedule · ${esc(type?.name || '')}</h1><p>${esc(fmtMed(start))} – ${esc(fmtMed(end))}</p><table><thead><tr><th>Date</th><th>Personnel</th><th>Status</th><th>Work time code</th><th>Fixed interval</th></tr></thead><tbody>${tableRows || '<tr><td colspan="5">No duty assignments in this date range.</td></tr>'}</tbody></table></body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
-  closeModal('shift-rotation-print-modal');
 }
-
-// ═══ GRID VIEW ═══════════════════════════════════════════════════════════════
-function planningHorizonDate() {
-  const days = Number(appSettings.planningHorizonDays);
-  if (!Number.isFinite(days) || days <= 0) return '';
-  const date = new Date(`${todayStr()}T00:00:00`);
-  date.setDate(date.getDate() + Math.round(days));
-  return fmt(date);
+function dutyLoadCredit(type, date) {
+  return isNormalWorkDate(date)
+    ? Math.max(0, Number(type?.weekdayHours || 0) - (Number(appSettings.coreHoursPerDay) || 0))
+    : Math.max(0, Number(type?.nonWorkingHours || 0));
 }
-function planningHorizonStyle(date) {
-  return date === planningHorizonDate()
-    ? `;box-shadow:inset 2px 0 0 ${normalizeHexColor(appSettings.planningHorizonColor, '#ef4444')} !important;`
-    : '';
+function renderDutyPlannerPreservingViewport() {
+  const viewport = document.getElementById('duty-scroll');
+  const left = viewport?.scrollLeft || 0, top = viewport?.scrollTop || 0;
+  renderDutyPlanner();
+  requestAnimationFrame(() => {
+    const updated = document.getElementById('duty-scroll');
+    if (updated) { updated.scrollLeft = left; updated.scrollTop = top; }
+  });
+}
+function scrollDutyDateIntoView(date, behavior = 'auto') {
+  const viewport = document.getElementById('duty-scroll');
+  const target = viewport?.querySelector(`.duty-day-head[data-date="${date}"]`);
+  if (!viewport || !target) return false;
+  const stickyWidth = viewport.querySelector('.duty-employee')?.getBoundingClientRect().width || 0;
+  const viewportRect = viewport.getBoundingClientRect(), targetRect = target.getBoundingClientRect();
+  const targetCenter = viewport.scrollLeft + targetRect.left - viewportRect.left + targetRect.width / 2;
+  const left = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, targetCenter - (viewport.clientWidth + stickyWidth) / 2));
+  viewport.scrollTo({ left, behavior });
+  return true;
+}
+function openDutyDatePicker() {
+  const input = document.getElementById('duty-date-jump-input');
+  if (!input) return;
+  input.value = todayStr();
+  if (typeof input.showPicker === 'function') input.showPicker(); else input.click();
+}
+function jumpToDutyDate(value) {
+  if (!isValidIsoDate(value)) return;
+  const target = new Date(`${value}T00:00:00`);
+  if (gridPeriod === 'year') gridYear = target.getFullYear();
+  else scheduleAnchorDate = value;
+  dutyPlannerInitialScrollPending = false;
+  saveGridPreferences();
+  renderDutyPlanner();
+  setTimeout(() => {
+    scrollDutyDateIntoView(value, 'smooth');
+    document.querySelectorAll('.jump-date-highlight').forEach(element => element.classList.remove('jump-date-highlight'));
+    document.querySelectorAll(`.duty-day-head[data-date="${value}"],.duty-cell[data-date="${value}"]`).forEach(element => element.classList.add('jump-date-highlight'));
+    setTimeout(() => document.querySelectorAll('.jump-date-highlight').forEach(element => element.classList.remove('jump-date-highlight')), 5000);
+  }, 80);
+}
+function renderDutyPlanner() {
+  const content = document.getElementById('content');
+  const types = normalizeDutyTypes(appSettings.dutyTypes);
+  if (!dutySelectedTypeId || !types.some(type => type.id === dutySelectedTypeId)) dutySelectedTypeId = types.find(type => !type.retired)?.id || types[0]?.id || '';
+  const type = types.find(item => item.id === dutySelectedTypeId);
+  if (!type) {
+    content.innerHTML = `<div class="duty-planner-wrap"><header class="duty-planner-header"><h1 class="page-title">Duty Planner</h1>${unlockedBossView() ? '<button class="btn btn-primary" onclick="nav(\'duty-types\')">Configure duty types</button>' : '<span class="form-hint">Unlock Boss View to configure duty types.</span>'}</header><section class="card duty-empty-state">Add a duty type in Boss View before assigning personnel.</section></div>`;
+    return;
+  }
+  const range = dutyPlannerRange(), days = range.days;
+  const visibleToday = days.some(day => fmt(day) === todayStr());
+  const deadlineDate = planningDeadlineEnabled() ? planningHorizonDate() : '';
+  const eligible = employees.filter(employee => type.eligibleEmployeeIds.includes(Number(employee.id))
+      && employee.id != null)
+    .sort(comparePersonnelHierarchy);
+  const dayWidth = gridPeriod === 'week' ? Math.min(180, Math.max(72, Math.floor((window.innerWidth - 300) / Math.max(1, days.length)))) : gridPeriod === 'month' ? Math.min(96, Math.max(48, Math.floor((window.innerWidth - 300) / Math.max(1, days.length)))) : 36;
+  const typeOptions = types.map(item => `<option value="${esc(item.id)}" ${item.id === type.id ? 'selected' : ''}>${esc(item.name)}${item.retired ? ' · Retired' : ''}</option>`).join('');
+  let lastDutyGroup = '';
+  const rows = eligible.map(employee => {
+    const dutyGroup = [employee.department || 'Unassigned department', employeeSection(employee) || ''].join('\u0000');
+    const groupHeader = dutyGroup !== lastDutyGroup ? (lastDutyGroup = dutyGroup, `<tr class="duty-group-row"><th class="duty-employee sticky-left">${esc([employee.department || 'Unassigned department', employeeSection(employee)].filter(Boolean).join(' · '))}</th><td colspan="${days.length}"></td></tr>`) : '';
+    const personColor = resolveSubdepartmentColor(employee.department || 'Unassigned', employee.team || '') || resolveProcessColor(employee.department || 'Unassigned', employeeSection(employee), employee.process || '') || resolveSectionColor(employee.department || 'Unassigned', employeeSection(employee)) || resolveDeptColor(employee.department || '') || 'var(--muted)';
+    const cells = days.map(day => {
+      const date = fmt(day), assignment = dutyAssignmentFor(employee.id, date, type.id), locked = workDateIsLocked(date) && !unlockedBossView();
+      const dayMarker = holidayFor(date);
+      const nonWorking = !isNormalWorkDate(date);
+      const existingWorkCodes = dutyCellExistingWorkCodes(employee.id, date);
+      const dayClass = `${isWknd(day) ? ' weekend' : ''}${nonWorking ? ' duty-non-working' : ''}${dayMarker ? ` ${dayMarker.isSpecialDay ? 'duty-special-day-col' : 'duty-holiday-col'}` : ''}${date === todayStr() ? ' today-col' : ''}${date === deadlineDate ? ' duty-deadline-col' : ''}${locked ? ' duty-locked' : ''}${existingWorkCodes.length ? ' duty-work-coded' : ''}`;
+      const status = assignment ? `<span class="duty-assignment-chip ${assignment.status}" style="--duty-color:${esc(type.color)}"><b>${esc(type.name)}</b></span>` : '<span class="duty-empty-cell">+</span>';
+      const workCodeNote = existingWorkCodes.length ? ` · Existing work: ${[...new Set(existingWorkCodes.map(item => `${item.codeName}${item.administrativeTime ? ` ${item.administrativeTime}` : ''}${item.shift ? ` · ${item.shift}` : ''} (${item.activityName})`))].join(', ')}` : '';
+      const workCodeLabel = existingWorkCodes.length
+        ? `<span class="duty-existing-code" aria-hidden="true">${esc(existingWorkCodes[0].codeAbbreviation)}${existingWorkCodes.length > 1 ? `<small>+${existingWorkCodes.length - 1}</small>` : ''}</span>`
+        : '';
+      const dayNote = dayMarker ? `${dayMarker.name || (dayMarker.isSpecialDay ? 'Special day' : 'Holiday')}${dayMarker.nonWorking === false ? ' · highlight only' : ' · non-working'}` : (isWknd(day) ? 'Weekend · non-working' : '');
+      const title = `${employee.name}, ${fmtMed(date)}: ${assignment ? `${type.name} · ${dutyStatusLabel(assignment.status)}` : 'No duty assigned'}${dayNote ? ` · ${dayNote}` : ''}${workCodeNote}${locked ? ' · Locked by planning deadline' : ''}`;
+      return `<td class="duty-cell${assignment ? ' assigned' : ''}${dayClass}" data-empid="${employee.id}" data-date="${date}" style="--duty-day-width:${dayWidth}px;--duty-color:${esc(type.color)};--duty-day-color:${esc(normalizeHexColor(dayMarker?.color, dayMarker?.isSpecialDay ? '#ef4444' : '#dc2626'))}" title="${esc(title)}" onclick="openDutyCell(event,${employee.id},'${date}')" onpointerdown="startDutyCellSelection(event,${employee.id},'${date}')">${status}${workCodeLabel}</td>`;
+    }).join('');
+    const highlighted = Number(employee.id) === Number(highlightedScheduleEmployeeId);
+    return `${groupHeader}<tr class="duty-employee-row schedule-employee-row${highlighted ? ' employee-row-highlight' : ''}" data-employee-id="${employee.id}"><th class="duty-employee rotation-employee sticky-left" style="--employee-color:${personColor};border-left:4px solid ${personColor};background:color-mix(in srgb,${personColor} 14%,var(--surface))"><b class="duty-employee-name emp-name" role="button" tabindex="0" aria-pressed="${highlighted}" onclick="toggleDutyEmployeeHighlight(${employee.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDutyEmployeeHighlight(${employee.id})}">${displayEmployeeNameMarkup(employee)}</b><small>${esc(employee.role || '')}</small></th>${cells}</tr>`;
+  }).join('');
+  const headers = days.map(day => {
+    const date = fmt(day), today = date === todayStr(), deadline = date === deadlineDate;
+    const dayMarker = holidayFor(date), nonWorking = !isNormalWorkDate(date);
+    const dayNote = dayMarker ? `${dayMarker.name || (dayMarker.isSpecialDay ? 'Special day' : 'Holiday')} · ${dayMarker.nonWorking === false ? 'highlight only' : 'non-working'}` : (isWknd(day) ? 'Weekend · non-working' : '');
+    const title = [dayNote, deadline ? `Planning deadline · ${fmtMed(date)}` : '', today ? 'Today' : ''].filter(Boolean).join(' · ');
+    return `<th class="rotation-day-head duty-day-head${isWknd(day) ? ' weekend' : ''}${nonWorking ? ' duty-non-working' : ''}${dayMarker ? ` ${dayMarker.isSpecialDay ? 'duty-special-day-col' : 'duty-holiday-col'}` : ''}${today ? ' today-col' : ''}${deadline ? ' duty-deadline-col' : ''}" data-date="${date}" style="--duty-day-color:${esc(normalizeHexColor(dayMarker?.color, dayMarker?.isSpecialDay ? '#ef4444' : '#dc2626'))}" title="${esc(title)}"><span>${day.toLocaleDateString('en-US', { weekday: 'short' })}</span><b>${day.getDate()}</b>${nonWorking ? '<small class="duty-non-working-mark">NW</small>' : ''}</th>`;
+  }).join('');
+  const rosterDates = days.map(fmt);
+  const confirmedCount = dutyAssignments.filter(item => item.dutyTypeId === type.id && rosterDates.includes(item.date) && item.status === 'confirmed').length;
+  const plannedCount = dutyAssignments.filter(item => item.dutyTypeId === type.id && rosterDates.includes(item.date) && item.status === 'planned').length;
+  content.innerHTML = `<div class="duty-planner-wrap rotation-wrap" style="--duty-day-width:${dayWidth}px;--rotation-day-width:${dayWidth}px"><header class="duty-planner-header rotation-topbar"><h1 class="page-title">Duty Planner</h1><div class="duty-planner-actions"><label class="duty-type-select-label">Duty type<select class="plain-select" onchange="setDutyPlannerType(this.value)">${typeOptions}</select></label><button class="btn" onclick="openDutyWorkSchedule()">Duty Work Schedule</button><button class="btn" onclick="nav('duty-types')">${unlockedBossView() ? 'Duty Types' : 'Type settings'}</button><div class="duty-calendar-tools"></div></div></header><div class="duty-planner-summary"><span><i style="--duty-color:${esc(type.color)}"></i>${esc(type.name)} · ${fmtMed(range.start)} – ${fmtMed(range.end)}</span><span>${eligible.length} eligible · ${confirmedCount} confirmed · ${plannedCount} planned</span>${deadlineDate ? `<span class="duty-deadline-legend"><i></i>Planning deadline · ${fmtMed(deadlineDate)}</span>` : '<span>Planning deadline disabled</span>'}</div>${eligible.length ? `<div class="duty-scroll rotation-scroll" id="duty-scroll"><table class="duty-table rotation-table"><thead><tr><th class="duty-employee rotation-employee sticky-left" rowspan="3">Eligible personnel</th>${rotationPeriodHeaderCells(days, 'month')}</tr><tr>${rotationPeriodHeaderCells(days, 'week')}</tr><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></div><div class="rotation-scroll-control"><input class="rotation-horizontal-scroll" type="range" min="0" max="0" value="0" step="1" aria-label="Scroll Duty Planner dates" oninput="setDutyPlannerScroll(this.value)"></div>` : '<section class="card duty-empty-state">No eligible personnel are configured for this duty type. Configure eligibility in Duty Types.</section>'}</div>`;
+    const dutyActions = content.querySelector('.duty-calendar-tools');
+    if (dutyActions) {
+      const calendarTools = document.createElement('div');
+      calendarTools.className = 'duty-calendar-inner-tools';
+      calendarTools.innerHTML = `<div class="duty-calendar-utility-tools"><button class="btn btn-sm" type="button" onclick="goToday()">Today</button><button class="btn btn-sm schedule-date-jump-button duty-date-jump-button" type="button" title="Jump to a specific date" onclick="openScheduleDatePicker()"><span>Jump…</span>${svgIcon('teamSchedule')}<input id="duty-date-jump-input" class="schedule-date-jump-input" type="date" value="${scheduleAnchorDate}" onchange="jumpToScheduleDate(this.value)" aria-label="Jump to date" tabindex="-1"></button><select class="plain-select duty-zoom-select" style="height:32px;padding:5px 7px;width:76px" onchange="applyAppZoom(this.value)" aria-label="Application zoom" title="Local application zoom">${[80,90,100,110,125,150,175].map(value => `<option value="${value}" ${appZoom === value ? 'selected' : ''}>${value}%</option>`).join('')}</select><button class="btn btn-sm" type="button" onclick="openDutyWorkSchedule()">Duty Work Schedule</button></div><div class="flex items-center gap-1 duty-period-controls" role="group" aria-label="Schedule period">${['week', 'month', 'year'].map(period => `<button class="btn btn-sm${gridPeriod === period ? ' btn-primary' : ''}" data-period="${period}" onclick="setGridPeriod('${period}')">${period[0].toUpperCase()}${period.slice(1)}</button>`).join('')}<button class="btn btn-icon" onclick="changeGridPeriod(-1)" aria-label="Previous period">${svgIcon('chevronLeft')}</button><span class="rotation-year">${esc(range.label)}</span><button class="btn btn-icon" onclick="changeGridPeriod(1)" aria-label="Next period">${svgIcon('chevronRight')}</button></div>`;
+    dutyActions.append(calendarTools);
+    requestAnimationFrame(() => setDutyPlannerPeriodControls());
+  }
+  requestAnimationFrame(syncDutyPlannerScrollbar);
+  if (dutyPlannerInitialScrollPending) {
+    dutyPlannerInitialScrollPending = false;
+    if (appSettings.jumpToTodayOnGridChange !== false && visibleToday) requestAnimationFrame(() => scrollDutyDateIntoView(todayStr()));
+  }
+}
+function openDutyCell(event, employeeId, date) {
+  if (suppressDutyCellClick) { suppressDutyCellClick = false; event?.stopPropagation?.(); return; }
+  event?.stopPropagation?.();
+  if (dutySelection.size > 1) return;
+  dutySelection = new Set([dutyCellKey(employeeId, date)]);
+  openDutyAssignmentEditor(employeeId, date);
+}
+function removeEmployeeDutyRelations(employeeId) {
+  dutyAssignments = dutyAssignments.filter(assignment => Number(assignment.employeeId) !== Number(employeeId));
+}
+function openDutyTypeSettingsEntry() { nav(unlockedBossView() ? 'duty-types' : 'duty-planner'); }
+function setDutyPlannerType(value) { dutySelectedTypeId = String(value || ''); dutySelection.clear(); renderDutyPlanner(); }
+function toggleDutyEmployeeHighlight(employeeId) { toggleScheduleEmployeeHighlight(employeeId); }
+function dutyAssignmentFor(employeeId, date, typeId = dutySelectedTypeId) { return dutyAssignments.find(assignment => assignment.employeeId === Number(employeeId) && assignment.date === date && assignment.dutyTypeId === String(typeId)) || null; }
+function dutyIntervalFor(assignment) {
+  if (!assignment) return null;
+  const start = Date.parse(`${assignment.date}T${assignment.startTime}:00`);
+  const endDate = assignment.endTime <= assignment.startTime ? new Date(`${assignment.date}T00:00:00`) : null;
+  if (endDate) endDate.setDate(endDate.getDate() + 1);
+  const end = Date.parse(`${fmt(endDate || new Date(`${assignment.date}T00:00:00`))}T${assignment.endTime}:00`);
+  return { start, end };
+}
+function activityIntervalForDutyConflict(employeeId, activity, date, dutyStartDate) {
+  const assignment = activityAssignment(`${employeeId}_${date}_${activity.id}`);
+  if (!assignment?.assigned || assignment.excluded || workTimeIsPlanned(assignment)) return null;
+  const range = assignment.shift ? activityDefaultShift(assignment.shift, activity) : '';
+  const interval = timeRangeInterval(range);
+  if (!interval) return { start: 0, end: 24 };
+  const dateStart = Date.parse(`${date}T00:00:00`);
+  const dutyStart = Date.parse(`${dutyStartDate}T00:00:00`);
+  const dayOffset = Math.round((dateStart - dutyStart) / 86400000);
+  let start = interval.start + dayOffset * 24;
+  let end = interval.end + dayOffset * 24;
+  if (end <= start) end += 24;
+  return { start, end };
+}
+function dutyDateIntervalOverlap(left, right) {
+  const a = dutyIntervalFor(left), b = dutyIntervalFor(right);
+  return Boolean(a && b && a.start < b.end && b.start < a.end);
+}
+function dutyAssignmentConflicts(employeeId, date, startTime, endTime, excludeId = '') {
+  const candidate = { employeeId: Number(employeeId), date, startTime, endTime };
+  const dutyConflicts = dutyAssignments.filter(assignment => assignment.id !== excludeId && assignment.employeeId === Number(employeeId) && dutyDateIntervalOverlap(candidate, assignment));
+  const startHour = Number(startTime.slice(0, 2)) + Number(startTime.slice(3, 5)) / 60;
+  const endHour = startHour + 24;
+  const endDate = (() => { const d = new Date(`${date}T00:00:00`); d.setDate(d.getDate() + 1); return fmt(d); })();
+  const activityConflicts = activities.filter(activity => activityStatus(activity) === 'confirmed' && activity.participants.some(participant => Number(participant.id) === Number(employeeId)) && activity.startDate <= endDate && activity.endDate >= date && datesBetween(date, endDate).some(day => {
+    const interval = activityIntervalForDutyConflict(employeeId, activity, day, date);
+    if (!interval) return false;
+    return startHour < interval.end && interval.start < endHour;
+  }));
+  return { dutyConflicts, activityConflicts };
+}
+function dutyCellKey(employeeId, date) { return `${Number(employeeId)}_${date}`; }
+function updateDutySelectionVisuals() {
+  document.querySelectorAll('.duty-cell[data-empid][data-date]').forEach(cell => cell.classList.toggle('duty-selected-cell', dutySelection.has(dutyCellKey(cell.dataset.empid, cell.dataset.date))));
+}
+function startDutyCellSelection(event, employeeId, date) {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  dutySelectionAnchor = { employeeId: Number(employeeId), date };
+  dutySelection = new Set([dutyCellKey(employeeId, date)]);
+  document.addEventListener('pointermove', onDutySelectionMove);
+  document.addEventListener('pointerup', finishDutyCellSelection, { once: true });
+  document.addEventListener('pointercancel', finishDutyCellSelection, { once: true });
+  updateDutySelectionVisuals();
+}
+function onDutySelectionMove(event) {
+  if (!dutySelectionAnchor) return;
+  const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('.duty-cell[data-empid][data-date]');
+  if (cell && Number(cell.dataset.empid) === dutySelectionAnchor.employeeId) extendDutyCellSelection(cell.dataset.empid, cell.dataset.date);
+}
+function extendDutyCellSelection(employeeId, date) {
+  if (!dutySelectionAnchor || Number(employeeId) !== dutySelectionAnchor.employeeId) return;
+  const start = new Date(`${dutySelectionAnchor.date}T00:00:00`), end = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
+  const direction = start <= end ? 1 : -1;
+  dutySelection.clear();
+  const cursor = new Date(start);
+  while ((direction > 0 && cursor <= end) || (direction < 0 && cursor >= end)) {
+    dutySelection.add(dutyCellKey(employeeId, fmt(cursor)));
+    cursor.setDate(cursor.getDate() + direction);
+  }
+  updateDutySelectionVisuals();
+}
+function finishDutyCellSelection() {
+  document.removeEventListener('pointermove', onDutySelectionMove);
+  document.removeEventListener('pointercancel', finishDutyCellSelection);
+  dutySelectionAnchor = null;
+  if (dutySelection.size > 1) suppressDutyCellClick = true;
+  updateDutySelectionVisuals();
+}
+function openDutyAssignmentEditor(employeeId, date) {
+  const selectedKeys = dutySelection.size ? [...dutySelection] : [dutyCellKey(employeeId, date)];
+  const [firstEmployeeId, firstDate] = selectedKeys[0].split('_');
+  const type = appSettings.dutyTypes.find(item => item.id === dutySelectedTypeId);
+  const existing = selectedKeys.length === 1 ? dutyAssignmentFor(firstEmployeeId, firstDate) : null;
+  const fixedInterval = dutyTypeInterval(type);
+  if (selectedKeys.some(key => workDateIsLocked(key.slice(key.indexOf('_') + 1))) && !unlockedBossView()) { showToast('Unlock Boss View to edit duties on or before the planning deadline.', 5000); return; }
+  if (!existing && !type?.eligibleEmployeeIds.includes(Number(firstEmployeeId))) { showToast('This employee is not eligible for the selected duty type.', 4500); return; }
+  document.getElementById('duty-assignment-id').value = existing?.id || '';
+  document.getElementById('duty-assignment-type').textContent = type?.name || 'Duty';
+  document.getElementById('duty-assignment-dates').value = selectedKeys.map(key => key.slice(key.indexOf('_') + 1)).join(', ');
+  document.getElementById('duty-assignment-dates').dataset.dates = JSON.stringify(selectedKeys.map(key => key.slice(key.indexOf('_') + 1)));
+  document.getElementById('duty-assignment-dates').dataset.keys = JSON.stringify(selectedKeys);
+  document.getElementById('duty-assignment-employee').textContent = empById(existing?.employeeId || firstEmployeeId)?.name || 'Selected personnel';
+  document.getElementById('duty-assignment-interval').textContent = `${fixedInterval.startTime}–${fixedInterval.endTime}`;
+  document.getElementById('duty-assignment-status').value = existing?.status || 'planned';
+  document.getElementById('duty-assignment-heading').textContent = selectedKeys.length > 1 ? `${type?.name || 'Duty'} · ${selectedKeys.length} dates` : `${type?.name || 'Duty'} · ${fmtMed(firstDate)}`;
+  document.getElementById('duty-assignment-delete').style.display = existing ? '' : 'none';
+  document.getElementById('duty-assignment-modal').classList.add('open');
+}
+async function saveDutyAssignment() {
+  const id = document.getElementById('duty-assignment-id').value;
+  const selectedKeys = JSON.parse(document.getElementById('duty-assignment-dates').dataset.keys || '[]');
+  const [firstEmployeeId] = String(selectedKeys[0] || '').split('_');
+  const employeeId = Number(firstEmployeeId);
+  const currentAssignment = dutyAssignments.find(item => item.id === id);
+  const type = appSettings.dutyTypes.find(item => item.id === dutySelectedTypeId);
+  const interval = dutyTypeInterval(type);
+  const startTime = interval.startTime, endTime = interval.endTime;
+  const status = document.getElementById('duty-assignment-status').value === 'confirmed' ? 'confirmed' : 'planned';
+  const dates = JSON.parse(document.getElementById('duty-assignment-dates').dataset.dates || '[]');
+  if (!type || !dates.length || !employeeId) return;
+  if (!type.eligibleEmployeeIds.includes(employeeId) && !(currentAssignment && currentAssignment.employeeId === employeeId)) { showToast('This employee is no longer eligible for new assignments.', 4500); return; }
+  const duration = timeRangeHours(`${startTime.replace(':', '')}-${endTime.replace(':', '')}`);
+  if (!Number.isFinite(duration) || duration <= 0 || duration > 24) { alert('This duty type has an invalid fixed interval. Edit the duty type before assigning it.'); return; }
+  if (dates.some(date => workDateIsLocked(date)) && !unlockedBossView()) { showToast('Unlock Boss View to edit duties on or before the planning deadline.', 5000); return; }
+  const proposed = dates.map(date => ({ id: id && dates.length === 1 ? id : '', dutyTypeId: type.id, employeeId, date, startTime, endTime, status }));
+  const conflicts = proposed.flatMap(item => { const result = dutyAssignmentConflicts(employeeId, item.date, startTime, endTime, id); return [...result.dutyConflicts.map(conflict => `Overlaps ${appSettings.dutyTypes.find(value => value.id === conflict.dutyTypeId)?.name || 'another duty'} on ${fmtMed(conflict.date)}`), ...result.activityConflicts.map(activity => `Overlaps activity work: ${activity.name}`)]; });
+  if (conflicts.length && !confirm(`This assignment overlaps:\n${[...new Set(conflicts)].join('\n')}\n\nKeep both assignments?`)) return;
+  await mutateState('saveDutyAssignment', () => {
+    if (id) dutyAssignments = dutyAssignments.filter(item => item.id !== id);
+    for (const item of proposed) dutyAssignments.push({ ...item, id: item.id || `duty-${globalThis.crypto?.randomUUID?.() || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`}` });
+    dutyAssignments = normalizeDutyAssignments(dutyAssignments, employees, appSettings.dutyTypes);
+  });
+  dutySelection.clear();
+  closeModal('duty-assignment-modal');
+  renderDutyPlannerPreservingViewport();
+}
+async function deleteDutyAssignmentFromEditor() {
+  const id = document.getElementById('duty-assignment-id').value;
+  const assignment = dutyAssignments.find(item => item.id === id);
+  if (!assignment) return;
+  if (workDateIsLocked(assignment.date) && !unlockedBossView()) { showToast('Unlock Boss View to edit duties on or before the planning deadline.', 5000); return; }
+  await mutateState('deleteDutyAssignment', () => { dutyAssignments = dutyAssignments.filter(item => item.id !== id); });
+  dutySelection.clear();
+  closeModal('duty-assignment-modal');
+  renderDutyPlannerPreservingViewport();
+}
+function unlockedBossView() {
+  return bossSessionActive === true;
+}
+function planningDeadlineEnabled() { return appSettings.billableWorkLockEnabled !== false; }
+function workDateIsLocked(date) {
+  const deadline = planningHorizonDate();
+  return Boolean(deadline) && isValidIsoDate(date) && date <= deadline;
+}
+function workAssignmentIsBillable(assignment) {
+  if (!assignment?.assigned || assignment.excluded || assignment.lifecycle === 'planned' || !assignment.workCodeId) return false;
+  const workCode = (appSettings.workCodes || []).find(code => String(code.id) === String(assignment.workCodeId));
+  return Boolean(workCode && workCode.staffingImpact !== 'unavailable' && workCode.aggregationMode !== 'none' && workCode.aggregationMode !== 'informational');
+}
+function guardLockedBillableWorkMapDates(dates, empId, operation, proposedAssignments) {
+  const uniqueDates = [...new Set((dates || []).filter(isValidIsoDate))];
+  if (unlockedBossView() || !planningDeadlineEnabled()) return { allowedDates: uniqueDates, lockedDates: [] };
+  const lockedDates = uniqueDates.filter(workDateIsLocked);
+  const affectedDates = lockedDates.filter(date => {
+    const proposed = proposedAssignments?.[date];
+    if (proposed) {
+      if (proposed.remove) return billableActivityAssignment(empId, date, proposed.activityId);
+      const existingIsBillable = billableActivityAssignment(empId, date, proposed.activityId);
+      if (proposed.editingExisting && existingIsBillable) return true;
+      return existingIsBillable || (workAssignmentIsBillable({ ...proposed.assignment, assigned: true, excluded: false })
+          && !assignmentIsAbsenceActivity(activities.find(item => Number(item.id) === Number(proposed.activityId)), proposed.assignment));
+    }
+    return Object.entries(activityShiftsMap).some(([key]) => {
+      const [assignedEmpId, assignedDate, activityId] = key.split('_');
+      return Number(assignedEmpId) === Number(empId) && assignedDate === date && billableActivityAssignment(empId, date, Number(activityId));
+    });
+  });
+  const allowedDates = uniqueDates.filter(date => !affectedDates.includes(date));
+  if (affectedDates.length && !allowedDates.length) showToast(`Boss View is required to ${operation} billable work time on or before the planning deadline (${fmtMed(planningHorizonDate())}).`, 6000);
+  else if (affectedDates.length) showToast(`Changed unlocked dates only. ${affectedDates.length} locked billable work date${affectedDates.length === 1 ? ' was' : 's were'} skipped.`, 5500);
+  return { allowedDates, lockedDates: affectedDates };
+}
+function assignmentIsAbsenceActivity(activity, assignment) {
+  if (!activity) return false;
+  const workCode = assignment?.workCodeId ? (appSettings.workCodes || []).find(code => String(code.id) === String(assignment.workCodeId)) : null;
+  if (workCode?.staffingImpact === 'unavailable') return true;
+  const activityType = activityTypeMeta(activity);
+  const labels = [activity.name, activity.type, activityType?.name, activityType?.label]
+    .map(value => String(value || '').trim().toLocaleLowerCase());
+  return labels.some(value => /(^|[\s_-])(absence|absent|leave|ooo|out of office|sick)([\s_-]|$)/.test(value));
+}
+function billableActivityAssignment(empId, date, activityId) {
+  const assignment = activityAssignment(`${empId}_${date}_${activityId}`);
+  const activity = activities.find(item => Number(item.id) === Number(activityId));
+  return workAssignmentIsBillable(assignment) && !assignmentIsAbsenceActivity(activity, assignment);
+}
+function assignmentWorkCodeIsLocked(empId, date, activityId) {
+  return planningDeadlineEnabled() && workDateIsLocked(date) && billableActivityAssignment(empId, date, activityId) && !unlockedBossView();
 }
 function planningHorizonHeaderStyle(date) {
   const horizonDate = planningHorizonDate();
@@ -4538,14 +5980,15 @@ function setScheduleSectionFilter(value) {
   scheduleSectionFilter = String(value || '');
   hiddenEmployees = new Set([...hiddenEmployees].filter(id => sortedEmployees().some(employee => employee.id === id)));
   saveGridPreferences();
-  renderPage();
+  if (currentPage === 'duty-planner') renderDutyPlannerPreservingViewport();
+  else renderPage();
 }
 function toggleScheduleEmployeeHighlight(employeeId) {
   highlightedScheduleEmployeeId = highlightedScheduleEmployeeId === Number(employeeId) ? null : Number(employeeId);
-  document.querySelectorAll('.schedule-employee-row').forEach(row => {
+  document.querySelectorAll('.schedule-employee-row, .duty-employee-row').forEach(row => {
     const highlighted = Number(row.dataset.employeeId) === highlightedScheduleEmployeeId;
     row.classList.toggle('employee-row-highlight', highlighted);
-    const name = row.querySelector('.emp-name');
+    const name = row.querySelector('.emp-name, .duty-employee-name');
     if (name) name.setAttribute('aria-pressed', String(highlighted));
   });
 }
@@ -4581,6 +6024,12 @@ function jumpToFirstVisibleActivity() {
 }
 
 function renderGrid() {
+  if (scheduleSubview === 'meetings') {
+    renderMeetingsView();
+    return;
+  }
+  const scheduleDateJump = document.getElementById('schedule-date-jump-input');
+  if (scheduleDateJump) scheduleDateJump.value = todayStr();
   const range = scheduleRange();
   const activeScope = scheduleScopeParts();
   if (activeScope.level && !(activeScope.level === 'department'
@@ -4631,6 +6080,10 @@ function renderGrid() {
           <div class="page-title organisation-name-header">${esc(appSettings.appName || 'Organisation')}</div>
           ${selectedPersonnelIds.size ? `<button class="btn" type="button" onclick="openBulkPersonnelEdit()">Edit ${selectedPersonnelIds.size} selected</button><button class="btn" type="button" onclick="selectedPersonnelIds.clear();renderEmployees()">Clear selection</button>` : ''}
           <div class="atlas-full-name">ATLAS - Adaptive Timeline, Load &amp; Allocation System</div>
+          <div class="schedule-subview-toolbar"><div class="schedule-subview-switch" role="group" aria-label="Schedule content">
+            <button type="button" class="${scheduleSubview === 'activities' ? 'active' : ''}" aria-pressed="${scheduleSubview === 'activities'}" onclick="setScheduleSubview('activities')">Activities</button>
+            <button type="button" class="${scheduleSubview === 'meetings' ? 'active' : ''}" aria-pressed="${scheduleSubview === 'meetings'}" onclick="setScheduleSubview('meetings')">Meetings</button>
+          </div>${scheduleSubview === 'activities' ? `<button id="change-log-preview-toggle" type="button" class="btn btn-sm change-log-open-button" aria-expanded="${changeLogPreviewOpen}" onclick="toggleChangeLogPreview()">${changeLogPreviewOpen ? 'Hide recent changes' : 'Recent changes'}</button>` : ''}</div>
         </div>
         <div class="flex items-center gap-2 schedule-topbar-controls">
           <button class="btn btn-sm" onclick="goToday()">Today</button>
@@ -4638,24 +6091,24 @@ function renderGrid() {
           <select class="plain-select" style="height:32px;padding:5px 7px;width:76px" onchange="applyAppZoom(this.value)" aria-label="Application zoom" title="Local application zoom">
             ${[80,90,100,110,125,150,175].map(value => `<option value="${value}" ${appZoom === value ? 'selected' : ''}>${value}%</option>`).join('')}
           </select>
-          <select class="plain-select" style="height:32px;padding:5px 9px" onchange="setGridViewMode(this.value)" aria-label="View schedule layout" title="Choose which schedule sections to display">
+          ${scheduleSubview === 'activities' ? `<select class="plain-select" style="height:32px;padding:5px 9px" onchange="setGridViewMode(this.value)" aria-label="View schedule layout" title="Choose which schedule sections to display">
             <option value="all" ${gridViewMode === 'all' ? 'selected' : ''}>View: All</option>
             <option value="timeline" ${gridViewMode === 'timeline' ? 'selected' : ''}>View: Timeline only</option>
             <option value="employees" ${gridViewMode === 'employees' ? 'selected' : ''}>View: Employees only</option>
-          </select>
-          <select class="plain-select" style="height:32px;padding:5px 9px;max-width:200px" onchange="setScheduleSectionFilter(this.value)" aria-label="Show department or section" title="Filter personnel and activities by explicit organizational scope">
+          </select>` : ''}
+          ${scheduleSubview === 'activities' ? `<select class="plain-select" style="height:32px;padding:5px 9px;max-width:200px" onchange="setScheduleSectionFilter(this.value)" aria-label="Show department or section" title="Filter personnel and activities by explicit organizational scope">
             <option value="">Show: All</option>
             <optgroup label="Departments">${scheduleDepartments.map(department => { const value = scheduleScopeValue('department', department); return `<option value="${esc(value)}" ${scheduleSectionFilter === value ? 'selected' : ''}>${esc(department)} (Department)</option>`; }).join('')}</optgroup>
             <optgroup label="Sections">${scheduleSections.map(section => { const value = scheduleScopeValue('section', section); return `<option value="${esc(value)}" ${scheduleSectionFilter === value || (!isScheduleScopeValue(scheduleSectionFilter) && scheduleSectionFilter === section) ? 'selected' : ''}>${esc(section)} (Section)</option>`; }).join('')}</optgroup>
-          </select>
-          <div class="flex items-center gap-1" role="group" aria-label="Schedule period">
+          </select>` : ''}
+          ${scheduleSubview === 'activities' ? `<div class="flex items-center gap-1" role="group" aria-label="Schedule period">
             ${['week', 'month', 'year'].map(period => `<button class="btn btn-sm${gridPeriod === period ? ' btn-primary' : ''}" onclick="setGridPeriod('${period}')">${period[0].toUpperCase()}${period.slice(1)}</button>`).join('')}
           </div>
           <div class="year-nav" aria-label="Schedule period navigation">
             <button class="btn btn-icon" onclick="changeGridPeriod(-1)" aria-label="Previous period">${svgIcon('chevronLeft')}</button>
             <span class="year-label">${esc(range.label)}</span>
             <button class="btn btn-icon" onclick="changeGridPeriod(1)" aria-label="Next period">${svgIcon('chevronRight')}</button>
-          </div>
+          </div>` : ''}
           ${renderSecurityLabel('security-label-inline')}
           ${hiddenEmployees.size ? `<button class="btn btn-sm" onclick="showAllEmployees()">Show all employees</button>` : ''}
 
@@ -4723,6 +6176,7 @@ function renderGrid() {
           </div>
         </div>
       </div>
+      ${scheduleSubview === 'activities' ? `<section id="change-log-panel" class="change-log-panel card"${changeLogPreviewOpen ? '' : ' hidden'}></section>` : ''}
       <div id="grid-scroll" style="position:relative;min-height:0;overflow:auto" onwheel="handleActivityListWheel(event)" onscroll="syncActivitiesToHorizontalViewport(event)">
         <div id="employee-picker" style="display:none"></div>
         <table class="gtable">
@@ -4758,6 +6212,8 @@ function renderGrid() {
       </div>
     </div>`);
   renderGridBody(days, today);
+  reapplyChangeLogCellHighlight();
+  renderChangeLogPreview();
   if (appSettings.jumpToTodayOnGridChange !== false) setTimeout(scrollToToday, 60);
 }
 
@@ -4770,9 +6226,10 @@ function renderGridBody(days, today) {
   const showEmployeeSection = gridViewMode !== 'timeline';
   const yearActs = activities.filter(a => a.startDate <= range.end && a.endDate >= range.start && activityVisibleForScheduleSection(a));
   const activityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
-  const filteredYearActs = activityFilter === 'all'
+  const statusFilteredYearActs = activityFilter === 'all'
     ? yearActs
     : yearActs.filter(a => activityStatus(a) === activityFilter);
+  const filteredYearActs = statusFilteredYearActs.filter(activity => pastActivitiesExpanded || activity.endDate >= today);
   const currentActs = filteredYearActs.filter(a => a.endDate >= today);
   const pastActs = filteredYearActs.filter(a => a.endDate < today);
   const activityWindow = scheduleActivityWindow();
@@ -4780,13 +6237,14 @@ function renderGridBody(days, today) {
   const visibleActivities = activityWindow.visible;
   const plannerYearStart = `${gridYear}-01-01`;
   const plannerYearEnd = `${gridYear}-12-31`;
-  const plannerYearActs = activities.filter(activity => activity.startDate <= plannerYearEnd && activity.endDate >= plannerYearStart && activityVisibleForScheduleSection(activity));
+  const plannerYearActs = activities.filter(activity => activity.startDate <= plannerYearEnd && activity.endDate >= plannerYearStart && activityVisibleForScheduleSection(activity)
+    && (pastActivitiesExpanded || activity.endDate >= today));
   const totalFilteredActivities = activityFilter === 'all'
     ? plannerYearActs
     : plannerYearActs.filter(activity => activityStatus(activity) === activityFilter);
   const activityHeadingText = gridPeriod === 'year'
-    ? `${totalFilteredActivities.length}`
-    : `${totalFilteredActivities.length} total · ${filteredYearActs.length} shown`;
+    ? `${setScheduleActivityCount()}`
+    : `${setScheduleActivityCount()} total · ${filteredYearActs.length} shown`;
   const hasAnyActivities = (currentActs.length + pastActs.length) > 0;
 
   // ── Activities section ────────────────────────────────────────
@@ -4822,7 +6280,7 @@ function renderGridBody(days, today) {
     const barBackground = lifecycle.status === 'tentative'
       ? `repeating-linear-gradient(135deg,color-mix(in srgb,${activityColor} 38%,transparent) 0 5px,color-mix(in srgb,${activityColor} 12%,transparent) 5px 10px)`
       : activityColor;
-    const barOpacity = lifecycle.status === 'tentative' ? '.9' : (dim ? '.16' : '.28');
+    const barOpacity = lifecycle.status === 'tentative' ? '.9' : (dim && lifecycle.status !== 'cancelled' ? '.16' : '.28');
     let row = `<tr class="activity-grid-row"><td class="gempl sticky-left" style="${dim ? 'opacity:.65;' : ''}cursor:pointer" onclick="openActModal(${act.id})" title="${esc(act.name)}${typeMeta ? ` · ${esc(typeMeta.label)}` : ''}\nClick to edit">
       <div class="act-cell-name">
         <span class="flex items-center gap-2" style="min-width:0">
@@ -4854,7 +6312,7 @@ function renderGridBody(days, today) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
         row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${calendarHoliday ? ' holiday-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="--holiday-color:${calendarHoliday?.color || '#ef4444'};height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)}${typeMeta ? ` · ${esc(typeMeta.label)}` : ''} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
           <div class="act-bar${lifecycle.status === 'cancelled' ? ' cancelled-bar' : ''}" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${barOpacity};border-radius:${brl} ${brr}"></div>
-          ${isS ? `<span class="grid-span-label" title="${esc(act.name)}" style="color:${activityDisplayColor(act)};width:${labelWidth}px;${dim ? 'opacity:.6' : ''}">${esc(activityDisplayName(act))}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
+          ${isS ? `<span class="grid-span-label${lifecycle.status === 'cancelled' ? ' cancelled-label' : ''}" title="${esc(act.name)}" style="color:${activityDisplayColor(act)};width:${labelWidth}px;${dim && lifecycle.status !== 'cancelled' ? 'opacity:.6' : ''}">${esc(activityDisplayName(act))}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
         </td>`;
       } else {
         row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${calendarHoliday ? ' holiday-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="--holiday-color:${calendarHoliday?.color || '#ef4444'};height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
@@ -4964,6 +6422,7 @@ function renderGridBody(days, today) {
     }
   }
   tbody.innerHTML = cleanHtml(html);
+  reapplyChangeLogCellHighlight();
 }
 
 function scrollToActivityCell(rowKey, date) {
@@ -4978,15 +6437,17 @@ function scrollToActivityCell(rowKey, date) {
 
 let activityViewportSyncTimer = null;
 let lastActivityViewportLeft = null;
+let pendingActivityJumpId = null;
 
 function syncActivitiesToHorizontalViewport(event, force = false) {
   const scroll = event?.currentTarget || document.getElementById('grid-scroll');
-  if (!scroll || gridViewMode === 'employees' || gridViewMode === 'timeline' || collapsedGridSections.activities || activityRangeSelection.active || cellSelection.active) return;
+  if (!scroll || pendingActivityJumpId !== null || gridViewMode === 'employees' || gridViewMode === 'timeline' || collapsedGridSections.activities || activityRangeSelection.active || cellSelection.active) return;
   if (!force && lastActivityViewportLeft !== null && Math.abs(scroll.scrollLeft - lastActivityViewportLeft) < 4) return;
   lastActivityViewportLeft = scroll.scrollLeft;
   if (activityViewportSyncTimer) clearTimeout(activityViewportSyncTimer);
   activityViewportSyncTimer = setTimeout(() => {
     activityViewportSyncTimer = null;
+    if (pendingActivityJumpId !== null) return;
     const dateCells = [...scroll.querySelectorAll('thead .gh-day[data-date]')];
     const sticky = scroll.querySelector('thead .gh-emp.sticky-left');
     const stickyRight = sticky?.getBoundingClientRect().right ?? scroll.getBoundingClientRect().left;
@@ -5082,15 +6543,40 @@ function togglePastActivities() {
 function jumpToActivity(activityId) {
   const activity = activities.find(act => Number(act.id) === Number(activityId));
   if (!activity) return;
+  const filter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
+  if ((filter !== 'all' && activityStatus(activity) !== filter) || !activityVisibleForScheduleSection(activity)) {
+    showToast('This activity is hidden by the current activity or section filter.', 4000);
+    return;
+  }
   const isPast = activity.endDate < todayStr();
   if (isPast && !pastActivitiesExpanded) {
     pastActivitiesExpanded = true;
     updatePastActivitiesToggle();
   }
-  if (setActivityWindowForId(activity.id)) renderGridBody(scheduleDays(), todayStr());
+  collapsedGridSections.activities = false;
+  pendingActivityJumpId = Number(activity.id);
+  if (activityViewportSyncTimer) {
+    clearTimeout(activityViewportSyncTimer);
+    activityViewportSyncTimer = null;
+  }
+  const positioned = setActivityWindowForId(activity.id);
+  if (!positioned) {
+    pendingActivityJumpId = null;
+    showToast('Could not find this activity in the current schedule window.', 4000);
+    return;
+  }
+  renderGridBody(scheduleDays(), todayStr());
   const { start, end } = scheduleRange();
   const visibleDate = activity.endDate < start ? start : (activity.endDate > end ? end : activity.endDate);
-  requestAnimationFrame(() => scrollToActivityCell(activity.id, visibleDate));
+  const targetId = Number(activity.id);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const targetCell = document.querySelector(`td.activity-select-cell[data-row-key="act-${targetId}"][data-date="${visibleDate}"]`);
+      if (targetCell?.closest('tr')) scrollToActivityCell(targetId, visibleDate);
+      else showToast('The selected activity is not currently visible in this schedule window.', 4000);
+      if (pendingActivityJumpId === targetId) pendingActivityJumpId = null;
+    });
+  });
 }
 function jumpToLastPastActivity() {
   const today = todayStr();
@@ -5131,12 +6617,11 @@ function scrollToActivityCell(activityId, dateString) {
 }
 
 function cellActivities(empId, ds) {
-  const employee = empById(empId);
   return activities
     .filter(act => {
-      if (!(ds >= act.startDate && ds <= act.endDate && participantFor(act, empId) && activityRelevantToEmployee(act, employee))) return false;
+      if (!(ds >= act.startDate && ds <= act.endDate && participantFor(act, empId))) return false;
       const assignment = activityAssignment(`${empId}_${ds}_${act.id}`);
-      return assignment.assigned === true && !assignment.excluded;
+      return assignment.assigned === true && !assignment.excluded && !workTimeIsPlanned(assignment);
     })
     .map(act => {
       const assignment = activityAssignment(`${empId}_${ds}_${act.id}`);
@@ -5173,6 +6658,21 @@ function workwheelCellEvents(empId, ds) {
     );
   });
 }
+function meetingCellEvents(empId, date) {
+  const today = todayStr();
+  const lookaheadDays = [3, 7, 14, 30].includes(Number(appSettings.meetingLookaheadDays)) ? Number(appSettings.meetingLookaheadDays) : 14;
+  const end = new Date(`${today}T00:00:00`);
+  end.setDate(end.getDate() + lookaheadDays - 1);
+  const lookaheadEnd = fmt(end);
+  return meetings.filter(meeting => {
+    if (meeting.showInEmployeeGrid === false) return false;
+    if (meeting.status === 'cancelled') return false;
+    if (!meeting.participantIds.includes(Number(empId)) && Number(meeting.responsibleId) !== Number(empId)) return false;
+    if (meeting.recurrence === 'none') return date === meeting.date;
+    if (date < today || date > lookaheadEnd) return false;
+    return recurringMeetingOccurrenceDates(meeting, date, date).length > 0;
+  }).sort((left, right) => (left.startTime || '').localeCompare(right.startTime || '') || left.title.localeCompare(right.title, 'nb'));
+}
 // All participant activities for the date regardless of shift/work-code assignment, so boss checks aren't limited to assigned cells.
 function participantActivitiesForDate(empId, ds) {
   return activities.filter(act => ds >= act.startDate && ds <= act.endDate && participantFor(act, empId));
@@ -5190,7 +6690,7 @@ function bossCheckDates(empId, kind, id, dates = pickerDates) {
   if (kind === 'status') return candidateDates.filter(date => getEntryObj(`${empId}_${date}`)?.status === id);
   const activity = activities.find(item => Number(item.id) === Number(id));
   if (!activity || !participantFor(activity, empId)) return [];
-  return candidateDates.filter(date => date >= activity.startDate && date <= activity.endDate && activityRelevantToEmployee(activity, empById(empId)));
+  return candidateDates.filter(date => date >= activity.startDate && date <= activity.endDate);
 }
 function bossCheckState(empId, kind, id) {
   const dates = bossCheckDates(empId, kind, id);
@@ -5230,6 +6730,7 @@ function activityCellLabel(activity, spanDays = 1) {
 function buildEmployeeCell(emp, ds, weekend, isToday) {
   const holiday = displayedHolidayFor(ds);
   const entry = getEntryObj(`${emp.id}_${ds}`);
+  const unavailable = cellUnavailable(emp.id, ds);
   const overtime = overtimeMap[`${emp.id}_${ds}`] || null;
   const cellNote = cellNotesMap[`${emp.id}_${ds}`] || '';
   const si = entry ? siFor(entry.status) : null;
@@ -5237,7 +6738,9 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const isPlannedStatus = statusEntryIsPlanned(entry);
   const acts = cellActivities(emp.id, ds);
   const workwheelEvents = workwheelCellEvents(emp.id, ds);
+  const meetingEvents = meetingCellEvents(emp.id, ds);
   const rotation = rotationRecord(emp.id, ds);
+  const scheduleDuties = dutyAssignments.filter(assignment => Number(assignment.employeeId) === Number(emp.id) && assignment.date === ds && appSettings.dutyTypes.some(type => type.id === assignment.dutyTypeId && type.showInSchedule));
   const rotationMeta = rotationShiftMeta(rotation?.shift);
   const birthday = isEmployeeBirthday(emp, ds);
   const birthdayYear = birthday ? Number(ds.slice(0, 4)) : NaN;
@@ -5247,9 +6750,14 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const tipParts = [];
   if (holiday?.isSpecialDay && !acts.length) tipParts.push(`Special day: ${holiday.name}${holiday.nonWorking ? ' (non-working)' : ''}`);
   if (rotationMeta) tipParts.push(`${rotationMeta.label}${rotationMeta.range ? ` (${rotationMeta.range})` : ''}${rotation?.shift === 'leave' ? '\nOff work — no planned hours' : '\nReserved for Shift Rotation'}`);
+  scheduleDuties.forEach(assignment => {
+    const type = appSettings.dutyTypes.find(item => item.id === assignment.dutyTypeId);
+    if (type) tipParts.push(`Duty: ${type.name} · ${dutyStatusLabel(assignment.status)} · ${assignment.startTime}–${assignment.endTime}`);
+  });
   acts.forEach(act => {
     const shift = activityShiftMeta(act, act.assignment.shift);
-    let detail = `Activity: ${act.name}`;
+    const lifecycle = activityWorkTimeLifecycle(act, emp.id, ds);
+    let detail = `Activity: ${act.name}${lifecycle === 'planned' ? ' · Work time planned' : ''}`;
     if (act.workCode) {
       const administrativeValue = act.workCode.aggregationMode === 'days'
         ? '1d'
@@ -5270,14 +6778,21 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     else if (entry.durationType === '24hours') t += ' (24 hours)';
     tipParts.push(t);
   }
+  if (unavailable) tipParts.push(`Unavailable${unavailable.reason ? `: ${unavailable.reason}` : ''}`);
   if (overtime) tipParts.push(`Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` (${overtime.note})` : ''}`);
   if (cellNote) tipParts.push(`Note: ${cellNote}`);
   if (birthday) tipParts.push(`Birthday: ${emp.name}${birthdayAge !== null ? ` · turns ${birthdayAge}` : ''}`);
   workwheelEvents.forEach(event => tipParts.push(`Workwheel: ${event.title}${event.startTime && event.endTime ? `\nTime: ${event.startTime}–${event.endTime}` : '\nAll day'}`));
+  meetingEvents.forEach(meeting => {
+    const meetingType = meetingTypes.find(type => type.id === meeting.typeId);
+    tipParts.push(`Meeting: ${meeting.title}${meetingType ? ` · ${meetingType.name}` : ''}${meeting.startTime && meeting.endTime ? `\nTime: ${meeting.startTime}–${meeting.endTime}` : '\nAll day'}${meeting.location ? `\nLocation: ${meeting.location}` : ''}`);
+  });
   if (!tipParts.length) tipParts.push('Click to set status');
 
   const primaryActivity = rotationMeta ? null : acts[0];
-  const checkedActivity = bossSessionActive ? participantActivitiesForDate(emp.id, ds).find(act => activityRelevantToEmployee(act, emp) && isBossCheckSet(emp.id, ds, 'activity', act.id)) : null;
+  const lockedBillableAssignment = Boolean(primaryActivity && assignmentWorkCodeIsLocked(emp.id, ds, primaryActivity.id));
+  const unavailableConflict = Boolean(unavailable && acts.length);
+  const checkedActivity = bossSessionActive ? participantActivitiesForDate(emp.id, ds).find(act => isBossCheckSet(emp.id, ds, 'activity', act.id)) : null;
   const checkedStatus = bossSessionActive && si && isBossCheckSet(emp.id, ds, 'status', si.key) ? si : null;
   const activitySpanDays = primaryActivity ? Math.max(1, Math.round((new Date(`${primaryActivity.endDate}T00:00:00`) - new Date(`${primaryActivity.startDate}T00:00:00`)) / 86400000) + 1) : 1;
   const gridActivityLabel = primaryActivity ? activityCellLabel(primaryActivity, activitySpanDays) : '';
@@ -5288,7 +6803,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
       ? gridActivityLabel
       : (activeWorkCode?.abbreviation || gridActivityLabel);
     const activityColor = activeWorkCode?.color || activityDisplayColor(primaryActivity);
-    cellStyleStr = activityStatus(primaryActivity) === 'tentative'
+    cellStyleStr = activityStatus(primaryActivity) === 'tentative' || workTimeIsPlanned(primaryActivity.assignment)
       ? `background:repeating-linear-gradient(135deg,color-mix(in srgb,${activityColor} 28%,transparent) 0 5px,color-mix(in srgb,${activityColor} 7%,transparent) 5px 10px);color:${activityColor}`
       : `background:${activityColor}20;color:${activityColor}`;
   } else if (!isPartial && si) {
@@ -5308,18 +6823,24 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const activityStatusBadge = primaryActivity && si ? `<div class="activity-status-badge" title="${esc(si.label)}" style="color:${si.color}">${esc(si.abbr)}</div>` : '';
   const shiftMeta = primaryActivity ? activityShiftMeta(primaryActivity, primaryActivity.assignment.shift) : null;
   const shiftSymbol = !customActivityShift && shiftMeta?.icon ? `<span class="shift-symbol">${shiftMeta.icon}</span>` : '';
-  if (primaryActivity && activityStatus(primaryActivity) === 'tentative') tipParts.push('Planned assignment');
+  if (primaryActivity && activityStatus(primaryActivity) === 'tentative') tipParts.push('Planned activity');
+  if (primaryActivity && workTimeIsPlanned(primaryActivity.assignment)) tipParts.push('Work time planned');
   const isCancelledActivity = primaryActivity && activityStatus(primaryActivity) === 'cancelled';
   const holidayTint = holiday && !primaryActivity && !si
     ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;border-color:${holiday.color || '#ef4444'}55;${weekend ? 'filter:brightness(.86);' : ''}`
     : '';
   const birthdayBadge = birthday ? `<span class="birthday-cake" title="${esc(`Birthday: ${emp.name}${birthdayAge !== null ? ` · turns ${birthdayAge}` : ''}`)}" aria-label="${esc(`Birthday: ${emp.name}${birthdayAge !== null ? ` · turns ${birthdayAge}` : ''}`)}">${svgIcon('cake', 'Birthday')}</span>` : '';
   let workwheelMarker = appSettings.showWorkwheelCellMarkers !== false && workwheelEvents.length ? `<span class="workwheel-cell-marker" style="--workwheel-color:${esc(workwheelEvents[0].color || '#3b82f6')}" title="${esc(workwheelEvents.map(event => event.title).join('\n'))}">◉${workwheelEvents.length > 1 ? `<small>${workwheelEvents.length}</small>` : ''}</span>` : '';
+  if (appSettings.showMeetingCellMarkers !== false && meetingEvents.length) workwheelMarker += `<span class="meeting-cell-marker" title="${esc(meetingEvents.map(meeting => `${meeting.startTime ? `${meeting.startTime} ` : ''}${meeting.title}`).join('\n'))}" aria-label="${meetingEvents.length} upcoming meeting${meetingEvents.length === 1 ? '' : 's'}">●${meetingEvents.length > 1 ? `<small>${meetingEvents.length}</small>` : ''}</span>`;
   if (cellNote && !primaryActivity && !rotation && !cellText) workwheelMarker += `<span class="cell-note-indicator" role="img" aria-label="Cell note" title="Cell note: ${esc(cellNote)}">N</span>`;
   const overtimeBadge = overtime
     ? `<span class="overtime-badge${!primaryActivity && !rotation && !cellText ? ' overtime-badge-empty' : ''}" title="Overtime: ${formatHoursNumber(overtime.hours)}h${overtime.note ? ` · ${esc(overtime.note)}` : ''}">OT ${formatHoursNumber(overtime.hours)}h</span>`
     : '';
   const workScheduleCheckBadge = checkedActivity || checkedStatus ? `<span class="work-schedule-check" title="Checked in external work system">✓</span>` : '';
+  const dutyMarkers = scheduleDuties.map(assignment => {
+    const type = appSettings.dutyTypes.find(item => item.id === assignment.dutyTypeId);
+    return type ? `<span class="schedule-duty-marker${assignment.status === 'planned' ? ' planned' : ''}" style="--duty-color:${esc(type.color)}" title="${esc(`${type.name} · ${dutyStatusLabel(assignment.status)} · ${assignment.startTime}–${assignment.endTime}`)}">${esc(type.name.slice(0, 4).toUpperCase())}</span>` : '';
+  }).join('');
 
   const fullDayStatusStyle = !primaryActivity && !isPartial && si && !isPlannedStatus
     ? `background:${si.color}20 !important;color:${si.color} !important;`
@@ -5330,17 +6851,17 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     ? ' day-shift-cell'
      : (primaryActivity?.assignment.shift === 'evening' ? ' evening-shift-cell' : (primaryActivity?.assignment.shift === 'night' ? ' night-shift-cell' : '')));
   const activityClass = primaryActivity ? ' has-activity' : '';
-  const plannedClass = primaryActivity && activityStatus(primaryActivity) === 'tentative' ? ' planned-activity-cell' : '';
+  const plannedClass = primaryActivity && (activityStatus(primaryActivity) === 'tentative' || workTimeIsPlanned(primaryActivity.assignment)) ? ' planned-activity-cell' : '';
   const activityColor = activeWorkCode?.color || primaryActivity?.color || 'transparent';
   const activityTextStyle = primaryActivity ? `color:${activityColor};` : '';
   const cancelledTextStyle = isCancelledActivity ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : '';
 
   const rotationMarker = rotationMeta ? `<span class="rotation-marker${rotation?.shift === 'leave' ? ' rotation-leave-marker' : ''}${rotation?.shift === 'overtime' ? ' rotation-overtime-marker' : ''}" title="${esc(rotationMeta.label)}">${rotation?.shift === 'leave' ? 'OFF' : (rotation?.shift === 'overtime' ? 'OT' : 'SR')}</span><span class="shift-symbol rotation-shift-symbol">${rotationMeta.icon}</span>` : '';
-  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}${isPlannedStatus ? ' planned-status-cell' : ''}${checkedActivity || checkedStatus ? ' work-schedule-checked-cell' : ''}"
+  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}${unavailable ? ' unavailable-cell' : ''}${unavailableConflict ? ' unavailable-conflict' : ''}${lockedBillableAssignment ? ' locked-billable-cell' : ''}${isPlannedStatus ? ' planned-status-cell' : ''}${checkedActivity || checkedStatus ? ' work-schedule-checked-cell' : ''}"
     data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
      onclick="handleCellClick(event,${emp.id},'${ds}')"
-  oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${rotationMarker}${rotation ? '' : `${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}${workScheduleCheckBadge}`}<div class="gday-inner" style="${rotationMeta ? 'color:var(--accent-blue);font-weight:800;' : `${activityTextStyle}${cancelledTextStyle}`}\">${rotationMeta ? '' : esc(cellText)}${rotation ? '' : birthdayBadge}</div>${workwheelMarker}</td>`;
+  oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${rotationMarker}${rotation ? '' : `${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}${workScheduleCheckBadge}`}<div class="gday-inner" style="${rotationMeta ? 'color:var(--accent-blue);font-weight:800;' : `${activityTextStyle}${cancelledTextStyle}`}\">${rotationMeta ? '' : esc(cellText)}${rotation ? '' : birthdayBadge}</div>${workwheelMarker}${dutyMarkers}</td>`;
 }
 
 // The compact rotationMarker is the sole SR/OFF/OT label in Schedule cells.
@@ -5369,9 +6890,12 @@ function scrollToToday() {
 function goToday() {
   const y = new Date().getFullYear();
   scheduleAnchorDate = todayStr();
+  if (currentPage === 'duty-planner' && gridPeriod === 'year' && gridYear !== y) gridYear = y;
   const focusToday = () => {
     if (currentPage === 'shift-rotation') {
       document.querySelector(`.rotation-day-head[data-date="${todayStr()}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    } else if (currentPage === 'duty-planner') {
+      scrollDutyDateIntoView(todayStr(), 'smooth');
     } else scrollToToday();
   };
   if (gridPeriod === 'year' && gridYear !== y) {
@@ -5386,7 +6910,7 @@ function goToday() {
   }
 }
 function openScheduleDatePicker() {
-  const input = document.getElementById('schedule-date-jump-input');
+  const input = document.getElementById(currentPage === 'duty-planner' ? 'duty-date-jump-input' : 'schedule-date-jump-input');
   if (!input) return;
   input.value = todayStr();
   if (typeof input.showPicker === 'function') input.showPicker();
@@ -5395,14 +6919,21 @@ function openScheduleDatePicker() {
 function jumpToScheduleDate(value) {
   if (!isValidIsoDate(value)) return;
   const target = new Date(`${value}T00:00:00`);
-  if (gridPeriod === 'year') {
-    gridYear = target.getFullYear();
-  } else {
-    scheduleAnchorDate = value;
-  }
+  if (gridPeriod === 'year') gridYear = target.getFullYear();
+  else scheduleAnchorDate = value;
   saveGridPreferences();
   renderPage();
   setTimeout(() => {
+    if (currentPage === 'duty-planner') {
+      const dutyInput = document.getElementById('duty-date-jump-input');
+      if (dutyInput) dutyInput.value = value;
+      scrollDutyDateIntoView(value, 'smooth');
+      document.querySelectorAll('.jump-date-highlight').forEach(element => element.classList.remove('jump-date-highlight'));
+      document.querySelectorAll(`.duty-day-head[data-date="${value}"],.duty-cell[data-date="${value}"]`).forEach(element => element.classList.add('jump-date-highlight'));
+      clearTimeout(jumpToScheduleDate._highlightTimer);
+      jumpToScheduleDate._highlightTimer = setTimeout(() => document.querySelectorAll('.jump-date-highlight').forEach(element => element.classList.remove('jump-date-highlight')), 5000);
+      return;
+    }
     const scroll = document.getElementById('grid-scroll');
     const header = scroll?.querySelector(`th[data-date="${value}"]`);
     if (!scroll || !header) return;
@@ -5410,27 +6941,26 @@ function jumpToScheduleDate(value) {
     scroll.querySelectorAll(`[data-date="${value}"]`).forEach(element => element.classList.add('jump-date-highlight'));
     const sticky = scroll.querySelector('th.sticky-left, td.sticky-left');
     const stickyWidth = sticky?.getBoundingClientRect().width || 0;
-    const scrollRect = scroll.getBoundingClientRect();
-    const headerRect = header.getBoundingClientRect();
+    const scrollRect = scroll.getBoundingClientRect(), headerRect = header.getBoundingClientRect();
     const targetLeft = headerRect.left - scrollRect.left + scroll.scrollLeft;
     const visibleWidth = Math.max(0, scroll.clientWidth - stickyWidth);
     scroll.scrollLeft = Math.max(0, targetLeft - stickyWidth - Math.max(0, (visibleWidth - headerRect.width) / 2));
     clearTimeout(jumpToScheduleDate._highlightTimer);
-    jumpToScheduleDate._highlightTimer = setTimeout(() => {
-      document.querySelectorAll('.jump-date-highlight').forEach(element => element.classList.remove('jump-date-highlight'));
-    }, 5000);
+    jumpToScheduleDate._highlightTimer = setTimeout(() => document.querySelectorAll('.jump-date-highlight').forEach(element => element.classList.remove('jump-date-highlight')), 5000);
   }, 80);
 }
 function changeGridYear(delta) {
   gridYear += delta;
   saveGridPreferences();
-  renderPage();
+  if (currentPage === 'duty-planner') renderDutyPlannerPreservingViewport();
+  else renderPage();
 }
 function setGridPeriod(period) {
   gridPeriod = normalizeGridPeriod(period);
   if (gridPeriod !== 'year') scheduleAnchorDate = todayStr();
   saveGridPreferences();
-  renderPage();
+  if (currentPage === 'duty-planner') renderDutyPlannerPreservingViewport();
+  else renderPage();
 }
 function changeGridPeriod(delta) {
   if (gridPeriod === 'year') return changeGridYear(delta);
@@ -5439,7 +6969,247 @@ function changeGridPeriod(delta) {
   if (gridPeriod === 'month') date.setMonth(date.getMonth() + delta);
   scheduleAnchorDate = fmt(date);
   saveGridPreferences();
+  if (currentPage === 'duty-planner') renderDutyPlannerPreservingViewport();
+  else renderPage();
+}
+function setScheduleSubview(value) {
+  scheduleSubview = value === 'meetings' ? 'meetings' : 'activities';
+  if (scheduleSubview === 'meetings' && scheduleSubViewDates.month.slice(0, 4) !== String(new Date().getFullYear())) {
+    scheduleSubViewDates.month = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
+    scheduleSubViewDates.selected = todayStr();
+  }
   renderPage();
+}
+function shiftMeetingMonth(delta) {
+  const date = new Date(`${scheduleSubViewDates.month}T00:00:00`);
+  date.setMonth(date.getMonth() + Number(delta), 1);
+  scheduleSubViewDates.month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+  renderGrid();
+}
+function selectMeetingDate(date) {
+  if (!isValidIsoDate(date)) return;
+  scheduleSubViewDates.selected = date;
+  if (date.slice(0, 7) !== scheduleSubViewDates.month.slice(0, 7)) scheduleSubViewDates.month = `${date.slice(0, 7)}-01`;
+  renderGrid();
+}
+function setMeetingLookaheadDays(value) {
+  const days = Number(value);
+  appSettings.meetingLookaheadDays = [3, 7, 14, 30].includes(days) ? days : 14;
+  persistSettings();
+  if (currentPage === 'grid' && scheduleSubview === 'activities') renderGrid();
+}
+function setMeetingsScopeFilter(value) {
+  meetingsScopeFilter = String(value || '');
+  renderGrid();
+}
+function meetingsForDate(date, applyScope = false) {
+  return meetings.filter(meeting => {
+    if (applyScope && !meetingMatchesScheduleScope(meeting)) return false;
+    if (meeting.status === 'cancelled') return true;
+    const end = meeting.endDate || '';
+    if (date < meeting.date || (end && date > end)) return false;
+    const cursor = new Date(`${date}T00:00:00`);
+    const start = new Date(`${meeting.date}T00:00:00`);
+    if (meeting.recurrence === 'daily') return true;
+    if (meeting.recurrence === 'weekly' || meeting.recurrence === 'fortnightly') {
+      const days = Math.round((cursor - start) / 86400000);
+      const cadence = meeting.recurrence === 'weekly' ? 7 : 14;
+      return cursor.getDay() === meeting.weekday && days >= 0 && days % cadence === 0;
+    }
+    if (meeting.recurrence === 'monthly') return cursor.getDate() === start.getDate();
+    return date <= meeting.endDate;
+  }).sort((left, right) => (left.startTime || '').localeCompare(right.startTime || '') || left.title.localeCompare(right.title, 'nb'));
+}
+function recurringMeetingOccurrenceDates(meeting, from, to) {
+  if (!meeting || meeting.recurrence === 'none' || !isValidIsoDate(from) || !isValidIsoDate(to) || to < from) return [];
+  const start = new Date(`${meeting.date}T00:00:00`);
+  const first = new Date(`${from}T00:00:00`);
+  const end = new Date(`${to}T00:00:00`);
+  const result = [];
+  for (const cursor = first; cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+    const date = fmt(cursor);
+    if (date < meeting.date || (meeting.endDate && date > meeting.endDate)) continue;
+    const elapsed = Math.round((cursor - start) / 86400000);
+    if (meeting.recurrence === 'daily'
+      || ((meeting.recurrence === 'weekly' || meeting.recurrence === 'fortnightly') && cursor.getDay() === meeting.weekday && elapsed % (meeting.recurrence === 'fortnightly' ? 14 : 7) === 0)
+      || (meeting.recurrence === 'monthly' && cursor.getDate() === start.getDate())) result.push(date);
+  }
+  return result;
+}
+function meetingsDueForEmployeesOnDate(date) {
+  const lookahead = [3, 7, 14, 30].includes(Number(appSettings.meetingLookaheadDays)) ? Number(appSettings.meetingLookaheadDays) : 14;
+  const end = new Date(`${date}T00:00:00`);
+  end.setDate(end.getDate() + lookahead - 1);
+  const endDate = fmt(end);
+  return meetings.filter(meeting => {
+    if (meeting.status === 'cancelled' || (!meeting.participantIds.length && !meeting.responsibleId)) return false;
+    const people = new Set([...meeting.participantIds, ...(meeting.responsibleId ? [Number(meeting.responsibleId)] : [])]);
+    if (![...people].some(id => { const employee = employees.find(item => Number(item.id) === id); return employee && scheduleEmployeeMatchesScope(employee); })) return false;
+    if (meeting.recurrence === 'none') return meeting.date === date;
+    return recurringMeetingOccurrenceDates(meeting, date, endDate).length > 0;
+  });
+}
+function renderMeetingsView() {
+  const monthStart = new Date(`${scheduleSubViewDates.month}T00:00:00`);
+  const year = monthStart.getFullYear();
+  const month = monthStart.getMonth();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const offset = (firstWeekday + 6) % 7;
+  const gridStart = new Date(year, month, 1 - offset);
+  const dates = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    return fmt(date);
+  });
+  const byDate = new Map(dates.map(date => [date, meetingsForDate(date, true)]));
+  const selectedDate = isValidIsoDate(scheduleSubViewDates.selected) ? scheduleSubViewDates.selected : todayStr();
+  const selectedMeetings = meetingsForDate(selectedDate, true);
+  const typeOptions = meetingTypes.map(type => `<option value="${esc(type.id)}">${esc(type.name)}</option>`).join('');
+  const scopeDepartments = [...new Set(employees.map(employee => String(employee.department || (employeeSection(employee) ? 'Independent sections' : '')).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb', { sensitivity: 'base' }));
+  const scopeSections = [...new Set(employees.map(employeeSection).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb', { sensitivity: 'base' }));
+  const scopeTeams = [...new Set(employees.map(employee => String(employee.team || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb', { sensitivity: 'base' }));
+  const filterId = document.getElementById('meetings-type-filter')?.value || '';
+  const visibleSelectedMeetings = filterId ? selectedMeetings.filter(meeting => meeting.typeId === filterId) : selectedMeetings;
+  document.getElementById('content').innerHTML = `<div class="meetings-view">
+    <header class="meetings-header"><div><div class="eyebrow">SCHEDULE / MEETINGS</div><h1 class="page-title">Meetings</h1><p class="page-sub">Meetings are managed separately from activity planning.</p><div class="schedule-subview-switch" role="group" aria-label="Schedule content"><button type="button" class="${scheduleSubview === 'activities' ? 'active' : ''}" aria-pressed="${scheduleSubview === 'activities'}" onclick="setScheduleSubview('activities')">Activities</button><button type="button" class="active" aria-pressed="true" onclick="setScheduleSubview('meetings')">Meetings</button></div></div><div class="meetings-actions"><label class="meetings-scope-filter">Show meetings for <select class="plain-select" aria-label="Filter meetings by department, section, or team" onchange="setMeetingsScopeFilter(this.value)"><option value="">Everyone</option><optgroup label="Departments">${scopeDepartments.map(value => `<option value="department::${esc(value)}" ${meetingsScopeFilter === `department::${value}` ? 'selected' : ''}>${esc(value)}</option>`).join('')}</optgroup><optgroup label="Sections">${scopeSections.map(value => `<option value="section::${esc(value)}" ${meetingsScopeFilter === `section::${value}` ? 'selected' : ''}>${esc(value)}</option>`).join('')}</optgroup><optgroup label="Teams">${scopeTeams.map(value => `<option value="team::${esc(value)}" ${meetingsScopeFilter === `team::${value}` ? 'selected' : ''}>${esc(value)}</option>`).join('')}</optgroup></select></label><button class="btn btn-sm" type="button" onclick="shiftMeetingMonth(-1)" aria-label="Previous month">‹</button><strong>${monthStart.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</strong><button class="btn btn-sm" type="button" onclick="shiftMeetingMonth(1)" aria-label="Next month">›</button><button class="btn btn-sm" type="button" onclick="selectMeetingDate(todayStr())">Today</button><button class="btn btn-primary" type="button" onclick="openMeetingEditor()">Add meeting</button></div></header>
+    <div class="meetings-layout"><section class="meetings-calendar card"><div class="meetings-weekdays">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day => `<span>${day}</span>`).join('')}</div><div class="meetings-month-grid">${dates.map(date => { const items = byDate.get(date) || []; const inMonth = date.slice(0,7) === scheduleSubViewDates.month.slice(0,7); const dots = items.slice(0,3).map(meeting => `<i style="--meeting-color:${esc(meetingTypes.find(type => type.id === meeting.typeId)?.color || meeting.color)}"></i>`).join(''); return `<button type="button" class="meeting-day${inMonth ? '' : ' outside-month'}${date === selectedDate ? ' selected' : ''}${date === todayStr() ? ' today' : ''}" aria-pressed="${date === selectedDate}" onclick="selectMeetingDate('${date}')"><span>${Number(date.slice(8,10))}</span>${items.length ? `<small>${items.length} meeting${items.length === 1 ? '' : 's'}</small><span class="meeting-dots">${dots}</span>` : ''}</button>`; }).join('')}</div></section>
+      <aside class="meetings-agenda card"><div class="meetings-agenda-heading"><div><span class="eyebrow">DAY AGENDA</span><h2>${new Date(`${selectedDate}T00:00:00`).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</h2></div><label>Type <select id="meetings-type-filter" class="plain-select" onchange="renderGrid()"><option value="">All types</option>${typeOptions}</select></label></div><div class="meeting-agenda-list">${visibleSelectedMeetings.length ? visibleSelectedMeetings.map(meeting => { const type = meetingTypes.find(item => item.id === meeting.typeId); const responsible = employees.find(employee => Number(employee.id) === Number(meeting.responsibleId)); const participants = meeting.participantIds.map(id => employees.find(employee => Number(employee.id) === Number(id))?.name).filter(Boolean); return `<button type="button" class="meeting-agenda-item status-${esc(meeting.status)}" style="--meeting-color:${esc(type?.color || meeting.color)}" onclick="openMeetingEditor('${esc(meeting.id)}')"><span class="meeting-time">${meeting.allDay ? 'All day' : `${esc(meeting.startTime || 'Time not set')}${meeting.endTime ? `–${esc(meeting.endTime)}` : ''}`}</span><span class="meeting-summary"><strong>${esc(meeting.title)}</strong><small>${esc(type?.name || 'Retired type')} · ${esc(meeting.status)}${meeting.location ? ` · ${esc(meeting.location)}` : ''}</small>${participants.length ? `<small>Participants: ${participants.map(esc).join(', ')}</small>` : ''}${responsible ? `<small>Responsible: ${esc(responsible.name)}</small>` : ''}${meeting.externalAttendees ? `<small>External: ${esc(meeting.externalAttendees)}</small>` : ''}</span><span class="meeting-edit-label">Edit</span></button>`; }).join('') : '<div class="meetings-empty"><strong>No meetings on this date</strong><span>Select another date or add a meeting.</span></div>'}</div>
+      <div class="meeting-types-note"><strong>Meeting types</strong><span>${meetingTypes.map(type => `<i style="--meeting-color:${esc(type.color)}"></i>${esc(type.name)}`).join(' · ')}</span>${unlockedBossView() ? '<button type="button" class="btn btn-sm" onclick="manageMeetingTypes()">Manage types</button>' : '<small>Unlock Boss View to manage meeting types.</small>'}</div></aside></div>
+  </div>`;
+  const filter = document.getElementById('meetings-type-filter');
+  if (filter) filter.value = filterId;
+}
+function openMeetingEditor(id = '') {
+  const meeting = meetings.find(item => item.id === String(id));
+  document.getElementById('meeting-id').value = meeting?.id || '';
+  document.getElementById('meeting-modal-title').textContent = meeting ? 'Edit meeting series' : 'Add meeting';
+  document.getElementById('meeting-title').value = meeting?.title || '';
+  const retiredMeetingType = meeting && !meetingTypes.some(type => type.id === meeting.typeId) ? `<option value="${esc(meeting.typeId)}">Retired type (${esc(meeting.typeId)})</option>` : '';
+  document.getElementById('meeting-type').innerHTML = `${retiredMeetingType}${meetingTypes.map(type => `<option value="${esc(type.id)}">${esc(type.name)}</option>`).join('')}`;
+  document.getElementById('meeting-type').value = meeting?.typeId || meetingTypes[0]?.id || '';
+  document.getElementById('meeting-status').value = meeting?.status || 'planned';
+  document.getElementById('meeting-show-in-grid').checked = meeting?.showInEmployeeGrid !== false;
+  document.getElementById('meeting-date').value = meeting?.date || scheduleSubViewDates.selected;
+  document.getElementById('meeting-end-date').value = meeting?.endDate === meeting?.date ? '' : meeting?.endDate || '';
+  document.getElementById('meeting-start-time').value = meeting?.startTime || '';
+  document.getElementById('meeting-end-time').value = meeting?.endTime || '';
+  document.getElementById('meeting-location').value = meeting?.location || '';
+  document.getElementById('meeting-recurrence').value = meeting?.recurrence || 'none';
+  document.getElementById('meeting-responsible').innerHTML = `<option value="">Unassigned</option>${[...employees].sort(comparePersonnelHierarchy).map(employee => `<option value="${employee.id}">${esc(employee.name)} · ${esc([employee.department, employeeSection(employee), employee.process, employee.team].filter(Boolean).join(' / '))}</option>`).join('')}`;
+  document.getElementById('meeting-responsible').value = meeting?.responsibleId || '';
+  meetingParticipantSelection = new Set(meeting?.participantIds || []);
+  meetingParticipantFilter = '';
+  meetingParticipantSearch = '';
+  for (const field of ['department', 'section', 'process', 'team']) meetingParticipantHierarchyFilters[field] = '';
+  renderMeetingParticipants();
+  document.getElementById('meeting-external-attendees').value = meeting?.externalAttendees || '';
+  document.getElementById('meeting-notes').value = meeting?.notes || '';
+  document.getElementById('meeting-delete').style.display = meeting ? '' : 'none';
+  document.getElementById('meeting-modal').classList.add('open');
+  setTimeout(() => document.getElementById('meeting-title').focus(), 20);
+}
+function renderMeetingParticipants() {
+  const container = document.getElementById('meeting-participants');
+  if (!container) return;
+  meetingParticipantHierarchyFilters.search = meetingParticipantSearch;
+  const visible = employees.filter(employee => {
+    const sectionScope = !meetingParticipantFilter || (meetingParticipantFilter.startsWith('department::')
+      ? String(employee.department || '').trim() === meetingParticipantFilter.slice('department::'.length)
+      : employeeSection(employee) === meetingParticipantFilter.slice('section::'.length));
+    return sectionScope && personnelPickerMatches(employee, meetingParticipantHierarchyFilters);
+  }).sort(comparePersonnelHierarchy);
+  const grouped = new Map();
+  visible.forEach(employee => {
+    const department = String(employee.department || '').trim() || 'Unassigned department';
+    const section = employeeSection(employee) || 'Direct personnel';
+    const key = `${department}\u0000${section}`;
+    if (!grouped.has(key)) grouped.set(key, { department, section, people: [] });
+    grouped.get(key).people.push(employee);
+  });
+  const markedCount = meetingParticipantSelection.size;
+  const filterMarkup = ['department', 'section', 'process', 'team'].map(field => `<label>${field[0].toUpperCase()}${field.slice(1)}<select id="meeting-hierarchy-${field}" class="plain-select" aria-label="Filter by ${field}" onchange="setMeetingHierarchyFilter('${field}',this.value)"></select></label>`).join('');
+  container.innerHTML = `<div class="meeting-participant-toolbar"><label>Search<input type="search" aria-label="Search personnel" placeholder="Search personnel…" value="${esc(meetingParticipantSearch)}" oninput="searchMeetingParticipants(this.value)"></label>${filterMarkup}<button type="button" class="btn btn-sm" onclick="setVisibleMeetingParticipants(true)">Select shown</button><button type="button" class="btn btn-sm" onclick="setVisibleMeetingParticipants(false)">Clear shown</button></div><div class="meeting-participant-summary">${markedCount} selected · ${visible.length} shown</div>${visible.length ? [...grouped.values()].map(group => `<section class="meeting-participant-group"><strong>${esc(group.department)} <span>· ${esc(group.section)}</span></strong>${group.people.map(employee => `<label><input type="checkbox" value="${employee.id}" ${meetingParticipantSelection.has(Number(employee.id)) ? 'checked' : ''} onchange="toggleMeetingParticipant(${employee.id},this.checked)"><span>${esc(employee.name)}${employee.role ? ` <small>· ${esc(employee.role)}</small>` : ''}</span></label>`).join('')}</section>`).join('') : '<span class="form-hint">No personnel match this filter.</span>'}`;
+  populatePersonnelPickerFilters('meeting-hierarchy', employees, meetingParticipantHierarchyFilters);
+}
+function setMeetingHierarchyFilter(field, value) {
+  if (!['department', 'section', 'process', 'team'].includes(field)) return;
+  meetingParticipantHierarchyFilters[field] = String(value || '');
+  renderMeetingParticipants();
+}
+function setMeetingParticipantFilter(value) {
+  meetingParticipantFilter = String(value || '');
+  for (const field of ['department', 'section', 'process', 'team']) meetingParticipantHierarchyFilters[field] = '';
+  renderMeetingParticipants();
+}
+function searchMeetingParticipants(value) {
+  meetingParticipantSearch = String(value || '');
+  renderMeetingParticipants();
+  const input = document.querySelector('#meeting-participants input[type="search"]');
+  if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+}
+function setVisibleMeetingParticipants(checked) {
+  const visibleIds = [...document.querySelectorAll('#meeting-participants input[type="checkbox"]')].map(input => Number(input.value));
+  visibleIds.forEach(id => checked ? meetingParticipantSelection.add(id) : meetingParticipantSelection.delete(id));
+  renderMeetingParticipants();
+}
+function toggleMeetingParticipant(id, checked) {
+  const employeeId = Number(id);
+  if (checked) meetingParticipantSelection.add(employeeId);
+  else meetingParticipantSelection.delete(employeeId);
+  renderMeetingParticipants();
+}
+async function saveMeeting() {
+  const id = document.getElementById('meeting-id').value;
+  const title = document.getElementById('meeting-title').value.trim();
+  const date = document.getElementById('meeting-date').value;
+  const endDate = document.getElementById('meeting-end-date').value || date;
+  const recurrence = document.getElementById('meeting-recurrence').value;
+  const dateField = document.getElementById('meeting-date');
+  const endDateField = document.getElementById('meeting-end-date');
+  const nativeDateValid = Boolean(dateField?.valueAsDate && !Number.isNaN(dateField.valueAsDate.getTime()));
+  const nativeEndDateValid = !endDateField?.value || Boolean(endDateField.valueAsDate && !Number.isNaN(endDateField.valueAsDate.getTime()));
+  if (!nativeDateValid || !nativeEndDateValid) { showToast('Choose valid meeting dates using the date picker.', 4500); return; }
+  if (!title || !isValidIsoDate(date) || !isValidIsoDate(endDate) || endDate < date) { alert('Enter a title and valid meeting date range.'); return; }
+  const startTime = document.getElementById('meeting-start-time').value;
+  const endTime = document.getElementById('meeting-end-time').value;
+  if ((startTime && !endTime) || (!startTime && endTime) || (startTime && endDate === date && endTime <= startTime)) { alert('Enter a valid start and end time.'); return; }
+  const weeklyDay = new Date(`${date}T00:00:00`).getDay();
+  const seriesEndDate = endDate > date ? endDate : '';
+  const selectedParticipants = [...meetingParticipantSelection].filter(id => employees.some(employee => Number(employee.id) === Number(id)));
+  const record = { id: id || `meeting-${globalThis.crypto?.randomUUID?.() || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`}`, title, typeId: document.getElementById('meeting-type').value, date, endDate: seriesEndDate, startTime, endTime, allDay: !startTime, location: document.getElementById('meeting-location').value.trim(), recurrence, status: document.getElementById('meeting-status').value, showInEmployeeGrid: document.getElementById('meeting-show-in-grid').checked, responsibleId: Number(document.getElementById('meeting-responsible').value) || null, participantIds: selectedParticipants, externalAttendees: document.getElementById('meeting-external-attendees').value.trim(), notes: document.getElementById('meeting-notes').value.trim(), weekday: weeklyDay, color: meetingTypes.find(type => type.id === document.getElementById('meeting-type').value)?.color || '#2563eb' };
+  const saved = await mutateState('saveMeeting', () => {
+    if (id) meetings = meetings.map(meeting => meeting.id === id ? record : meeting);
+    else meetings.push(record);
+  });
+  if (!saved || !meetings.some(meeting => meeting.id === record.id)) return;
+  scheduleSubViewDates.month = `${date.slice(0,7)}-01`;
+  scheduleSubViewDates.selected = date;
+  closeModal('meeting-modal');
+  renderGrid();
+}
+async function deleteMeetingFromEditor() {
+  const id = document.getElementById('meeting-id').value;
+  const meeting = meetings.find(item => item.id === id);
+  if (!meeting || !confirm(`Delete the ${meeting.recurrence === 'none' ? 'meeting' : 'entire recurring series'} “${meeting.title}”?`)) return;
+  await mutateState('deleteMeeting', () => { meetings = meetings.filter(item => item.id !== id); });
+  closeModal('meeting-modal');
+  renderGrid();
+}
+async function manageMeetingTypes() {
+  if (!unlockedBossView()) { showToast('Unlock Boss View to manage meeting types.', 4000); return; }
+  const definition = meetingTypes.map(type => `${type.id}|${type.name}|${type.color}`).join('\n');
+  const updated = prompt('Meeting types — one per line as id|name|#hex-color. Retired types remain readable on existing meetings.', definition);
+  if (updated === null) return;
+  const parsed = updated.split(/\r?\n/).map((line, index) => {
+    const [rawId, rawName, rawColor] = line.split('|');
+    const name = String(rawName || '').trim();
+    if (!name) return null;
+    return { id: String(rawId || `meeting-type-${index + 1}`).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 64), name, color: normalizeHexColor(rawColor, '#64748b') };
+  }).filter(Boolean);
+  const ids = parsed.map(type => type.id);
+  if (!parsed.length || new Set(ids).size !== ids.length) { alert('Add at least one meeting type and use unique IDs.'); return; }
+  await mutateState('manageMeetingTypes', () => { meetingTypes = normalizeMeetingTypes(parsed); });
+  renderGrid();
 }
 function showAllEmployees() {
   hiddenEmployees.clear();
@@ -5619,27 +7389,47 @@ function startHolidayRangeSelection(event, date) {
 
 // ═══ STATUS PICKER ═══════════════════════════════════════════════════════════
 function _showPicker(event, empId, dates) {
+  const sameSelection = pickerEmpId === empId && pickerDates.length === dates.length && pickerDates.every((date, index) => date === dates[index]);
   pickerEmpId = empId;
   pickerDates = dates;
   pickerDate = dates[0];
+  if (!sameSelection) {
+    pickerOvertimeExpanded = false;
+    document.getElementById('pk-overtime-toggle').setAttribute('aria-expanded', 'false');
+  }
   pickerSelectedStatus = null;
+  pickerWorkTimeLifecycles = {};
   const emp = empById(empId);
   const dateLabel = pickerDates.length > 1
     ? `${fmtMed(pickerDates[0])} – ${fmtMed(pickerDates[pickerDates.length - 1])} (${pickerDates.length} days)`
     : fmtMed(pickerDate);
   document.getElementById('pk-head').innerHTML = `<b>${esc(emp?.name || '')}</b>${dateLabel}`;
+  const unavailableEntries = pickerDates.map(date => cellUnavailable(empId, date));
+  const allUnavailable = unavailableEntries.length > 0 && unavailableEntries.every(Boolean);
+  const unavailableTitle = unavailableEntries.some(Boolean)
+    ? `${allUnavailable ? 'Clear' : 'Mark'} unavailable`
+    : 'Mark employee unavailable for selected date(s)';
+  document.getElementById('pk-unavailable-section').innerHTML = `<button type="button" class="pk-btn pk-unavailable-code" aria-pressed="${allUnavailable}" title="${esc(unavailableTitle)}" onclick="toggleEmployeeUnavailable()"><span class="pk-initial">${allUnavailable ? '×' : 'U'}</span><span class="pk-status-label">Unavailable${unavailableEntries.some(Boolean) && !allUnavailable ? ' · some selected' : ''}</span></button>`;
+  document.getElementById('pk-unavailable-section').style.display = bossSessionActive ? 'none' : '';
 
-  const acts = activities.filter(act => actParticipantIds(act).includes(empId) && activityRelevantToEmployee(act, emp) && pickerDates.some(date => date >= act.startDate && date <= act.endDate));
+  const acts = activities.filter(act => actParticipantIds(act).includes(empId) && pickerDates.some(date => date >= act.startDate && date <= act.endDate));
   const entry = getEntryObj(`${empId}_${pickerDate}`);
+  const lockedBillableDates = pickerDates.filter(date => acts.some(activity => assignmentWorkCodeIsLocked(empId, date, activity.id)));
+  const lockedDatesMessage = lockedBillableDates.length
+    ? `<div class="pk-lock-notice" role="status">🔒 ${lockedBillableDates.length === pickerDates.length ? 'Billable work is locked on' : 'Some billable work is locked on'} ${lockedBillableDates.map(fmtMed).join(', ')} until Boss View is unlocked.</div>`
+    : '';
   pickerStatusLifecycle = entry?.lifecycle || 'confirmed';
   if (bossSessionActive) {
     document.getElementById('pk-status-section').style.display = 'none';
     document.getElementById('pk-duration-section').style.display = 'none';
     document.getElementById('pk-note-section').innerHTML = '';
     document.getElementById('pk-overtime-section').innerHTML = '';
+    document.getElementById('pk-overtime-toggle').style.display = 'none';
     document.getElementById('pk-clear-btn').style.display = 'none';
-    document.getElementById('pk-add-activity-btn').style.display = 'none';
+    document.getElementById('pk-add-activity-btn').style.display = currentPage === 'grid' ? 'flex' : 'none';
+    document.getElementById('pk-add-activity-btn').innerHTML = `${svgIcon('plus')} Add activity${pickerDates.length > 1 ? ' for selected dates' : ''}`;
   } else {
+    document.getElementById('pk-overtime-toggle').style.display = '';
     document.getElementById('pk-status-section').style.display = 'flex';
     const btns = document.getElementById('pk-status-btns');
     btns.innerHTML = statuses.length
@@ -5649,7 +7439,7 @@ function _showPicker(event, empId, dates) {
     document.getElementById('pk-time').value = (entry?.durationType === 'time' && entry.time) ? entry.time : '';
     const cellNotes = pickerDates.map(date => cellNotesMap[`${empId}_${date}`] || '');
     const sharedCellNote = cellNotes.length && cellNotes.every(note => note === cellNotes[0]) ? cellNotes[0] : '';
-    document.getElementById('pk-note-section').innerHTML = `<div class="pk-sep"></div><div class="pk-label">Cell note</div><div class="pk-shift-box"><div class="pk-field"><span class="pk-field-label">Note${pickerDates.length > 1 ? ' for selected dates' : ''}</span><textarea class="pk-input" id="pk-cell-note" maxlength="240" rows="2" placeholder="Meeting, absence reason, or other context">${esc(sharedCellNote)}</textarea></div><div class="pk-save-row"><button class="pk-clear" ${cellNotes.some(Boolean) ? '' : 'disabled'} onclick="removeCellNote()">Remove note</button><button class="btn btn-sm btn-primary" onclick="saveCellNote()">Save note</button></div></div>`;
+    document.getElementById('pk-note-section').innerHTML = `<div class="pk-sep"></div><div class="pk-label">Cell note</div><div class="pk-shift-box"><div class="pk-field"><span class="pk-field-label">Note${pickerDates.length > 1 ? ' for selected dates' : ''}</span><textarea class="pk-input" id="pk-cell-note" maxlength="240" rows="2" placeholder="Meeting, absence reason, or other context">${esc(sharedCellNote)}</textarea></div><div class="pk-save-row"><button class="pk-clear" ${cellNotes.some(Boolean) ? '' : 'disabled'} onclick="removeCellNote()">Remove note</button><button class="btn btn-sm btn-primary" onclick="saveCellNote()">Save</button></div></div>`;
     const overtimeEntries = pickerDates.map(date => overtimeMap[`${empId}_${date}`]).filter(Boolean);
     const sharedOvertimeHours = overtimeEntries.length === pickerDates.length && overtimeEntries.every(item => item.hours === overtimeEntries[0].hours)
       ? overtimeEntries[0].hours
@@ -5657,35 +7447,35 @@ function _showPicker(event, empId, dates) {
     const sharedOvertimeNote = overtimeEntries.length === pickerDates.length && overtimeEntries.every(item => item.note === overtimeEntries[0].note)
       ? overtimeEntries[0].note
       : '';
+    const overtimeExpanded = pickerOvertimeExpanded;
+    document.getElementById('pk-overtime-toggle').setAttribute('aria-expanded', String(overtimeExpanded));
     document.getElementById('pk-overtime-section').innerHTML = `
-      <div class="pk-sep"></div>
-      <div class="pk-label">Additional work</div>
-      <div class="pk-shift-box">
-        <div class="pk-shift-title"><span class="pk-color-dot" style="background:#c2410c"></span><span>Overtime (OT)</span></div>
+      <div class="pk-shift-box pk-overtime-editor" style="display:${overtimeExpanded ? 'flex' : 'none'}">
         <div class="pk-field"><span class="pk-field-label">Hours${pickerDates.length > 1 ? ' per selected day' : ''}</span><input class="pk-input" id="pk-overtime-hours" type="text" inputmode="decimal" placeholder="e.g. 2.5" value="${esc(sharedOvertimeHours)}"></div>
-        <div class="pk-field"><span class="pk-field-label">Note (optional)</span><input class="pk-input" id="pk-overtime-note" type="text" maxlength="120" placeholder="Reason or context" value="${esc(sharedOvertimeNote)}"></div>
-        <div class="pk-save-row"><button class="pk-clear" ${overtimeEntries.length ? '' : 'disabled'} onclick="removeOvertime()">Remove OT</button><button class="btn btn-sm btn-primary" onclick="saveOvertime()">Save OT</button></div>
+        <div class="pk-field"><span class="pk-field-label">Reason (optional)</span><input class="pk-input" id="pk-overtime-note" type="text" maxlength="120" placeholder="Reason or context" value="${esc(sharedOvertimeNote)}"></div>
+        <div class="pk-save-row"><button class="pk-clear" ${overtimeEntries.length ? '' : 'disabled'} onclick="removeOvertime()">Remove OT</button><button class="btn btn-sm btn-primary" onclick="saveOvertime()">Save overtime</button></div>
       </div>`;
     const hasCellActivity = activities.some(act => actParticipantIds(act).includes(empId) && pickerDate >= act.startDate && pickerDate <= act.endDate && (() => { const assignment = activityAssignment(`${empId}_${pickerDate}_${act.id}`); return assignment.assigned === true && !assignment.excluded; })());
-    document.getElementById('pk-clear-btn').style.display = (entry || hasCellActivity || overtimeEntries.length || cellNotes.some(Boolean)) ? 'block' : 'none';
+    const hasUnavailable = unavailableEntries.some(Boolean);
+    document.getElementById('pk-clear-btn').style.display = (entry || hasCellActivity || overtimeEntries.length || cellNotes.some(Boolean) || hasUnavailable) ? 'block' : 'none';
     document.getElementById('pk-clear-label').textContent = pickerDates.length > 1 ? 'Clear all selected cells' : 'Clear cell';
     document.getElementById('pk-add-activity-btn').style.display = pickerDates.length > 1 ? 'flex' : 'none';
   }
 
   const sect = document.getElementById('pk-shift-section');
-  if (appSettings.shiftRotationEnabled === true && pickerDates.some(date => rotationRecord(empId, date))) {
+  if (!bossSessionActive && appSettings.shiftRotationEnabled === true && pickerDates.some(date => rotationRecord(empId, date))) {
     const firstRotation = pickerDates.map(date => rotationRecord(empId, date)).find(Boolean);
     const selectedRotation = firstRotation?.shift || '';
     sect.innerHTML = `<div class="pk-sep"></div><div class="pk-label">Shift Rotation${pickerDates.length > 1 ? ' for selected dates' : ''}</div><div class="pk-shift-box"><div class="pk-shift-options">
       ${['day','evening','night','turn','leave'].map(shift => `<button class="pk-chip${selectedRotation === shift ? ' sel' : ''}" onclick="setRotationFromPicker('${shift}')">${esc(rotationShiftMeta(shift).label)}</button>`).join('')}
       <button class="pk-chip" onclick="setRotationFromPicker('')">Clear rotation</button>
     </div></div>`;
-  } else if (appSettings.shiftRotationEnabled === true && currentPage === 'shift-rotation') {
+  } else if (!bossSessionActive && appSettings.shiftRotationEnabled === true && currentPage === 'shift-rotation') {
     sect.innerHTML = `<div class="pk-sep"></div><div class="pk-label">Shift Rotation${pickerDates.length > 1 ? ' for selected dates' : ''}</div><div class="pk-shift-box"><div class="pk-shift-options">
       ${['day','evening','night','turn','leave'].map(shift => `<button class="pk-chip" onclick="setRotationFromPicker('${shift}')">${esc(rotationShiftMeta(shift).label)}</button>`).join('')}
       <button class="pk-chip" onclick="setRotationFromPicker('')">Clear rotation</button>
     </div></div>`;
-  } else if (bossSessionActive) {
+  } else if (bossSessionActive && !acts.length) {
     const status = entry ? siFor(entry.status) : null;
     const statusCheckState = status ? bossCheckState(empId, 'status', status.key) : 'none';
     const statusItem = status ? `<div class="pk-shift-box">
@@ -5701,10 +7491,16 @@ function _showPicker(event, empId, dates) {
     }).join('');
     sect.innerHTML = statusItem || activityItems ? '<div class="pk-sep"></div><div class="pk-label">Work schedule check</div>' + statusItem + activityItems : '';
   } else if (acts.length) {
-    sect.innerHTML = '<div class="pk-sep"></div><div class="pk-label">Activity assignment</div>' + acts.map(act => {
+    const status = bossSessionActive && entry ? siFor(entry.status) : null;
+    const statusCheckState = status ? bossCheckState(empId, 'status', status.key) : 'none';
+    const statusCheckItem = status ? `<div class="pk-shift-box"><div class="pk-shift-title"><span class="pk-color-dot" style="background:${status.color}"></span><span>Daily code: ${esc(status.label)}${status.isAbsence ? ' (absence)' : ''}</span></div><div class="pk-save-row"><button class="pk-chip${statusCheckState !== 'none' ? ' sel' : ''}" type="button" onclick="toggleBossCheck(${empId},'status',${JSON.stringify(status.key)})">${statusCheckState === 'all' ? '✓ Checked' : (statusCheckState === 'some' ? '◐ Partly checked' : 'Mark checked')}</button></div></div>` : '';
+    sect.innerHTML = (statusCheckItem ? '<div class="pk-sep"></div><div class="pk-label">Work schedule check</div>' + statusCheckItem : '') + '<div class="pk-sep"></div><div class="pk-label">Activity assignment</div>' + acts.map(act => {
       const firstDate = pickerDates.find(date => date >= act.startDate && date <= act.endDate) || pickerDate;
       const assignmentKey = `${empId}_${firstDate}_${act.id}`;
       const assignment = activityAssignment(assignmentKey);
+      const workTimeLifecycle = assignment.lifecycle || 'confirmed';
+      const activityCheckState = bossSessionActive ? bossCheckState(empId, 'activity', act.id) : 'none';
+      pickerWorkTimeLifecycles[act.id] = workTimeLifecycle;
       const selectedCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
       const rawShift = assignment.shift || '';
       const selectedShift = !assignment.assigned || assignment.excluded
@@ -5712,8 +7508,12 @@ function _showPicker(event, empId, dates) {
         : (!assignment.shift
           ? 'normal'
           : (['normal', 'day', 'evening', 'night', 'turn'].includes(rawShift) ? rawShift : 'custom'));
-      return `<div class="pk-shift-box">
-        <div class="pk-shift-title"><span class="act-dot" style="background:${act.color};width:9px;height:9px"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(act.name)}${act.abbreviation ? ` (${esc(act.abbreviation)})` : ''}</span></div>
+      const assignmentSummary = assignment.assigned && !assignment.excluded
+        ? [selectedCode ? `${selectedCode.abbreviation} · ${selectedCode.name}` : '', selectedShift === 'normal' ? 'Normal Hours' : selectedShift && selectedShift !== 'custom' ? selectedShift[0].toUpperCase() + selectedShift.slice(1) : selectedShift === 'custom' ? assignment.shift : ''].filter(Boolean).join(' · ')
+        : 'Not assigned';
+      return `<details class="pk-assignment-card">
+        <summary class="pk-assignment-summary"><span class="act-dot" style="background:${act.color};width:9px;height:9px"></span><span class="pk-assignment-name">${esc(act.name)}${act.abbreviation ? ` (${esc(act.abbreviation)})` : ''}</span><span class="pk-assignment-current">${esc(assignmentSummary)}</span>${svgIcon('chevronDown')}</summary>
+        <div class="pk-assignment-editor">
         <div class="pk-field"><span class="pk-field-label">Work Code</span>
           <input id="pk-code-${act.id}" type="hidden" value="${esc(assignment.workCodeId || '')}">
           <details class="pk-code-menu" id="pk-code-menu-${act.id}">
@@ -5721,6 +7521,7 @@ function _showPicker(event, empId, dates) {
             <div class="pk-code-options">${sortedPlanningItems(appSettings.workCodes).map(code => `<button type="button" class="pk-code-option${assignment.workCodeId === code.id ? ' sel' : ''}" data-work-code-id="${esc(code.id)}" onclick="selectPickerWorkCode(${act.id},this.dataset.workCodeId)"><span class="pk-color-dot" style="background:${code.color}"></span><span>${esc(code.abbreviation)} · ${esc(code.name)}</span></button>`).join('')}</div>
           </details>
         </div>
+        <div class="pk-field"><span class="pk-field-label">Work-time status</span><div class="pk-shift-options" id="pk-work-time-state-${act.id}" data-lifecycle="${workTimeLifecycle}"><button class="pk-chip${workTimeLifecycle === 'confirmed' ? ' sel' : ''}" type="button" onclick="setPickerWorkTimeLifecycle(${act.id},'confirmed')">Confirmed</button><button class="pk-chip${workTimeLifecycle === 'planned' ? ' sel' : ''}" type="button" onclick="setPickerWorkTimeLifecycle(${act.id},'planned')">Planned</button></div><div class="form-hint">Applies to this employee’s work time, not the activity status.</div></div>
         <div id="pk-admin-${act.id}">${pickerAdministrativeField(act.id, selectedCode, assignment.administrativeTime)}</div>
         <div class="pk-field"><span class="pk-field-label">Shift Type</span><div class="pk-shift-options" id="pk-shifts-${act.id}" data-shift="${esc(selectedShift === 'custom' ? assignment.shift : selectedShift)}">
           <button class="pk-chip${selectedShift === 'normal' ? ' sel' : ''}" onclick="selectPickerShift(${act.id},'normal')">Normal Hours (NA)</button>
@@ -5733,12 +7534,15 @@ function _showPicker(event, empId, dates) {
           </div><div id="pk-custom-shift-wrap-${act.id}" style="display:${selectedShift === 'custom' ? 'block' : 'none'}"><input class="pk-input" id="pk-custom-shift-${act.id}" type="text" placeholder="1500-2000" value="${esc(selectedShift === 'custom' ? assignment.shift : '')}" oninput="document.getElementById('pk-shifts-${act.id}').dataset.shift=this.value.trim()"><div class="form-hint">Expected format: HHMM-HHMM, for example 1500-2000.</div></div></div>
         <div class="pk-save-row">
           <button class="pk-clear" ${assignment.assigned && !assignment.excluded ? '' : 'disabled'} onclick="clearActivityAssignment(${empId},${act.id})">${assignment.assigned && !assignment.excluded ? `Remove from ${esc(act.abbreviation || act.name)}` : 'Not assigned'}</button>
+          ${bossSessionActive ? `<button class="pk-chip${activityCheckState !== 'none' ? ' sel' : ''}" type="button" onclick="toggleBossCheck(${empId},'activity',${act.id})">${activityCheckState === 'all' ? '✓ Checked' : (activityCheckState === 'some' ? '◐ Partly checked' : 'Mark checked')}</button>` : ''}
           <button class="btn btn-sm btn-primary" onclick="saveActivityAssignment(${empId},${act.id})">Set</button>
         </div>
-      </div>`;
+        </div>
+      </details>`;
     }).join('');
   } else sect.innerHTML = '';
 
+  sect.insertAdjacentHTML('afterbegin', lockedDatesMessage);
   const picker = document.getElementById('picker');
   picker.classList.add('open');
   const pad = 8;
@@ -5758,6 +7562,8 @@ function openActivityFromSelection() {
   if (!pickerDates.length) return;
   const blocked = pickerDates.filter(date => employeeHasRotation(pickerEmpId, date));
   if (blocked.length) { alert(`Cannot create an Activity on Shift Rotation date(s): ${blocked.join(', ')}`); return; }
+  const unavailableDates = pickerDates.filter(date => cellUnavailable(pickerEmpId, date));
+  if (unavailableDates.length && !confirm(`This employee is marked unavailable on:\n\n${unavailableDates.map(date => `${fmtMed(date)}${cellUnavailable(pickerEmpId, date)?.reason ? ` — ${cellUnavailable(pickerEmpId, date).reason}` : ''}`).join('\n')}\n\nCreate an activity anyway?`)) return;
   const sorted = [...pickerDates].sort();
   pendingActivityPreset = {
     startDate: sorted[0],
@@ -5801,6 +7607,16 @@ function selectPickerWorkCode(actId, workCodeId) {
   document.getElementById(`pk-code-menu-${actId}`)?.removeAttribute('open');
   const admin = document.getElementById(`pk-admin-${actId}`);
   if (admin) admin.innerHTML = pickerAdministrativeField(actId, code, '');
+}
+function setPickerWorkTimeLifecycle(actId, lifecycle) {
+  const value = lifecycle === 'planned' ? 'planned' : 'confirmed';
+  pickerWorkTimeLifecycles[actId] = value;
+  const container = document.getElementById(`pk-work-time-state-${actId}`);
+  if (!container) return;
+  container.dataset.lifecycle = value;
+  container.querySelectorAll('[onclick*="setPickerWorkTimeLifecycle"]').forEach(button => {
+    button.classList.toggle('sel', button.getAttribute('onclick')?.includes(`'${value}'`) === true);
+  });
 }
 function pickerAdministrativeField(actId, code, value = '') {
   if (!code || code.aggregationMode === 'days') return code ? '<div class="form-hint" style="margin-bottom:7px">Administrative value: 1d per assigned date</div>' : '';
@@ -5867,25 +7683,52 @@ async function saveActivityAssignment(empId, actId) {
   const isNormalWorkingHours = !customShift && selectedShift === 'normal';
   const shift = customShift || selectedShift;
   if (!activity) { alert('Select a Shift Type.'); return; }
-  const dates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
-  const blockedDates = dates.filter(date => employeeHasRotation(empId, date));
-  if (blockedDates.length) { alert(`Cannot plan this Activity on Shift Rotation date(s): ${blockedDates.join(', ')}`); return; }
-  if (!shift) {
-    const hasAssignment = dates.some(date => {
+  const proposedDates = (pickerDates.length ? pickerDates : [pickerDate]).filter(date => date >= activity.startDate && date <= activity.endDate);
+  const proposedWorkCodeId = workCodeId || null;
+  const plannedLifecycle = pickerWorkTimeLifecycles[actId] === 'planned' ? 'planned' : 'confirmed';
+  if (!shift && !proposedWorkCodeId) {
+    const clearDates = proposedDates.filter(date => {
       const assignment = activityAssignment(`${empId}_${date}_${actId}`);
       return assignment.assigned && !assignment.excluded;
     });
-    if (hasAssignment) { await clearActivityAssignment(empId, actId); return; }
+    if (clearDates.length) { await clearActivityAssignment(empId, actId); return; }
+    showToast('Select a work code or Normal Working Hours.', 4000);
+    return;
+  }
+  const proposedByDate = Object.fromEntries(proposedDates.map(date => [date, shift
+    ? { activityId: actId, assignment: { shift, workCodeId: proposedWorkCodeId, lifecycle: plannedLifecycle, assigned: true, excluded: false }, editingExisting: Boolean(activityAssignment(`${empId}_${date}_${actId}`).assigned && !activityAssignment(`${empId}_${date}_${actId}`).excluded) }
+    : { activityId: actId, remove: true }]));
+  const { allowedDates: dates } = guardLockedBillableWorkMapDates(proposedDates, empId, 'change', proposedByDate);
+  if (!dates.length) return;
+  const blockedDates = bossSessionActive ? [] : dates.filter(date => employeeHasRotation(empId, date));
+  if (blockedDates.length) { alert(`Cannot plan this Activity on Shift Rotation date(s): ${blockedDates.join(', ')}`); return; }
+  const existingAssignmentDates = proposedDates.filter(date => {
+    const assignment = activityAssignment(`${empId}_${date}_${actId}`);
+    return assignment.assigned && !assignment.excluded;
+  });
+  const datesToAssign = dates.filter(date => !existingAssignmentDates.includes(date));
+  const unavailableDates = datesToAssign.filter(date => cellUnavailable(empId, date));
+  if (unavailableDates.length && !confirm(`This employee is marked unavailable on:\n\n${unavailableDates.map(date => `${fmtMed(date)}${cellUnavailable(empId, date)?.reason ? ` — ${cellUnavailable(empId, date).reason}` : ''}`).join('\n')}\n\nAssign work anyway?`)) return;
+  if (!shift) {
+    const hasAssignment = proposedDates.some(date => {
+      const assignment = activityAssignment(`${empId}_${date}_${actId}`);
+      return assignment.assigned && !assignment.excluded;
+    });
+    if (hasAssignment) {
+      if (existingAssignmentDates.length) await clearActivityAssignment(empId, actId);
+      else alert('Select a Shift Type.');
+      return;
+    }
     alert('Select a Shift Type.');
     return;
   }
   if (!isNormalWorkingHours && !workCodeId) { alert('Select a Work Code, or use Normal Working Hours.'); return; }
   if (workCode?.aggregationMode === 'hours' && workCode.durationMode !== 'fixed' && !timeRangeHours(administrativeTime)) { alert('Enter a valid administrative time range, e.g. 1800-2200.'); return; }
-  if (!confirmActivityReplacement(empId, dates, actId)) return;
+  if (!confirmActivityReplacement(empId, datesToAssign, actId)) return;
   await mutateState('saveActivityAssignment', () => {
   dates.forEach(date => {
-    removeConflictingActivityAssignments(empId, date, actId);
-    activityShiftsMap[`${empId}_${date}_${actId}`] = { shift, workCodeId: workCodeId || null, administrativeTime, staffingImpactOverride: null, assigned: true, excluded: false };
+    if (!existingAssignmentDates.includes(date)) removeConflictingActivityAssignments(empId, date, actId);
+    activityShiftsMap[`${empId}_${date}_${actId}`] = { shift, workCodeId: workCodeId || null, administrativeTime, staffingImpactOverride: null, lifecycle: pickerWorkTimeLifecycles[actId] === 'planned' ? 'planned' : 'confirmed', assigned: true, excluded: false };
   });
   if (pickerSelectedStatus) {
     dates.forEach(date => {
@@ -5901,7 +7744,9 @@ async function saveActivityAssignment(empId, actId) {
 async function clearActivityAssignment(empId, actId) {
   const activity = activities.find(item => item.id === actId);
   if (!activity) return;
-  const dates = [...(pickerDates.length ? pickerDates : [pickerDate])].filter(date => date >= activity.startDate && date <= activity.endDate);
+  const proposedDates = [...(pickerDates.length ? pickerDates : [pickerDate])].filter(date => date >= activity.startDate && date <= activity.endDate);
+  const proposedByDate = Object.fromEntries(proposedDates.map(date => [date, { activityId: actId, remove: true }]));
+  const { allowedDates: dates } = guardLockedBillableWorkMapDates(proposedDates, empId, 'remove', proposedByDate);
   if (!dates.length) return;
   await mutateState('clearActivityAssignment', () => {
     dates.forEach(date => excludeActivityAssignment(`${empId}_${date}_${actId}`));
@@ -6006,6 +7851,40 @@ async function saveCellNote() {
   pickerDates.forEach(date => updateCell(pickerEmpId, date));
   closePicker();
 }
+async function toggleEmployeeUnavailable() {
+  if (pickerEmpId == null || !pickerDates.length) return;
+  const existing = pickerDates.map(date => cellUnavailable(pickerEmpId, date));
+  if (existing.every(Boolean)) {
+    await clearEmployeeUnavailable();
+    return;
+  }
+  const conflicts = pickerDates.filter(date => activities.some(activity => actParticipantIds(activity).includes(pickerEmpId) && date >= activity.startDate && date <= activity.endDate && (() => {
+    const assignment = activityAssignment(`${pickerEmpId}_${date}_${activity.id}`);
+    return assignment.assigned === true && !assignment.excluded && !workTimeIsPlanned(assignment);
+  })()));
+  if (conflicts.length && !confirm(`Existing activity assignments will remain on unavailable dates:\n\n${conflicts.map(fmtMed).join('\n')}\n\nMark these dates unavailable anyway?`)) return;
+  const dates = [...pickerDates];
+  const empId = pickerEmpId;
+  await mutateState('saveEmployeeUnavailable', () => {
+    dates.forEach(date => {
+      const key = `${empId}_${date}`;
+      unavailableMap[key] = unavailableMap[key] || { reason: '' };
+    });
+  });
+  dates.forEach(date => updateCell(empId, date));
+  if (conflicts.length) showToast(`Unavailable dates overlap ${conflicts.length} existing assignment date${conflicts.length === 1 ? '' : 's'}; assignments were kept.`, 4500);
+  _showPicker(null, empId, dates);
+}
+async function clearEmployeeUnavailable() {
+  if (pickerEmpId == null || !pickerDates.length) return;
+  const dates = [...pickerDates];
+  const empId = pickerEmpId;
+  await mutateState('clearEmployeeUnavailable', () => {
+    dates.forEach(date => { delete unavailableMap[`${empId}_${date}`]; });
+  });
+  dates.forEach(date => updateCell(empId, date));
+  _showPicker(null, empId, dates);
+}
 async function removeCellNote() {
   if (pickerEmpId == null || !pickerDates.length) return;
   await mutateState('removeCellNote', () => {
@@ -6056,6 +7935,15 @@ async function removeOvertime() {
   dates.forEach(date => updateCell(pickerEmpId, date));
   closePicker();
 }
+function toggleOvertimeEditor() {
+  const toggle = document.getElementById('pk-overtime-toggle');
+  const editor = document.querySelector('#pk-overtime-section .pk-overtime-editor');
+  if (!toggle || !editor) return;
+  pickerOvertimeExpanded = !pickerOvertimeExpanded;
+  toggle.setAttribute('aria-expanded', String(pickerOvertimeExpanded));
+  editor.style.display = pickerOvertimeExpanded ? 'flex' : 'none';
+  if (pickerOvertimeExpanded) document.getElementById('pk-overtime-hours')?.focus();
+}
 async function clearStatus() {
   if (pickerEmpId == null || !pickerDate) return;
   const dates = pickerDates.length ? pickerDates : [pickerDate];
@@ -6064,6 +7952,7 @@ async function clearStatus() {
     entriesMap[`${pickerEmpId}_${date}`] = null;
     overtimeMap[`${pickerEmpId}_${date}`] = null;
     delete cellNotesMap[`${pickerEmpId}_${date}`];
+    delete unavailableMap[`${pickerEmpId}_${date}`];
     activities.filter(act => actParticipantIds(act).includes(pickerEmpId) && date >= act.startDate && date <= act.endDate).forEach(act => {
       excludeActivityAssignment(`${pickerEmpId}_${date}_${act.id}`);
       delete workScheduleChecksMap[`${pickerEmpId}_${date}_${act.id}`];
@@ -6075,7 +7964,14 @@ async function clearStatus() {
   closePicker();
 }
 async function saveShift(empId, date, actId, shift) {
-  const dates = pickerEmpId === empId && pickerDates.length ? pickerDates : [date];
+  const proposedDates = pickerEmpId === empId && pickerDates.length ? pickerDates : [date];
+  const proposedByDate = Object.fromEntries(proposedDates.map(selectedDate => {
+    const current = activityAssignment(`${empId}_${selectedDate}_${actId}`);
+    const assignment = shift === null ? null : { ...current, shift, lifecycle: pickerWorkTimeLifecycles[actId] === 'planned' ? 'planned' : 'confirmed', assigned: true, excluded: false };
+    return [selectedDate, shift === null ? { activityId: actId, remove: true } : { activityId: actId, assignment }];
+  }));
+  const { allowedDates: dates } = guardLockedBillableWorkMapDates(proposedDates, empId, shift === null ? 'remove' : 'change', proposedByDate);
+  if (!dates.length) return;
   await mutateState('saveShift', () => {
   for (const selectedDate of dates) {
     if (pickerSelectedStatus) {
@@ -6085,22 +7981,34 @@ async function saveShift(empId, date, actId, shift) {
     }
     const key = `${empId}_${selectedDate}_${actId}`;
     if (shift === null) excludeActivityAssignment(key);
-    else activityShiftsMap[key] = { ...activityAssignment(key), shift, assigned: true, excluded: false };
+    else {
+      const existingAssignment = activityAssignment(key);
+      activityShiftsMap[key] = { ...existingAssignment, shift, lifecycle: pickerWorkTimeLifecycles[actId] === 'planned' ? 'planned' : 'confirmed', assigned: true, excluded: false };
+    }
   }
   });
   dates.forEach(selectedDate => updateCell(empId, selectedDate));
   closePicker();
 }
 async function setAssignmentWorkCode(empId, date, actId, workCodeId) {
-  const dates = pickerEmpId === empId && pickerDates.length ? pickerDates : [date];
+  const proposedDates = pickerEmpId === empId && pickerDates.length ? pickerDates : [date];
+  const activity = activities.find(item => Number(item.id) === Number(actId));
+  const proposedByDate = Object.fromEntries(proposedDates.map(selectedDate => {
+    const current = activityAssignment(`${empId}_${selectedDate}_${actId}`);
+    const assignment = workCodeId ? { ...current, shift: 'normal', workCodeId, assigned: true, excluded: false } : null;
+    return [selectedDate, workCodeId ? { activityId: actId, assignment } : { activityId: actId, remove: true }];
+  }));
+  const { allowedDates: dates } = guardLockedBillableWorkMapDates(proposedDates, empId, workCodeId ? 'change' : 'remove', proposedByDate);
+  if (!dates.length) return;
   if (workCodeId && !confirmActivityReplacement(empId, dates, actId)) return;
   await mutateState('setAssignmentWorkCode', () => {
   for (const selectedDate of dates) {
     const key = `${empId}_${selectedDate}_${actId}`;
-    if (!workCodeId) excludeActivityAssignment(key);
-    else {
+    if (!workCodeId) {
+      excludeActivityAssignment(key);
+    } else {
       removeConflictingActivityAssignments(empId, selectedDate, actId);
-      activityShiftsMap[key] = { shift: 'normal', workCodeId, assigned: true, excluded: false };
+      activityShiftsMap[key] = { ...activityAssignment(key), shift: 'normal', workCodeId, assigned: true, excluded: false };
     }
   }
   });
@@ -6116,11 +8024,15 @@ async function saveShiftCustom(empId, date, actId) {
 function closePicker() {
   document.getElementById('picker').classList.remove('open');
   pickerEmpId = null; pickerDate = null; pickerDates = []; pickerSelectedStatus = null;
+  pickerOvertimeExpanded = false;
+  document.getElementById('pk-overtime-toggle')?.setAttribute('aria-expanded', 'false');
   clearCellSelection();
 }
 document.addEventListener('click', e => {
   const picker = document.getElementById('picker');
-  if (picker.classList.contains('open') && !picker.contains(e.target)) closePicker();
+  const clickPath = typeof e.composedPath === 'function' ? e.composedPath() : [];
+  const clickedInsidePicker = picker.contains(e.target) || clickPath.includes(picker);
+  if (picker.classList.contains('open') && !clickedInsidePicker) closePicker();
   if (!holidayTriggerContains(e.target) && !holidayPopoverContains(e.target)) closeHolidayAddMenu();
 });
 
@@ -6383,34 +8295,129 @@ function quickCreateActivityType() {
   openStatusManager();
   setTimeout(() => document.getElementById('sf-label')?.focus(), 50);
 }
+function activityParticipantDepartment(employee) {
+  return String(employee?.department || (employeeSection(employee) ? 'Independent sections' : 'Unassigned')).trim();
+}
+function pickerParentPath(employee, field) {
+  if (field === 'department') return '';
+  const department = activityParticipantDepartment(employee), section = employeeSection(employee) || 'Unassigned section';
+  if (field === 'section') return department;
+  if (field === 'process') return `${department} / ${section}`;
+  return `${department} / ${section} / ${employee.process || 'Unassigned process'}`;
+}
+function personnelPickerOptions(field, candidates = employees) {
+  const unique = new Map();
+  for (const employee of candidates) {
+    const value = field === 'department' ? activityParticipantDepartment(employee)
+      : field === 'section' ? employeeSection(employee)
+        : String(employee?.[field] || '').trim();
+    if (!value) continue;
+    const parent = pickerParentPath(employee, field);
+    const key = JSON.stringify([parent, value]);
+    if (!unique.has(key)) unique.set(key, { key, value, parent });
+  }
+  return [...unique.values()].sort((a, b) => a.parent.localeCompare(b.parent, 'nb', { sensitivity: 'base' }) || a.value.localeCompare(b.value, 'nb', { sensitivity: 'base' }));
+}
+function populatePersonnelPickerFilters(prefix, candidates = employees, values = {}) {
+  for (const field of ['department', 'section', 'process', 'team']) {
+    const select = document.getElementById(`${prefix}-${field}`);
+    if (!select) continue;
+    const label = field === 'department' ? 'departments' : field === 'team' ? 'teams' : `${field}s`;
+    const options = personnelPickerOptions(field, candidates);
+    select.innerHTML = `<option value="">All ${label}</option>${options.map(option => `<option value="${esc(option.key)}">${esc(option.parent ? `${option.parent} / ${option.value}` : option.value)}</option>`).join('')}`;
+    select.value = values[field] || '';
+  }
+}
+function personnelPickerMatches(employee, filters) {
+  const fields = {
+    department: activityParticipantDepartment(employee),
+    section: employeeSection(employee),
+    process: String(employee?.process || '').trim(),
+    team: String(employee?.team || '').trim(),
+  };
+  for (const field of ['department', 'section', 'process', 'team']) {
+    const selected = filters[field];
+    if (!selected) continue;
+    let parent, value;
+    try {
+      [parent, value] = JSON.parse(selected);
+    } catch (error) {
+      return false;
+    }
+    if (fields[field] !== value || (parent && pickerParentPath(employee, field) !== parent)) return false;
+  }
+  const search = String(filters.search || '').trim().toLocaleLowerCase('nb-NO');
+  return !search || [employee.name, employee.email, employee.role, employee.department, employeeSection(employee), employee.process, employee.team, employee.level]
+    .filter(Boolean).join(' ').toLocaleLowerCase('nb-NO').includes(search);
+}
+function personnelPickerSelections(container) {
+  return [...document.querySelectorAll(`#${container} input[type="checkbox"]:checked`)].map(input => Number(input.value)).filter(Number.isFinite);
+}
+function filteredActivityParticipantEmployees() {
+  const filters = {
+    search: document.getElementById('af-participant-search')?.value || '',
+    department: document.getElementById('af-participant-department')?.value || '',
+    section: document.getElementById('af-participant-section')?.value || '',
+    process: document.getElementById('af-participant-process')?.value || '',
+    team: document.getElementById('af-participant-team')?.value || '',
+  };
+  return [...employees].sort(comparePersonnelHierarchy).filter(employee => personnelPickerMatches(employee, filters));
+}
+function populateActivityParticipantFilters() {
+  const departmentSelect = document.getElementById('af-participant-department');
+  const sectionSelect = document.getElementById('af-participant-section');
+  const processSelect = document.getElementById('af-participant-process');
+  const teamSelect = document.getElementById('af-participant-team');
+  if (!departmentSelect || !sectionSelect || !processSelect || !teamSelect) return;
+  populatePersonnelPickerFilters('af-participant', employees);
+}
+function renderActivityParticipantSummary() {
+  const count = document.getElementById('af-participant-count');
+  const summary = document.getElementById('af-participant-summary');
+  if (count) count.textContent = `(${selectedParticipants.length} selected)`;
+  if (!summary) return;
+  const names = selectedParticipants.map(person => empById(Number(person.id))?.name).filter(Boolean);
+  if (!selectedParticipants.length) { summary.textContent = 'No people selected'; return; }
+  const shown = names.slice(0, 3).join(', ');
+  const remaining = selectedParticipants.length - Math.min(names.length, 3);
+  summary.textContent = `${shown}${remaining > 0 ? ` + ${remaining} more` : ''}` || `${selectedParticipants.length} people selected`;
+}
 function buildParticipantPicker() {
   const container = document.getElementById('af-participants');
-  const count = document.getElementById('af-participant-count');
-  count.textContent = `(${selectedParticipants.length} selected)`;
-  if (!employees.length) { container.innerHTML = '<div class="muted text-sm" style="padding:8px 10px">Add personnel first to assign participants.</div>'; return; }
-  const relevance = {
-    departments: [...document.getElementById('af-relevance-departments').selectedOptions].map(option => option.value),
-    sections: [...document.getElementById('af-relevance-sections').selectedOptions].map(option => option.value),
-    processes: [...document.getElementById('af-relevance-processes').selectedOptions].map(option => option.value),
-  };
-  const ordered = sortedEmployees();
-  const eligible = ordered.filter(emp => activityRelevantToEmployee({ relevance }, emp));
-  const eligibleIds = new Set(eligible.map(emp => emp.id));
-  const outsideTargets = ordered.filter(emp => selectedParticipants.some(person => person.id === emp.id) && !eligibleIds.has(emp.id));
-  const renderPerson = (emp, outside = false) => {
-    const checked = selectedParticipants.some(p => p.id === emp.id);
-    return `<div class="participant-option${checked ? ' sel' : ''}${outside ? ' participant-outside-targets' : ''}">
+  if (!container) return;
+  renderActivityParticipantSummary();
+  const visibleEmployees = filteredActivityParticipantEmployees();
+  const pickerCount = document.getElementById('activity-participant-picker-count');
+  if (pickerCount) pickerCount.textContent = `Showing ${visibleEmployees.length} of ${employees.length} · ${selectedParticipants.length} selected`;
+  if (!employees.length) { container.innerHTML = '<div class="muted text-sm" style="padding:12px">Add personnel first to assign participants.</div>'; return; }
+  if (!visibleEmployees.length) { container.innerHTML = '<div class="muted text-sm" style="padding:12px">No personnel match this search and department filter.</div>'; return; }
+  container.innerHTML = visibleEmployees.map(employee => {
+    const checked = selectedParticipants.some(person => Number(person.id) === Number(employee.id));
+    const organisationPath = [employee.department, employeeSection(employee), employee.process, employee.team].filter(Boolean).join(' · ');
+    return `<div class="participant-option${checked ? ' sel' : ''}">
       <label class="participant-head">
-        <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleParticipant(${emp.id},this.checked)">
+        <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleParticipant(${employee.id},this.checked)">
         <span style="min-width:0;flex:1">
-          <span style="font-size:13px;font-weight:500">${esc(emp.name)}</span>
-          <small>${esc(emp.role)} · ${esc(emp.department)}${outside ? ' · Selected outside activity targets' : ''}</small>
+          <span style="font-size:13px;font-weight:600">${esc(employee.name)}</span>
+          <small>${esc([employee.role, organisationPath].filter(Boolean).join(' · '))}</small>
         </span>
       </label>
     </div>`;
-  };
-  container.innerHTML = `${eligible.map(emp => renderPerson(emp)).join('')}${outsideTargets.length ? `<div class="participant-filter-note">Selected personnel outside the current targets</div>${outsideTargets.map(emp => renderPerson(emp, true)).join('')}` : ''}`
-    || '<div class="muted text-sm" style="padding:8px 10px">No personnel match the selected targets.</div>';
+  }).join('');
+}
+function openActivityParticipants() {
+  populateActivityParticipantFilters();
+  document.getElementById('af-participant-department').value = '';
+  document.getElementById('af-participant-section').value = '';
+  document.getElementById('af-participant-process').value = '';
+  document.getElementById('af-participant-team').value = '';
+  document.getElementById('af-participant-search').value = '';
+  buildParticipantPicker();
+  document.getElementById('activity-participants-modal').classList.add('open');
+  setTimeout(() => document.getElementById('af-participant-search').focus(), 30);
+}
+function closeActivityParticipants() {
+  closeModal('activity-participants-modal');
 }
 function toggleParticipant(id, checked) {
   if (checked) { if (!selectedParticipants.find(p => p.id === id)) selectedParticipants.push({ id }); }
@@ -6423,9 +8430,17 @@ function selectAllActivityParticipants() {
     sections: [...document.getElementById('af-relevance-sections').selectedOptions].map(option => option.value),
     processes: [...document.getElementById('af-relevance-processes').selectedOptions].map(option => option.value),
   };
-  selectedParticipants = sortedEmployees()
+  const matchingParticipants = employees
     .filter(emp => activityRelevantToEmployee({ relevance }, emp))
     .map(emp => ({ id: emp.id }));
+  const selectedIds = new Set(selectedParticipants.map(person => person.id));
+  selectedParticipants = [...selectedParticipants, ...matchingParticipants.filter(person => !selectedIds.has(person.id))];
+  buildParticipantPicker();
+}
+function selectFilteredActivityParticipants() {
+  const visibleParticipants = filteredActivityParticipantEmployees().map(employee => ({ id: employee.id }));
+  const selectedIds = new Set(selectedParticipants.map(person => Number(person.id)));
+  selectedParticipants = [...selectedParticipants, ...visibleParticipants.filter(person => !selectedIds.has(Number(person.id)))];
   buildParticipantPicker();
 }
 function clearActivityParticipants() {
@@ -6478,6 +8493,11 @@ function openActModal(id) {
   }
   pendingActivityPreset = null;
   buildSwatchRow('af-swatches', selectedActColor, c => { selectedActColor = c; markSwatch('af-swatches', c); });
+  populateActivityParticipantFilters();
+  document.getElementById('af-participant-department').value = '';
+  document.getElementById('af-participant-section').value = '';
+  document.getElementById('af-participant-process').value = '';
+  document.getElementById('af-participant-team').value = '';
   buildParticipantPicker();
   document.getElementById('act-modal').classList.add('open');
   setTimeout(() => document.getElementById('af-name').focus(), 50);
@@ -6577,6 +8597,7 @@ async function saveActivity() {
     activities.push(rec);
   }
   if (prefillCells) {
+    const assignmentDates = datesBetween(rec.startDate, rec.endDate);
     const assignmentDate = new Date(`${rec.startDate}T00:00:00`);
     const assignmentEnd = new Date(`${rec.endDate}T00:00:00`);
     let prefilled = 0;
@@ -6585,14 +8606,20 @@ async function saveActivity() {
       rec.participants.forEach(participant => {
         const statusKey = `${participant.id}_${date}`;
         const hasCellEntry = Boolean(getEntryObj(statusKey));
-        const hasActivityAssignment = Object.keys(activityShiftsMap).some(key => {
+          const hasActivityAssignment = Object.keys(activityShiftsMap).some(key => {
           const parts = key.split('_');
-          return Number(parts[0]) === Number(participant.id) && parts[1] === date && activityAssignment(key)?.assigned === true && activityAssignment(key)?.excluded !== true;
+            return Number(parts[0]) === Number(participant.id) && parts[1] === date && activityAssignment(key)?.assigned === true && activityAssignment(key)?.excluded !== true && !workTimeIsPlanned(activityAssignment(key));
         });
         const targetKey = `${participant.id}_${date}_${rec.id}`;
         if (!hasCellEntry && !hasActivityAssignment && !employeeHasRotation(participant.id, date)) {
-          activityShiftsMap[targetKey] = { shift: 'normal', workCodeId: null, administrativeTime: '', staffingImpactOverride: null, assigned: true, excluded: false };
-          prefilled++;
+              const selectedWorkCode = appSettings.workCodes.find(code => String(code.id) === String(appSettings.defaultWorkCodeId || ''));
+              const defaultCode = selectedWorkCode?.staffingImpact !== 'unavailable' ? selectedWorkCode : null;
+              const assignment = { shift: 'normal', workCodeId: defaultCode?.id || null, administrativeTime: '', staffingImpactOverride: null, lifecycle: 'confirmed', assigned: true, excluded: false };
+              if (!billableActivityAssignment(participant.id, date, rec.id) && defaultCode && workAssignmentIsBillable(assignment) && workDateIsLocked(date) && !unlockedBossView()) {
+                return;
+              }
+              activityShiftsMap[targetKey] = assignment;
+              prefilled++;
         }
       });
       assignmentDate.setDate(assignmentDate.getDate() + 1);
@@ -6625,6 +8652,12 @@ function requestDeleteActivityFromModal() {
 
 let activityReportId = null;
 let activityReportHideInactiveByWeek = false;
+let historySelectedActivityId = null;
+let historySelectedRevisionId = '';
+let changeLogSearch = '';
+let changeLogCategoryFilter = '';
+let changeLogFromDate = '';
+let changeLogToDate = '';
 function activityReportDates(act) {
   const dates = [];
   for (const d = new Date(`${act.startDate}T00:00:00`); fmt(d) <= act.endDate; d.setDate(d.getDate() + 1)) {
@@ -6701,7 +8734,7 @@ function updateActivityReportPreview() {
   activityReportHideInactiveByWeek = document.getElementById('activity-report-hide-inactive-week')?.checked === true;
   if (activityReportId != null) openActivityReport(activityReportId);
 }
-function activityReportRows(act) {
+function activityReportRows(act, hideInactiveByWeek = false) {
   const rows = [];
   const dates = activityReportDates(act);
   const participants = [...(act.participants || [])].sort((a, b) =>
@@ -6711,18 +8744,128 @@ function activityReportRows(act) {
     if (!emp) return;
     dates.forEach(date => {
       const info = activityAssignmentInfo(act, emp.id, date, true);
+      if (hideInactiveByWeek) {
+        const weekDates = activityReportWeekChunks(dates).find(week => week.dates.includes(date))?.dates || [date];
+        if (!weekDates.some(weekDate => activityReportHasAssignment(act, emp.id, weekDate))) return;
+      }
       rows.push({
+        employeeId: Number(emp.id),
         employee: displayEmployeeName(emp),
         department: emp.department,
         date,
+        workCodeId: info?.workCode.id || '',
         shiftType: info ? `${info.workCode.abbreviation} (${info.administrativeValue})` : '',
-        shift: info?.physicalShift || 'Not scheduled',
         administrativeValue: info?.administrativeValue || '',
+        shift: info?.physicalShift || 'Not scheduled',
         deviation: dailyDeviationLabel(emp.id, date),
       });
     });
   });
   return rows;
+}
+function workScheduleRevisionSnapshot(act, hideInactiveByWeek = false) {
+  const rows = activityReportRows(act, hideInactiveByWeek).map(row => ({
+    employeeId: row.employeeId,
+    employee: row.employee,
+    department: row.department || '',
+    date: row.date,
+    workCodeId: row.workCodeId || '',
+    workCode: row.shiftType,
+    administrativeValue: row.administrativeValue || '',
+    physicalShift: row.shift,
+    deviation: row.deviation,
+    assigned: row.shiftType !== '' || row.shift !== 'Not scheduled',
+  }));
+  const participantIds = [...new Set((act.participants || []).map(participant => Number(participant.id)).filter(Number.isFinite))].sort((a, b) => a - b);
+  return {
+    activity: {
+      id: Number(act.id), name: String(act.name || ''), abbreviation: String(act.abbreviation || ''),
+      startDate: String(act.startDate || ''), endDate: String(act.endDate || ''),
+      includeWeekends: act.includeWeekends === true, status: activityStatus(act),
+      costCenter: String(act.project || ''), order: String(act.order || ''), billing: String(act.billing || ''),
+      participantIds,
+    },
+    reportOptions: { hideInactiveByWeek: hideInactiveByWeek === true },
+    rows,
+  };
+}
+function workScheduleRevisionDiff(previous, current) {
+  if (!previous?.snapshot) return { initial: true, added: current.rows.filter(row => row.assigned).length, removed: 0, changed: 0, metadata: [] };
+  const prior = previous.snapshot;
+  const priorRows = new Map((prior.rows || []).map(row => [`${row.employeeId || row.employee}\u0000${row.date}`, row]));
+  const currentRows = new Map((current.rows || []).map(row => [`${row.employeeId || row.employee}\u0000${row.date}`, row]));
+  let added = 0, removed = 0, changed = 0;
+  for (const [key, row] of currentRows) {
+    const before = priorRows.get(key);
+    if (!before) { if (row.assigned) added++; continue; }
+    if (!before.assigned && row.assigned) { added++; continue; }
+    if (before.assigned && !row.assigned) { removed++; continue; }
+    if (JSON.stringify([before.assigned, before.workCodeId, before.workCode, before.administrativeValue, before.physicalShift, before.deviation]) !== JSON.stringify([row.assigned, row.workCodeId, row.workCode, row.administrativeValue, row.physicalShift, row.deviation])) changed++;
+  }
+  for (const [key, row] of priorRows) if (!currentRows.has(key) && row.assigned) removed++;
+  const metadata = [];
+  const priorActivity = prior.activity || {};
+  const currentActivity = current.activity || {};
+  [['name','Activity name'],['startDate','Start date'],['endDate','End date'],['costCenter','Cost center'],['order','Order'],['billing','Billing explanation'],['includeWeekends','Weekend inclusion'],['status','Activity status']].forEach(([key,label]) => {
+    if (priorActivity[key] !== currentActivity[key]) metadata.push(label);
+  });
+  const oldPeople = [...(priorActivity.participantIds || [])].sort((a,b)=>a-b).join(',');
+  const newPeople = [...(currentActivity.participantIds || [])].sort((a,b)=>a-b).join(',');
+  const oldIds = new Set((priorActivity.participantIds || []).map(Number));
+  const newIds = new Set((currentActivity.participantIds || []).map(Number));
+  const employeeNames = new Map(employees.map(employee => [Number(employee.id), displayEmployeeName(employee)]));
+  const addedParticipants = [...newIds].filter(id => !oldIds.has(id)).map(id => employeeNames.get(id) || `Employee ${id}`);
+  const removedParticipants = [...oldIds].filter(id => !newIds.has(id)).map(id => employeeNames.get(id) || `Employee ${id}`);
+  if (oldPeople !== newPeople && !metadata.includes('Participant list')) metadata.push('Participant list');
+  if (prior.reportOptions?.hideInactiveByWeek !== current.reportOptions?.hideInactiveByWeek) metadata.push('Report personnel filter');
+  return { initial: false, added, removed, changed, metadata, addedParticipants, removedParticipants };
+}
+function currentWorkScheduleChanges(activityId) {
+  const act = activities.find(item => Number(item.id) === Number(activityId));
+  if (!act) return null;
+  const latest = (workScheduleHistory[String(activityId)] || []).at(-1) || null;
+  const current = workScheduleRevisionSnapshot(act, latest?.reportOptions?.hideInactiveByWeek === true);
+  return { latest, current, diff: workScheduleRevisionDiff(latest, current) };
+}
+function recordActivityWorkSchedulePrint(act, hideInactiveByWeek) {
+  const activityKey = String(act.id);
+  const revisions = workScheduleHistory[activityKey] || [];
+  const snapshot = workScheduleRevisionSnapshot(act, hideInactiveByWeek);
+  const diffFromPrevious = workScheduleRevisionDiff(revisions.at(-1) || null, snapshot);
+  const revision = {
+    id: `work-schedule-revision-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    printedAt: new Date().toISOString(),
+    activityName: String(act.name || ''),
+    reportOptions: { hideInactiveByWeek: hideInactiveByWeek === true },
+    diffFromPrevious,
+    snapshot,
+  };
+  recordUndo();
+  workScheduleHistory[activityKey] = [...revisions, revision].slice(-20);
+  markUnsaved();
+  saveState().catch(error => showToast(`Print requested, but revision history could not be saved to browser recovery: ${error.message}`, 7000));
+  if (canUseFileSystemSave() && localBackupFileHandle) {
+    writeLocalBackupFile(localBackupFileHandle).then(() => markFileSaved()).catch(error => console.warn('Work schedule revision was not directly written to planner file:', error?.message || error));
+  }
+  updateUndoButton();
+  updateSbStatus();
+  if (currentPage === 'work-schedule-history') renderWorkScheduleHistoryPage();
+  showToast(`Work schedule print requested · ${new Date(revision.printedAt).toLocaleString('en-GB')}`, 3500);
+  return revision;
+}
+function workScheduleSnapshotHtml(snapshot, options = {}) {
+  const activity = snapshot.activity || {};
+  const dates = [...new Set((snapshot.rows || []).map(row => row.date))].sort();
+  const weeks = activityReportWeekChunks(dates);
+  const reportLabel = options.historical ? 'ARCHIVED WORK SCHEDULE' : `${activity.status === 'tentative' ? 'DRAFT · ' : ''}Work Schedule`;
+  const sections = weeks.map(week => {
+    const weekRows = (snapshot.rows || []).filter(row => week.dates.includes(row.date));
+    const people = new Map();
+    weekRows.forEach(row => { if (!people.has(row.employeeId)) people.set(row.employeeId, { name: row.employee, rows: new Map() }); people.get(row.employeeId).rows.set(row.date, row); });
+    return `<section class="report-section"><div class="report-header"><h1>${reportLabel}: ${esc(activity.name || 'Activity')}</h1><div class="week-label">Week ${isoWeek(new Date(`${week.dates[0]}T00:00:00`))}</div></div><div class="info-box"><div><b>Cost Center:</b> ${esc(activity.costCenter || 'Not specified')}</div><div><b>Order:</b> ${esc(activity.order || 'Not specified')}</div><div><b>Billing explanation:</b> ${esc(activity.billing || 'No note')}</div></div><div class="period">Period: ${fmtMed(week.dates[0])} – ${fmtMed(week.dates[week.dates.length - 1])}</div><table><thead><tr><th class="employee-column">Employee</th>${week.dates.map(date => `<th class="date-column${isWknd(new Date(`${date}T00:00:00`)) ? ' weekend' : ''}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US',{weekday:'short'})}<div class="muted">${fmtShort(date)}</div></th>`).join('')}</tr></thead><tbody>${people.size ? [...people.values()].map(person => `<tr><td>${esc(person.name)}</td>${week.dates.map(date => { const row=person.rows.get(date); return `<td>${row?.assigned?`<strong>${esc(row.workCode)}</strong><div class="report-physical-shift">${esc(row.physicalShift)}</div>${row.deviation?`<div class="report-deviation">${esc(row.deviation)}</div>`:''}`:'—'}</td>`; }).join('')}</tr>`).join('') : `<tr><td colspan="${week.dates.length+1}" class="empty-note">No participants scheduled this week.</td></tr>`}</tbody></table></section>`;
+  });
+  const title = `${options.historical ? 'Archived ' : ''}Work Schedule - ${activity.name || 'Activity'}`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}:root{--weekend-bg:#fff7ed;--weekend-text:#c2410c;--weekend-border:#fed7aa}html,body{width:100%}body{font:9px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.week-label{font-size:12px;font-weight:700;color:#475569}h1{font-size:18px;margin:0 0 5px}.info-box{background:#f5f5f5;border:1px solid #d8d8d8;border-radius:6px;padding:8px;margin-top:8px;display:flex;gap:20px}.period{color:#666;margin:7px 0 10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:5px 4px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:145px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:var(--weekend-bg);color:var(--weekend-text);border-left-color:var(--weekend-border);border-right-color:var(--weekend-border)}.empty-note{text-align:center;padding:20px}.report-physical-shift,.report-deviation{font-size:8px;margin-top:2px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`;
 }
 function openActivityReport(id) {
   const act = activities.find(item => item.id === id);
@@ -6810,6 +8953,7 @@ function printActivityReport() {
   }
   const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the activity report.'); return; }
+  recordActivityWorkSchedulePrint(act, hideInactiveByWeek);
   printWindow.document.write(`<!doctype html><html><head><title>Work Schedule - ${esc(act.name)}</title><style>
     @page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}:root{--surface:#fff;--text:#111;--muted:#666;--weekend-bg:#fff7ed;--weekend-text:#c2410c;--weekend-border:#fed7aa}html,body{width:100%}body{font:9px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.week-label{font-size:12px;font-weight:700;color:#475569}h1{font-size:18px;margin:0 0 5px}.info-box{background:#f5f5f5;border:1px solid #d8d8d8;border-radius:6px;padding:8px;margin-top:8px;display:flex;gap:20px}.period{color:#666;margin:7px 0 10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:5px 4px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:145px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:var(--weekend-bg);color:var(--weekend-text);border-left-color:var(--weekend-border);border-right-color:var(--weekend-border);box-shadow:inset 0 0 0 1px var(--weekend-border)}.empty-note{text-align:center;padding:20px}.scheduled{color:#111}.report-shift-line{display:flex;align-items:center;gap:4px}.report-shift-line .ui-icon{width:11px;height:11px;flex:0 0 11px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--shift-color)}.report-physical-shift{font-size:8px;margin-top:2px}.section-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
   </style></head><body>${sections.join('')}</body></html>`);
@@ -6825,7 +8969,7 @@ function teamReportEntries(start, end) {
   return sortedEmployees().map(emp => {
     const employeeActivities = activities.filter(act => {
       const participant = participantFor(act, emp.id);
-      return act.startDate <= end && act.endDate >= start && participant && activityRelevantToEmployee(act, emp) && activityHasScheduledShift(act, emp.id, start, end);
+      return act.startDate <= end && act.endDate >= start && participant && activityHasScheduledShift(act, emp.id, start, end);
     })
       .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
     return { emp, activities: employeeActivities };
@@ -7035,7 +9179,7 @@ function activityScheduleBarRow(act, dates) {
   const barBackground = lifecycle.status === 'tentative'
     ? `repeating-linear-gradient(135deg,color-mix(in srgb,${activityColor} 38%,transparent) 0 5px,color-mix(in srgb,${activityColor} 12%,transparent) 5px 10px)`
     : activityColor;
-  const barOpacity = lifecycle.status === 'tentative' ? '.9' : '.28';
+  const barOpacity = lifecycle.status === 'tentative' ? '.9' : (dim && lifecycle.status !== 'cancelled' ? '.16' : '.28');
   const visibleStart = dates[0] > act.startDate ? dates[0] : act.startDate;
   const visibleEnd = dates[dates.length - 1] < act.endDate ? dates[dates.length - 1] : act.endDate;
   const startIdx = dates.indexOf(visibleStart);
@@ -7060,7 +9204,7 @@ function activityScheduleBarRow(act, dates) {
     const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
     row += `<td class="gday${isWknd(d) ? ' weekend' : ''}${isS ? ' span-label-cell' : ''}" style="height:28px${isS ? ';overflow:visible;z-index:4' : ''}">
         <div class="act-bar${lifecycle.status === 'cancelled' ? ' cancelled-bar' : ''}" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${barOpacity};border-radius:${brl} ${brr}"></div>
-        ${isS ? `<span class="grid-span-label" title="${esc(act.name)}" style="color:${activityColor};width:${labelWidth}px">${esc(activityDisplayName(act))}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
+        ${isS ? `<span class="grid-span-label${lifecycle.status === 'cancelled' ? ' cancelled-label' : ''}" title="${esc(act.name)}" style="color:${activityColor};width:${labelWidth}px">${esc(activityDisplayName(act))}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
       </td>`;
   }
   return row + '</tr>';
@@ -8288,10 +10432,13 @@ function confirmDelete(kind, id) {
       employees = employees.filter(e => e.id !== id);
       for (const key of Object.keys(entriesMap)) if (key.startsWith(`${id}_`)) entriesMap[key] = null;
       for (const key of Object.keys(overtimeMap)) if (key.startsWith(`${id}_`)) overtimeMap[key] = null;
+      for (const key of Object.keys(unavailableMap)) if (key.startsWith(`${id}_`)) unavailableMap[key] = null;
       for (const key of Object.keys(activityShiftsMap)) if (key.startsWith(`${id}_`)) activityShiftsMap[key] = null;
       for (const key of Object.keys(shiftRotationMap)) if (key.startsWith(`${id}_`)) shiftRotationMap[key] = null;
       for (const key of Object.keys(workScheduleChecksMap)) if (key.startsWith(`${id}_`)) delete workScheduleChecksMap[key];
       removeEmployeeRotationRelations(id);
+      removeEmployeeDutyRelations(id);
+      appSettings.dutyTypes = normalizeDutyTypes(appSettings.dutyTypes).map(type => ({ ...type, eligibleEmployeeIds: type.eligibleEmployeeIds.filter(employeeId => Number(employeeId) !== Number(id)) }));
       for (const act of activities) act.participants = act.participants.filter(p => p.id !== id);
     } else if (kind === 'activity') {
       activities = activities.filter(a => a.id !== id);
@@ -8356,7 +10503,7 @@ function activityAdministrativeMeasure(activity, empId, date) {
   if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return { units: 0, hours: 0 };
   if (!activity.includeWeekends && isWknd(new Date(`${date}T00:00:00`))) return { units: 0, hours: 0 };
   const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
-  if (!assignment.assigned || assignment.excluded) return { units: 0, hours: 0 };
+  if (!assignment.assigned || assignment.excluded || workTimeIsPlanned(assignment)) return { units: 0, hours: 0 };
   const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
   if (!workCode) return { units: 0, hours: 0 };
   if (workCode.aggregationMode === 'days') return { units: 1, hours: 0 };
@@ -8370,7 +10517,7 @@ function activityAdministrativeMeasure(activity, empId, date) {
 function activityLoadMeasure(activity, empId, date) {
   if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return { units: 0, hours: 0 };
   const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
-  if (!assignment.assigned || assignment.excluded) return { units: 0, hours: 0 };
+  if (!assignment.assigned || assignment.excluded || workTimeIsPlanned(assignment)) return { units: 0, hours: 0 };
   return { units: 0, hours: activityShiftHours(activity, empId, date) };
 }
 function formatHoursNumber(value) { return Number(Number(value || 0).toFixed(1)); }
@@ -8399,6 +10546,7 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
   let oooUnits = 0;
   let oooHours = 0;
   let overtimeHours = 0;
+  let confirmedDutyHours = 0;
   const targetDates = new Set(dateStrings);
   const activityById = new Map(activities.map(activity => [activity.id, activity]));
   const assignmentsByDate = new Map();
@@ -8415,6 +10563,13 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
 
   dateStrings.forEach(ds => {
     overtimeHours += Number(overtimeMap[`${emp.id}_${ds}`]?.hours) || 0;
+    const confirmedDuties = dutyAssignments.filter(assignment => Number(assignment.employeeId) === Number(emp.id) && assignment.date === ds && assignment.status === 'confirmed');
+    for (const assignment of confirmedDuties) {
+      const type = appSettings.dutyTypes.find(item => item.id === assignment.dutyTypeId);
+      if (!type) continue;
+      const credit = isNormalWorkDate(ds) ? Math.max(0, Number(type.weekdayHours) - (Number(appSettings.coreHoursPerDay) || 0)) : Number(type.nonWorkingHours) || 0;
+      confirmedDutyHours += Math.max(0, credit);
+    }
     const entry = getEntryObj(`${emp.id}_${ds}`);
     if (entry) {
       const st = siFor(entry.status);
@@ -8445,8 +10600,9 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
     oooUnits,
     oooHours,
     overtimeHours,
+    confirmedDutyHours,
     totalUnits: statusUnits + activityUnits,
-    totalHoursActual: timedStatusHours + timedActivityHours + overtimeHours,
+    totalHoursActual: timedStatusHours + timedActivityHours + overtimeHours + confirmedDutyHours,
   };
 }
 function staffingShiftIntervalsFor(empId, date) {
@@ -8455,7 +10611,7 @@ function staffingShiftIntervalsFor(empId, date) {
     if (activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity) || !actParticipantIds(activity).includes(empId)) continue;
     if (date < activity.startDate || date > activity.endDate || (!activity.includeWeekends && isWknd(new Date(`${date}T00:00:00`)))) continue;
     const assignment = activityAssignment(`${empId}_${date}_${activity.id}`);
-    if (!assignment.assigned || assignment.excluded || !assignment.shift) continue;
+    if (!assignment.assigned || assignment.excluded || !assignment.shift || workTimeIsPlanned(assignment)) continue;
     const shift = ['normal', 'day', 'evening', 'night'].includes(assignment.shift) ? activityDefaultShift(assignment.shift, activity) : assignment.shift;
     const interval = timeRangeInterval(shift);
     if (interval) intervals.push(interval);
@@ -8467,6 +10623,7 @@ function getEmployeeStaffingLoad(emp, dateStrings) {
   let capacityHours = 0;
   let extraHours = 0;
   let overtimeHours = 0;
+  let confirmedDutyHours = 0;
   for (const date of dateStrings) {
     const normalDay = isNormalWorkDate(date);
     if (normalDay) capacityHours += coreHours;
@@ -8474,6 +10631,16 @@ function getEmployeeStaffingLoad(emp, dateStrings) {
     const workedHours = intervals.reduce((sum, interval) => sum + Math.max(0, interval.end - interval.start), 0);
     extraHours += normalDay ? Math.max(0, workedHours - coreHours) : workedHours;
     overtimeHours += Number(overtimeMap[`${emp.id}_${date}`]?.hours) || 0;
+    let dutyCreditForDate = 0;
+    for (const assignment of dutyAssignments) {
+      if (Number(assignment.employeeId) !== Number(emp.id) || assignment.date !== date || assignment.status !== 'confirmed') continue;
+      const type = appSettings.dutyTypes.find(item => item.id === assignment.dutyTypeId);
+      if (!type) continue;
+      const credit = normalDay ? Math.max(0, Number(type.weekdayHours) - coreHours) : Number(type.nonWorkingHours) || 0;
+      dutyCreditForDate += Math.max(0, credit);
+    }
+    confirmedDutyHours += dutyCreditForDate;
+    extraHours += dutyCreditForDate;
   }
   const percentage = capacityHours > 0 ? ((capacityHours + extraHours + overtimeHours) / capacityHours) * 100 : (extraHours + overtimeHours > 0 ? Infinity : 0);
   const overloaded = overtimeHours > 0 || percentage > appSettings.highMax;
@@ -8658,11 +10825,12 @@ function renderDashboard() {
     if (entry && counts[entry.status] !== undefined) counts[entry.status]++;
     const status = entry ? siFor(entry.status) : null;
     const unavailableActivity = unavailableActivityFor(emp.id, today);
+    const explicitUnavailable = cellUnavailable(emp.id, today);
     const statusUnavailable = status && !statusEntryIsPlanned(entry) && (status.isAbsence || status.isOutOfOffice);
     const isPartial = entry?.durationType === 'time';
     const partialHours = isPartial && entry?.time ? (timeRangeHours(entry.time) ?? 0) : 0;
     const coreHours = appSettings.coreHoursPerDay || 7.5;
-    if (!statusUnavailable && !unavailableActivity) {
+    if (!statusUnavailable && !unavailableActivity && !explicitUnavailable) {
       availableToday += isPartial ? 0 : 1;
     }
     if (statusUnavailable) {
@@ -8671,6 +10839,8 @@ function renderDashboard() {
       const assignment = activityAssignment(`${emp.id}_${today}_${unavailableActivity.id}`);
       const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
       unavailableTodayPeople.push({ name: emp.name, status: `${workCode?.name || 'Activity'} · ${unavailableActivity.name}` });
+    } else if (explicitUnavailable) {
+      unavailableTodayPeople.push({ name: emp.name, status: explicitUnavailable.reason ? `Unavailable · ${explicitUnavailable.reason}` : 'Unavailable' });
     }
     if ((statusUnavailable && status.isOutOfOffice) || (!statusUnavailable && unavailableActivity)) oooToday++;
     if (statusUnavailable && status.isAbsence) {
@@ -8693,9 +10863,10 @@ function renderDashboard() {
     for (const emp of dashboardEmployees) {
       const entry = getEntryObj(`${emp.id}_${ds}`);
       const status = entry ? siFor(entry.status) : null;
+      const explicitUnavailable = cellUnavailable(emp.id, ds);
       const statusAffectsAvailability = !!status && !statusEntryIsPlanned(entry) && (status.isAbsence || status.isOutOfOffice);
       if (status && !statusEntryIsPlanned(entry) && dayCounts[entry.status] !== undefined) dayCounts[entry.status]++;
-      if (statusAffectsAvailability) unavailableStatusCount++;
+      if (statusAffectsAvailability || explicitUnavailable) unavailableStatusCount++;
       else if (unavailableActivityFor(emp.id, ds)) assignmentUnavailable++;
       if (entry?.durationType === 'time' && status?.isAbsence && !statusEntryIsPlanned(entry)) {
         partialAbsenceHours += timeRangeHours(entry.time) ?? 0;
@@ -8733,8 +10904,7 @@ function renderDashboard() {
     const associatedActivities = activities
       .filter(activity => activityStatus(activity) !== 'cancelled'
         && participantFor(activity, emp.id)
-        && date >= activity.startDate && date <= activity.endDate
-        && activityRelevantToEmployee(activity, emp))
+        && date >= activity.startDate && date <= activity.endDate)
       .map(activity => activity.name)
       .filter((name, index, names) => name && names.indexOf(name) === index);
     const destination = associatedActivities.length
@@ -9649,7 +11819,7 @@ async function bootApp() {
   document.getElementById('af-end').addEventListener('change', updateActivityWeekLabels);
   document.getElementById('af-start').addEventListener('input', updateActivityWeekLabels);
   document.getElementById('af-end').addEventListener('input', updateActivityWeekLabels);
-  
+
   updateSbStatus();
   if (remoteUpdateSource === 'none') {
     setSyncStatusState('out-of-sync');
