@@ -41,7 +41,11 @@ Startup behavior:
 
 The startup screen also supports **Create blank planner** for a new empty planner.
 
-Use **Choose Data File** to open a planner JSON and **Save As** to create a writable copy. When the browser has native file access to the selected folder, Team Manager can also write silent weekly backups into a `backups/` subfolder.
+Older planner files may store daily codes as `statusTypes`, `absenceCodes`, or legacy activity types; ATLAS migrates these definitions into the current daily-status list when opening the planner. If entries were already removed and the file was saved after their definitions disappeared, restore an earlier planner JSON or backup to recover them.
+
+The **Enable Duty Planner** option in Application settings hides its navigation and page without deleting its types or assignments, so it can be enabled again later.
+
+The startup chooser keeps the routine options **Choose JSON file**, **Use recovered data** (when available), and **Create blank planner**. **Application settings → Data & Backup → Import data…** lets a Boss View administrator select a planner file, load it as the active planner, or selectively merge personnel and activities. Selective work assignments are added only on dates where the matched employee has no existing work, status, rotation, or unavailable marker. **Save As** creates a writable copy. When the browser has native file access to the selected folder, Team Manager can also write silent weekly backups into a `backups/` subfolder.
 
 Team Manager checks for external changes and keeps a visible sync status:
 - **Updated** (green)

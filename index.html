@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ATLAS — Adaptive Timeline, Load &amp; Allocation System</title>
-<link rel="stylesheet" href="css/styles.css?v=90">
+<link rel="stylesheet" href="css/styles.css?v=95">
 </head>
 <body>
 <aside id="sidebar">
@@ -118,7 +118,7 @@
     </div>
     <div id="activity-report-content" style="overflow:auto;margin-top:14px"></div>
     <div class="modal-actions" style="align-items:center">
-      <button class="btn" onclick="openActivityReport(activityReportId)">Update report</button>
+      <button class="btn" onclick="updateActivityReport()">Update report</button>
       <button class="btn" onclick="openWorkScheduleHistoryForActivity(activityReportId)">History</button>
       <button class="btn" onclick="printActivityReport()">Print</button>
       <button class="btn btn-primary" onclick="exportActivityReportCsv()">Export CSV</button>
@@ -503,6 +503,7 @@
     <div class="form-row"><label>Schedule</label><button class="btn" type="button" onclick="openScheduleSettings()">Open Schedule settings</button><div class="form-hint">Core workday, grid behavior, special days, planning options, and activity deadline.</div></div>
     <div class="form-row"><label>Organisation Structure</label><button class="btn" type="button" onclick="openOrganisationStructure()">Manage Organisation Structure</button><div class="form-hint">Reorder and review Departments, Sections, Processes, and Teams.</div></div>
     <div class="form-row"><label>Personnel</label><button class="btn" type="button" onclick="openPersonnelSettings()">Open Personnel settings</button><div class="form-hint">Staffing thresholds, hierarchy order, and hierarchy colors.</div></div>
+    <div class="form-row"><label>Duty Planner</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-duty-planner-enabled" type="checkbox"> Enable Duty Planner</label><div class="form-hint">Hide the Duty Planner navigation and page when disabled. Existing duty assignments and types are retained.</div></div>
     <div class="form-row">
       <label>Shift Rotation</label>
       <button class="btn" type="button" onclick="openShiftRotationSettings()">Configure Shift Rotation</button>
@@ -593,24 +594,24 @@
 <div class="modal-bg" id="data-backup-settings-modal">
   <div class="modal" style="width:520px">
     <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Data & Backup</h3><button class="icon-btn" title="Close" onclick="closeModal('data-backup-settings-modal')">&times;</button></div>
-    <p class="modal-desc">Manage the active planner JSON file and local recovery options.</p>
+    <p class="modal-desc">Choose the planner JSON used by ATLAS or save a copy of the active planner.</p>
     <div class="form-hint" id="default-json-status" style="margin-bottom:10px"></div>
-    <div class="flex gap-2" style="flex-wrap:wrap"><button class="btn" type="button" onclick="importData()">Import selected data</button><button class="btn" type="button" title="Replace all active planner data with a full planner backup" onclick="importData({replace:true})">Replace full planner</button><button class="btn" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As...</button><button class="btn" type="button" onclick="loadExampleTestData()">Load example data</button></div>
+    <div class="flex gap-2" style="flex-wrap:wrap"><button class="btn btn-primary" type="button" onclick="openDataImportFlow()">Import data…</button><button class="btn" id="save-local-as-btn" type="button" onclick="saveDataAs()">Save As…</button></div>
+    <input id="data-import-json-file" type="file" accept="application/json,.json" onchange="handleDataImportChoiceFile(event)" style="display:none">
     <input id="import-json-file" type="file" accept="application/json,.json" onchange="handleImportDataFile(event)" style="display:none">
     <div class="modal-actions"><button class="btn" onclick="closeModal('data-backup-settings-modal')">Done</button></div>
   </div>
 </div>
 
-<div class="modal-bg" id="planner-import-modal">
+<div class="modal-bg" id="data-import-modal">
   <div class="modal" style="width:min(720px,calc(100vw - 32px));max-height:88vh;overflow:auto">
-    <div class="flex items-center justify-between gap-2"><h3 style="margin:0">Import selected data</h3><button class="icon-btn" type="button" title="Close" onclick="closePlannerImport()">&times;</button></div>
-    <p class="modal-desc">Bring personnel and activities from an ATLAS planner JSON into this planner. Existing records are kept; matching records are skipped.</p>
+    <div class="flex items-center justify-between gap-2"><h3 style="margin:0">Import data</h3><button class="icon-btn" type="button" title="Close" onclick="closePlannerImport()">&times;</button></div>
+    <p class="modal-desc">Select the planner JSON to load into ATLAS.</p>
     <div class="form-row"><label>Source planner file</label><div class="flex items-center gap-2" style="flex-wrap:wrap"><button class="btn" type="button" onclick="document.getElementById('planner-import-json-file').click()">Choose JSON file</button><span id="planner-import-file-name" class="form-hint">No file selected</span></div><div id="planner-import-error" class="form-hint" role="alert" style="color:var(--danger,#dc2626)"></div></div>
     <input id="planner-import-json-file" type="file" accept="application/json,.json" onchange="handlePlannerImportFile(event)" style="display:none">
-    <div class="form-row"><label>Data to import</label><label class="settings-check"><input id="planner-import-personnel" type="checkbox" checked onchange="updatePlannerImportPreview()"> Personnel</label><label class="settings-check"><input id="planner-import-activities" type="checkbox" checked onchange="updatePlannerImportPreview()"> Activities and their cell assignments</label><div class="form-hint">Personnel matching an existing email are skipped. Existing activities are skipped when their name, dates, and view targets match.</div></div>
-    <div class="form-row"><label>Activity time frame</label><div class="form-row-2" style="margin:0"><label>From<input id="planner-import-from" type="date" onchange="updatePlannerImportPreview()"></label><label>To (optional)<input id="planner-import-to" type="date" onchange="updatePlannerImportPreview()"></label></div><div class="form-hint">Activities that overlap this period are included. The default starts today, so finished activities are skipped.</div></div>
-    <div id="planner-import-preview" class="atlas-setup-notice" role="status">Choose a planner file to preview the import.</div>
-    <div class="modal-actions"><button class="btn" type="button" onclick="closePlannerImport()">Cancel</button><button class="btn btn-primary" id="planner-import-submit" type="button" onclick="commitPlannerImport()" disabled>Import selected data</button></div>
+    <div class="modal-actions"><button class="btn" type="button" onclick="closePlannerImport()">Cancel</button><button class="btn btn-primary" id="planner-import-submit" type="button" onclick="loadSelectedPlannerFile()" disabled>Load everything</button></div>
+    <div id="planner-import-choices" class="form-row" style="display:none;margin-top:12px"><button class="btn" id="planner-import-advanced-button" type="button" onclick="continuePlannerImport()">Selective import options…</button>
+      <div id="planner-import-selection" style="display:none;margin-top:12px"><label>Data to import</label><label class="settings-check"><input id="planner-import-personnel" type="checkbox" checked onchange="updatePlannerImportPreview()"> Personnel not already in this planner</label><label class="settings-check"><input id="planner-import-activities" type="checkbox" checked onchange="updatePlannerImportPreview()"> Activities and work assignments on dates without existing work/status</label><div class="form-hint">When an employee already exists, work is imported only on dates without an existing activity assignment, daily status, shift rotation, or unavailable marker.</div><div class="form-row"><label>Activity time frame</label><div class="form-row-2" style="margin:0"><label>From<input id="planner-import-from" type="date" onchange="updatePlannerImportPreview()"></label><label>To (optional)<input id="planner-import-to" type="date" onchange="updatePlannerImportPreview()"></label></div><div class="form-hint">Activities that overlap this period are included. The default starts today, so finished activities are skipped.</div></div><div id="planner-import-preview" class="atlas-setup-notice" role="status">Select data to preview the merge.</div><button class="btn" id="planner-selective-submit" type="button" onclick="commitPlannerImport()" disabled>Import selected data</button></div></div>
   </div>
 </div>
 
@@ -622,7 +623,7 @@
     <div class="form-row"><label>Grid behavior</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-jump-to-today" type="checkbox"> Jump to today after changing grid settings</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:7px"><input id="set-auto-activity-page-scroll" type="checkbox"> Automatically show activities for dates visible while scrolling sideways</label><div class="form-hint">Turn this off to keep the activity rows fixed while browsing dates horizontally.</div><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:7px"><input id="set-show-level-rank" type="checkbox"> Show Level / Rank in Schedule and Shift Rotation</label></div>
     <div class="form-row"><label>Special days</label><button class="btn" type="button" onclick="openSpecialDaysModal()">Manage Special Days</button></div>
     <div class="form-row"><label>Planning configuration</label><button class="btn" type="button" onclick="closeModal('schedule-settings-modal');openStatusManager()">Manage Planning Options</button></div>
-    <div class="form-row"><label>Billable work-time lock deadline</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-billable-work-lock-enabled" type="checkbox" checked> Require Boss View for locked billable work cells</label><div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:8px"><input id="set-planning-horizon-days" type="number" min="0" max="365" step="1" placeholder="Days from today"><input id="set-planning-horizon-color" type="color" style="width:48px;height:34px;padding:2px"></div><div class="form-hint">Enabled by default. Billable employee work cells on or before the red line require Boss View. Activity details, Normal Hours, and absence/unavailable work codes are not locked. Set days to 0 to disable the lock.</div></div>
+    <div class="form-row"><label>Billable work-time lock deadline</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-billable-work-lock-enabled" type="checkbox" checked> Require Boss View for locked billable work cells</label><div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:8px"><input id="set-planning-horizon-days" type="number" min="0" max="365" step="1" placeholder="Days from today"><input id="set-planning-horizon-color" type="color" style="width:48px;height:34px;padding:2px"></div><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:8px"><input id="set-billable-lock-indicator" type="checkbox"> Show lock symbols on locked cells</label><div class="form-hint">When enabled, billable employee work cells on or before the red line require Boss View. Activity details, Normal Hours, and absence/unavailable work codes are not locked. Set days to 0 to disable the lock.</div></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal('schedule-settings-modal')">Cancel</button><button class="btn btn-primary" onclick="saveSettings();closeModal('schedule-settings-modal')">Save schedule settings</button></div>
   </div>
 </div>
@@ -726,7 +727,8 @@
     <h3 id="meeting-modal-title">Add meeting</h3>
     <input id="meeting-id" type="hidden">
     <div class="form-row"><label for="meeting-title">Title *</label><input id="meeting-title" maxlength="120" placeholder="Operations briefing"></div>
-    <div class="form-row-2"><div class="form-row" style="margin:0"><label for="meeting-type">Type</label><select id="meeting-type" class="plain-select"></select></div><div class="form-row" style="margin:0"><label for="meeting-status">Status</label><select id="meeting-status" class="plain-select"><option value="planned">Planned</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option></select></div></div>
+    <div class="form-row-2"><div class="form-row" style="margin:0"><label for="meeting-type">Type</label><select id="meeting-type" class="plain-select" onchange="updateMeetingTypeColorPreview()"></select></div><div class="form-row" style="margin:0"><label for="meeting-status">Status</label><select id="meeting-status" class="plain-select"><option value="planned">Planned</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option></select></div></div>
+    <div id="meeting-type-color-preview" class="meeting-type-color-preview"></div>
     <label style="display:flex;align-items:center;gap:7px;margin:8px 0 14px;font-size:12px;cursor:pointer"><input id="meeting-show-in-grid" type="checkbox" checked> Show dots in personnel grid</label>
     <div class="form-row-2"><div class="form-row" style="margin:0"><label for="meeting-date">Date</label><input id="meeting-date" type="date"></div><div class="form-row" style="margin:0"><label for="meeting-end-date">End date (optional)</label><input id="meeting-end-date" type="date"></div></div>
     <div class="form-row-2"><div class="form-row" style="margin:0"><label for="meeting-start-time">Start time</label><input id="meeting-start-time" type="time"></div><div class="form-row" style="margin:0"><label for="meeting-end-time">End time</label><input id="meeting-end-time" type="time"></div></div>
@@ -795,6 +797,6 @@
   </div>
 </div>
 <script src="app/workwheel.js?v=13"></script>
-<script src="app/app.js?v=109"></script>
+<script src="app/app.js?v=121"></script>
 </body>
 </html>

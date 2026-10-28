@@ -95,13 +95,13 @@ let appSettings = {
   appName: 'ATLAS', personnelOrganisationName: 'Organisation', showWorkwheelCellMarkers: true, showMeetingCellMarkers: true,
   darkMode: false, autoSaveEnabled: true, autoSyncEnabled: true, showOnlyConfirmedActivities: false,
   activityStatusFilter: 'all', jumpToTodayOnGridChange: true, autoActivityPageOnHorizontalScroll: true,
-  showLevelRankInSchedule: true, coreHoursPerDay: 7.5, coreWorkdayRange: '0730-1500',
+  showLevelRankInSchedule: true, dutyPlannerEnabled: true, coreHoursPerDay: 7.5, coreWorkdayRange: '0730-1500',
   lightMax: 70, normalMax: 100, highMax: 120, planningHorizonDays: 14, planningHorizonColor: '#ef4444',
   holidays: [], specialDays: { recurring: [], oneOff: [] }, specialDaysVisible: true, adminPasswordHash: '',
   departmentColors: {}, subdepartmentColors: {}, sectionColors: {}, processColors: {}, activityTypes: [],
   workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })), shiftTemplates: DEFAULT_SHIFT_TEMPLATES.map(shift => ({ ...shift })),
   summaryColumns: null, securityLabel: { enabled: false, text: 'BEGRENSET', color: '#16a34a' },
-  billableWorkLockEnabled: true, meetingLookaheadDays: 14, shiftRotationEnabled: false,
+  billableWorkLockEnabled: true, showBillableLockIndicator: false, meetingLookaheadDays: 14, shiftRotationEnabled: false,
   shiftRotationRanges: { normal: '0730-1500', day: '0730-2400', evening: '1200-2000', night: '0000-0730' },
   shiftRotationColors: { normal: '#64748b', day: '#f59e0b', evening: '#14b8a6', night: '#3b82f6', turn: '#8b5cf6', leave: '#b45309', overtime: '#dc2626' },
   shiftTeams: [], dutyTypes: [], workwheelEnabled: false, workwheelUpcomingDays: 14, bugReportEnabled: false, bugTracker: [],
@@ -170,6 +170,8 @@ function loadSettings() {
       appSettings.specialDaysVisible = parsed.specialDaysVisible !== false;
       appSettings.adminPasswordHash = String(parsed.adminPasswordHash || '');
       appSettings.showLevelRankInSchedule = parsed.showLevelRankInSchedule !== false;
+      appSettings.showBillableLockIndicator = parsed.showBillableLockIndicator === true;
+      appSettings.dutyPlannerEnabled = parsed.dutyPlannerEnabled !== false;
       appSettings.activityTypes = normalizeActivityTypes(parsed.activityTypes);
       appSettings.workCodes = normalizeWorkCodes(parsed.workCodes);
       appSettings.shiftTemplates = normalizeShiftTemplates(parsed.shiftTemplates);
@@ -306,7 +308,42 @@ function normalizeDutyAssignments(value, employeeList = employees, dutyTypes = a
   });
 }
 function normalizeActivityTypes(value) {
-  return (Array.isArray(value) ? value : []).map((type, index) => ({ id: String(type.id || `at${index + 1}`), key: String(type.key || type.name || type.label || `activity_type_${index + 1}`).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''), name: String(type.name || type.label || 'Activity Type').trim(), abbreviation: String(type.abbreviation || type.abbr || '').trim().toUpperCase().slice(0, 8), color: normalizeHexColor(type.color) }));
+  return (Array.isArray(value) ? value : []).map((type, index) => ({ id: String(type.id || `at${index + 1}`), key: String(type.key || type.name || type.label || `activity_type_${index + 1}`).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''), name: String(type.name || type.label || 'Activity Type').trim(), abbreviation: String(type.abbreviation || type.abbr || type.initial || type.code || '').trim().toUpperCase().slice(0, 8), color: normalizeHexColor(type.color), isAbsence: type.isAbsence === true || type.absence === true || type.isLeave === true, isOutOfOffice: type.isOutOfOffice === true || type.outOfOffice === true || type.isUnavailable === true }));
+}
+function legacyDailyStatusDefinitions(data) {
+  const candidates = [data?.statuses, data?.statusTypes, data?.dailyStatuses, data?.absenceCodes, data?.absenceTypes, data?.dailyStatusTypes, data?.workCodes, data?.workTimeCodes, data?.appSettings?.dailyStatuses, data?.appSettings?.absenceCodes, data?.appSettings?.absenceTypes, data?.appSettings?.workCodes, data?.appSettings?.workTimeCodes];
+  const definitions = candidates.find(value => Array.isArray(value) && value.length);
+  if (definitions) {
+    if ([data?.absenceCodes, data?.absenceTypes, data?.appSettings?.absenceCodes, data?.appSettings?.absenceTypes].includes(definitions)) {
+      return definitions.map(status => ({ ...status, isAbsence: true }));
+    }
+    return definitions;
+  }
+  if (data?.dailyStatusesSeparated !== true) {
+    const legacyTypes = data?.activityTypes?.length ? data.activityTypes : data?.appSettings?.activityTypes;
+    if (Array.isArray(legacyTypes)) return legacyTypes;
+  }
+  return candidates.find(Array.isArray) || null;
+}
+function normalizeLegacyDailyStatuses(value) {
+  const usedKeys = new Set();
+  return (Array.isArray(value) ? value : []).map((status, index) => {
+    const label = String(status?.label || status?.name || status?.description || status?.title || status?.code || status?.id || `Status ${index + 1}`).trim();
+    const abbreviation = String(status?.abbr || status?.initial || status?.abbreviation || status?.shortName || status?.code || label).trim().toUpperCase().slice(0, 3);
+    const baseKey = String(status?.key || status?.code || status?.name || status?.label || status?.id || `status_${index + 1}`).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `status_${index + 1}`;
+    let key = baseKey;
+    let suffix = 2;
+    while (usedKeys.has(key)) key = `${baseKey}_${suffix++}`;
+    usedKeys.add(key);
+    return { ...status, id: Number.isFinite(Number(status?.id)) ? Number(status.id) : index + 1, key, label, abbr: abbreviation, color: normalizeHexColor(status?.color || status?.colour, PALETTE[index % PALETTE.length]), isAbsence: status?.isAbsence === true || status?.absence === true || status?.isLeave === true, isOutOfOffice: status?.isOutOfOffice === true || status?.outOfOffice === true || status?.isUnavailable === true };
+  });
+}
+function isLegacyAbsenceStatus(status) {
+  const classification = [status?.category, status?.type, status?.kind].map(value => String(value || '').toLowerCase());
+  return status?.isAbsence === true || status?.absence === true || status?.isLeave === true
+    || status?.isOutOfOffice === true || status?.outOfOffice === true || status?.isUnavailable === true
+    || status?.staffingImpact === 'unavailable'
+    || classification.some(value => /absence|absent|leave|ooo|unavailable|sick/.test(value));
 }
 function normalizeActivityRelevance(value) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -321,24 +358,50 @@ function activityRelevantToEmployee(activity, employee) {
   return (!relevance.departments.length || relevance.departments.includes(String(employee.department || '').trim())) && (!relevance.sections.length || relevance.sections.includes(employeeSection(employee))) && (!relevance.processes.length || relevance.processes.includes(String(employee.process || '').trim()));
 }
 function scheduleScopeParts() {
-  const match = /^(department|section)::([\s\S]+)$/.exec(scheduleSectionFilter);
+  const match = /^(department|section|team)::([\s\S]+)$/.exec(scheduleSectionFilter);
   return match ? { level: match[1], value: match[2] } : scheduleSectionFilter ? { level: 'section', value: scheduleSectionFilter } : { level: '', value: '' };
 }
 function scheduleScopeValue(level, value) { return value ? `${level}::${value}` : ''; }
-function isScheduleScopeValue(value) { return /^(department|section)::/.test(String(value || '')); }
+function isScheduleScopeValue(value) { return /^(department|section|team)::/.test(String(value || '')); }
 function scheduleEmployeeMatchesScope(employee) {
   const scope = scheduleScopeParts();
   if (!scope.level) return true;
-  return scope.level === 'department' ? String(employee?.department || (employeeSection(employee) ? 'Independent sections' : '')).trim() === scope.value : employeeSection(employee) === scope.value;
+  if (scope.level === 'department') return scope.value === 'Independent sections'
+    ? !String(employee?.department || '').trim() && Boolean(employeeSection(employee))
+    : String(employee?.department || '').trim() === scope.value;
+  if (scope.level === 'team') return String(employee?.team || '').trim() === scope.value;
+  return employeeSection(employee) === scope.value;
 }
-function meetingMatchesScheduleScope(meeting) {
-  const scope = scheduleScopeParts();
-  if (!scope.level) return true;
+function meetingMatchesScope(meeting, scope) {
+  if (!scope?.level) return true;
   const participantIds = [...new Set([...(meeting?.participantIds || []), ...(meeting?.responsibleId ? [Number(meeting.responsibleId)] : [])])];
   return participantIds.some(id => {
     const employee = employees.find(item => Number(item.id) === Number(id));
-    return employee && scheduleEmployeeMatchesScope(employee);
+    if (!employee) return false;
+    return scheduleEmployeeMatchesScopeFor(employee, scope);
   });
+}
+function meetingsViewScopeParts() {
+  return parseMeetingsScopeFilter(meetingsScopeFilter);
+}
+function parseMeetingsScopeFilter(value) {
+  const match = /^(department|section|team)::([\s\S]+)$/.exec(String(value || ''));
+  return match ? { level: match[1], value: match[2] } : { level: '', value: '' };
+}
+function validateMeetingsViewScopeFilter(value, employeeList = employees) {
+  const filter = String(value || '');
+  if (!filter) return '';
+  const scope = parseMeetingsScopeFilter(filter);
+  if (!scope.level) return '';
+  return employeeList.some(employee => scheduleEmployeeMatchesScopeFor(employee, scope)) ? filter : '';
+}
+function scheduleEmployeeMatchesScopeFor(employee, scope) {
+  if (!scope?.level) return true;
+  if (scope.level === 'department') return scope.value === 'Independent sections'
+    ? !String(employee?.department || '').trim() && Boolean(employeeSection(employee))
+    : String(employee?.department || '').trim() === scope.value;
+  if (scope.level === 'team') return String(employee?.team || '').trim() === scope.value;
+  return employeeSection(employee) === scope.value;
 }
 function activityVisibleForScheduleSection(activity) {
   const scope = scheduleScopeParts();
@@ -404,11 +467,15 @@ function updateCoreHoursDisplayFromRangeInput() {
 function normalizeStateVersion(data) {
   const raw = data && typeof data === 'object' ? data : {};
   const normalized = { ...raw };
+  if (Array.isArray(raw.statuses) && raw.statuses.length === 0) normalized.statuses = null;
   const detectedVersion = Number(raw.dataVersion ?? raw.version ?? 1);
   normalized.dataVersion = Math.max(DATA_VERSION, detectedVersion);
   normalized.appVersion = raw.appVersion || APP_VERSION;
   normalized.appSettings = raw.appSettings && typeof raw.appSettings === 'object' ? { ...raw.appSettings } : null;
-  normalized.activityTypes = normalizeActivityTypes(raw.activityTypes || raw.appSettings?.activityTypes || []);
+  const activityTypes = [raw.activityTypes, raw.appSettings?.activityTypes].find(value => Array.isArray(value) && value.length)
+    || [raw.activityTypes, raw.appSettings?.activityTypes].find(Array.isArray)
+    || [];
+  normalized.activityTypes = normalizeActivityTypes(activityTypes);
   normalized.meetingTypes = normalizeMeetingTypes(raw.meetingTypes || raw.appSettings?.meetingTypes || [
     { id: 'meeting', name: 'Meeting', color: '#2563eb' },
     { id: 'briefing', name: 'Briefing', color: '#0f766e' },
@@ -419,7 +486,11 @@ function normalizeStateVersion(data) {
   normalized.dutyAssignments = Array.isArray(raw.dutyAssignments) ? raw.dutyAssignments : [];
   normalized.workScheduleHistory = normalizeWorkScheduleHistory(raw.workScheduleHistory || {});
   normalized.changeLog = normalizeChangeLog(raw.changeLog || []);
-  normalized.workCodes = normalizeWorkCodes(raw.workCodes || raw.appSettings?.workCodes);
+  const workCodes = [raw.workCodes, raw.appSettings?.workCodes, raw.workTimeCodes, raw.appSettings?.workTimeCodes].find(value => Array.isArray(value) && value.length);
+  normalized.workCodes = normalizeWorkCodes(workCodes);
+  normalized.legacyDailyStatuses = legacyDailyStatusDefinitions(raw);
+  normalized.absenceCodes = raw.absenceCodes || raw.absenceTypes || raw.appSettings?.absenceCodes || raw.appSettings?.absenceTypes || [];
+  normalized.appSettings = { ...(normalized.appSettings || {}), workCodes: normalized.workCodes };
   normalized.shiftTemplates = normalizeShiftTemplates(raw.shiftTemplates || raw.appSettings?.shiftTemplates);
   normalized.summaryColumns = normalizeSummaryColumns(raw.summaryColumns ?? raw.appSettings?.summaryColumns);
   const annualRequirements = normalizeAnnualRequirements(raw);
@@ -532,8 +603,9 @@ function normalizeMeetingTypes(value) {
     { id: 'other', name: 'Other', color: '#64748b' },
   ];
 }
-function normalizeMeetings(value) {
+function normalizeMeetings(value, typeDefinitions = meetingTypes) {
   if (!Array.isArray(value)) return [];
+  const typeColors = new Map((Array.isArray(typeDefinitions) ? typeDefinitions : []).map(type => [String(type.id), type.color]));
   const seen = new Set();
   return value.map((item, index) => {
     const id = String(item?.id || `meeting-${index + 1}`).trim().slice(0, 80);
@@ -565,7 +637,7 @@ function normalizeMeetings(value) {
       externalAttendees: externalAttendees.slice(0, 500),
       recurrence,
       weekday: Number.isInteger(Number(item.weekday)) ? Number(item.weekday) : new Date(`${date}T00:00:00`).getDay(),
-      color: normalizeHexColor(item.color, '#2563eb'),
+      color: normalizeHexColor(typeColors.get(String(item.typeId)) || item.color, '#2563eb'),
     };
   }).filter(Boolean);
 }
@@ -819,6 +891,7 @@ function openSettings() {
   document.getElementById('set-security-label-text').value = secLabel.text;
   document.getElementById('set-security-label-color').value = secLabel.color;
   document.getElementById('set-workwheel-enabled').checked = appSettings.workwheelEnabled === true;
+  document.getElementById('set-duty-planner-enabled').checked = appSettings.dutyPlannerEnabled !== false;
   document.getElementById('set-workwheel-upcoming-days').value = String(appSettings.workwheelUpcomingDays || 14);
   renderHolidaySettings();
   updateDefaultJsonStatus();
@@ -853,12 +926,13 @@ function openScheduleSettings() {
     lockToggle.title = unlockedBossView() ? 'Boss View can enable or disable this planner lock.' : 'Unlock Boss View to change this planner-wide lock.';
   }
   document.getElementById('set-core-time').value = appSettings.coreWorkdayRange || '0730-1500';
+  document.getElementById('set-show-level-rank').checked = appSettings.showLevelRankInSchedule !== false;
   document.getElementById('set-jump-to-today').checked = appSettings.jumpToTodayOnGridChange !== false;
   document.getElementById('set-auto-activity-page-scroll').checked = appSettings.autoActivityPageOnHorizontalScroll !== false;
-  document.getElementById('set-show-level-rank').checked = appSettings.showLevelRankInSchedule !== false;
   document.getElementById('set-planning-horizon-days').value = String(appSettings.planningHorizonDays ?? 14);
   document.getElementById('set-planning-horizon-color').value = normalizeHexColor(appSettings.planningHorizonColor, '#ef4444');
   document.getElementById('set-billable-work-lock-enabled').checked = appSettings.billableWorkLockEnabled !== false;
+  document.getElementById('set-billable-lock-indicator').checked = appSettings.showBillableLockIndicator === true;
   document.getElementById('set-core-time').oninput = updateCoreHoursDisplayFromRangeInput;
   updateCoreHoursDisplayFromRangeInput();
   document.getElementById('schedule-settings-modal').classList.add('open');
@@ -1578,6 +1652,17 @@ async function saveSettings() {
     color: document.getElementById('set-security-label-color')?.value || '#16a34a',
   });
   const workwheelEnabled = document.getElementById('set-workwheel-enabled')?.checked === true;
+  const dutyPlannerEnabled = document.getElementById('set-duty-planner-enabled')?.checked === true;
+  const scheduleSettingsOpen = document.getElementById('schedule-settings-modal')?.classList.contains('open') === true;
+  const gridSettings = scheduleSettingsOpen ? {
+    coreWorkdayRange: normalizeCoreWorkdayRange(document.getElementById('set-core-time')?.value, appSettings.coreWorkdayRange),
+    jumpToTodayOnGridChange: document.getElementById('set-jump-to-today')?.checked === true,
+    autoActivityPageOnHorizontalScroll: document.getElementById('set-auto-activity-page-scroll')?.checked === true,
+    showLevelRankInSchedule: document.getElementById('set-show-level-rank')?.checked === true,
+    planningHorizonDays: Math.max(0, Math.min(365, Math.round(Number(document.getElementById('set-planning-horizon-days')?.value) || 0))),
+    planningHorizonColor: normalizeHexColor(document.getElementById('set-planning-horizon-color')?.value, appSettings.planningHorizonColor),
+    showBillableLockIndicator: document.getElementById('set-billable-lock-indicator')?.checked === true,
+  } : null;
   const workwheelUpcomingDays = Math.max(1, Math.min(365, Math.round(Number(document.getElementById('set-workwheel-upcoming-days')?.value) || 14)));
 
   await mutateState('saveSettings', () => {
@@ -1587,12 +1672,19 @@ async function saveSettings() {
     appSettings.meetingLookaheadDays = meetingLookaheadDays;
     appSettings.billableWorkLockEnabled = billableWorkLockEnabled;
     appSettings.securityLabel = securityLabel;
+    if (gridSettings) {
+      Object.assign(appSettings, gridSettings);
+      appSettings.coreHoursPerDay = timeRangeHours(appSettings.coreWorkdayRange) || 7.5;
+    }
     appSettings.workwheelEnabled = workwheelEnabled;
+    appSettings.dutyPlannerEnabled = dutyPlannerEnabled;
     appSettings.workwheelUpcomingDays = workwheelUpcomingDays;
     persistSettings();
   });
   applyAppName();
   updateWorkwheelNavigation();
+  updateDutyPlannerNavigation();
+  if (!appSettings.dutyPlannerEnabled && currentPage === 'duty-planner') currentPage = 'grid';
   updateSaveButton();
   updateSbStatus();
   closeModal('settings-modal');
@@ -2433,6 +2525,7 @@ function plannerImportActivityKey(activity) {
 function buildPlannerImportPlan(source, options = {}) {
   const includePersonnel = options.includePersonnel === true;
   const includeActivities = options.includeActivities === true;
+  const onlyUnassignedDates = options.onlyUnassignedDates === true;
   const from = String(options.from || '').trim();
   const to = String(options.to || '').trim();
   if (!isValidIsoDate(from) || (to && !isValidIsoDate(to)) || (to && to < from)) throw new Error('Choose a valid activity date range.');
@@ -2504,14 +2597,14 @@ function buildPlannerImportPlan(source, options = {}) {
     if (key && !existingActivitiesByKey.has(key)) existingActivitiesByKey.set(key, activity);
   });
   const newActivities = [];
-  const newActivitySourceIds = new Set();
+  const importableActivitySourceIds = new Set();
   let skippedActivities = 0, outsideDateRange = 0, invalidActivities = 0, unmatchedParticipants = 0;
   if (includeActivities) (source.activities || source.projects || []).forEach(activity => {
     if (!isValidIsoDate(activity.startDate) || !isValidIsoDate(activity.endDate) || activity.endDate < activity.startDate) { invalidActivities++; return; }
     if (activity.endDate < from || (to && activity.startDate > to)) { outsideDateRange++; return; }
     const key = plannerImportActivityKey(activity);
     const match = key ? existingActivitiesByKey.get(key) : null;
-    if (match) { activityIdMap.set(Number(activity.id), Number(match.id)); skippedActivities++; return; }
+    if (match) { activityIdMap.set(Number(activity.id), Number(match.id)); skippedActivities++; importableActivitySourceIds.add(Number(activity.id)); return; }
     const sourceParticipants = Array.isArray(activity.participants) ? activity.participants : (activity.employeeIds || []).map(id => ({ id }));
     const mappedParticipants = [];
     const participantIds = new Set();
@@ -2523,7 +2616,7 @@ function buildPlannerImportPlan(source, options = {}) {
     const importedActivity = { ...activity, id: activityId++, participants: mappedParticipants,
       relevance: normalizeActivityRelevance(activity.relevance || { departments: activity.departments, sections: activity.sections, processes: activity.processes }) };
     newActivities.push(importedActivity);
-    newActivitySourceIds.add(Number(activity.id));
+    importableActivitySourceIds.add(Number(activity.id));
     activityIdMap.set(Number(activity.id), importedActivity.id);
     if (key) existingActivitiesByKey.set(key, importedActivity);
   });
@@ -2564,15 +2657,32 @@ function buildPlannerImportPlan(source, options = {}) {
     if (value == null) return;
     const [sourceEmployeeId, date, sourceActivityId] = key.split('_');
     const sourceActivityNumber = Number(sourceActivityId);
-    if (!newActivitySourceIds.has(sourceActivityNumber) || !isValidIsoDate(date) || date < from || (to && date > to)) return;
+    if (!importableActivitySourceIds.has(sourceActivityNumber) || !isValidIsoDate(date) || date < from || (to && date > to)) return;
     const mappedEmployeeId = employeeIdMap.get(Number(sourceEmployeeId));
     const mappedActivityId = activityIdMap.get(sourceActivityNumber);
     if (mappedEmployeeId === undefined || mappedActivityId === undefined) { skippedAssignments++; return; }
     const destinationKey = `${mappedEmployeeId}_${date}_${mappedActivityId}`;
-    if (Object.prototype.hasOwnProperty.call(activityShiftsMap, destinationKey) && activityShiftsMap[destinationKey] != null) { skippedAssignments++; return; }
+    const hasImportedAssignmentForDate = Object.values(newAssignments).some(assignment =>
+      Number(assignment.employeeId) === Number(mappedEmployeeId) && assignment.date === date);
+    const destinationHasWork = hasImportedAssignmentForDate || Object.keys(activityShiftsMap).some(existingKey => {
+      const [existingEmployeeId, existingDate] = existingKey.split('_', 3);
+      if (Number(existingEmployeeId) !== Number(mappedEmployeeId) || existingDate !== date) return false;
+      const existingAssignment = activityAssignment(existingKey);
+      return existingAssignment.assigned === true && existingAssignment.excluded !== true && Boolean(existingAssignment.shift);
+    });
+    const importedStatusForDate = Object.values(newAssignments).some(assignment =>
+      Number(assignment.employeeId) === Number(mappedEmployeeId) && assignment.date === date && assignment.status);
+    const destinationHasStatus = Boolean(getEntryObj(`${mappedEmployeeId}_${date}`)) || importedStatusForDate;
+    const destinationHasRotation = Boolean(rotationRecord(mappedEmployeeId, date));
+    const destinationUnavailable = Boolean(cellUnavailable(mappedEmployeeId, date));
+    if ((onlyUnassignedDates && (destinationHasWork || destinationHasStatus || destinationHasRotation || destinationUnavailable))
+      || (Object.prototype.hasOwnProperty.call(activityShiftsMap, destinationKey) && activityShiftsMap[destinationKey] != null)) {
+      skippedAssignments++;
+      return;
+    }
     const assignment = typeof value === 'string' ? { shift: value } : { ...value };
     assignment.workCodeId = mapWorkCode(assignment.workCodeId);
-    newAssignments[destinationKey] = assignment;
+    newAssignments[destinationKey] = { ...assignment, employeeId: Number(mappedEmployeeId), date };
   });
   const activityTypeKeys = new Set((appSettings.activityTypes || []).map(type => String(type.key || '')));
   const usedActivityTypeKeys = new Set(newActivities.map(activity => String(activity.type || '')).filter(Boolean));
@@ -2585,35 +2695,111 @@ function buildPlannerImportPlan(source, options = {}) {
 function updatePlannerImportPreview() {
   const preview = document.getElementById('planner-import-preview');
   const submit = document.getElementById('planner-import-submit');
+  const selectiveSubmit = document.getElementById('planner-selective-submit');
+  const selection = document.getElementById('planner-import-selection');
   const activitiesEnabled = document.getElementById('planner-import-activities').checked;
+  const selectable = unlockedBossView() && selection?.style.display !== 'none';
   document.getElementById('planner-import-from').disabled = !activitiesEnabled;
   document.getElementById('planner-import-to').disabled = !activitiesEnabled;
-  if (!pendingPlannerImport) { preview.textContent = 'Choose a planner file to preview the import.'; submit.disabled = true; return; }
+  if (!pendingPlannerImport) { preview.textContent = 'Choose a planner file to preview the import.'; submit.disabled = true; if (selectiveSubmit) selectiveSubmit.disabled = true; return; }
   try {
     const includePersonnel = document.getElementById('planner-import-personnel').checked;
-    const plan = buildPlannerImportPlan(pendingPlannerImport.data, { includePersonnel, includeActivities: activitiesEnabled, from: document.getElementById('planner-import-from').value, to: document.getElementById('planner-import-to').value });
+    const plan = buildPlannerImportPlan(pendingPlannerImport.data, { includePersonnel, includeActivities: activitiesEnabled, onlyUnassignedDates: selectable, from: document.getElementById('planner-import-from').value, to: document.getElementById('planner-import-to').value });
     const rows = [];
     if (includePersonnel) rows.push(`Personnel: ${plan.newEmployees.length} to add; ${plan.skippedPersonnel} matching records skipped; ${plan.newCategories.length} categories added.`);
     if (activitiesEnabled) rows.push(`Activities: ${plan.newActivities.length} to add; ${plan.skippedActivities} duplicates skipped; ${plan.outsideDateRange} outside the date range; ${plan.invalidActivities} invalid dates skipped.`);
     if (activitiesEnabled) rows.push(`Dependencies: ${plan.newActivityTypes.length} activity types and ${plan.newWorkCodes.length} work codes added. Activity cell assignments: ${Object.keys(plan.newAssignments).length} to add; ${plan.unmatchedParticipants} participant links, ${plan.skippedAssignments} assignments, and ${plan.unmappedWorkCodes} unknown work-code references skipped.`);
     preview.textContent = rows.join(' ') || 'Select Personnel or Activities to import.';
-    submit.disabled = !plan.newEmployees.length && !plan.newActivities.length;
-  } catch (error) { preview.textContent = error.message; submit.disabled = true; }
+    submit.disabled = !pendingPlannerImport;
+    if (selectiveSubmit) selectiveSubmit.disabled = !selectable || (!plan.newEmployees.length && !plan.newActivities.length && !Object.keys(plan.newAssignments).length);
+    if (selectiveSubmit) selectiveSubmit.textContent = `Merge ${plan.newEmployees.length} personnel, ${plan.newActivities.length} activities, ${Object.keys(plan.newAssignments).length} assignments`;
+  } catch (error) { preview.textContent = error.message; submit.disabled = !pendingPlannerImport; if (selectiveSubmit) { selectiveSubmit.disabled = true; selectiveSubmit.textContent = 'Import selected data'; } }
+}
+function openDataImportFlow() {
+  if (startupFileSelectionRequired) {
+    beginStartupFileSelection();
+    return;
+  }
+  pendingPlannerImport = null;
+  const picker = document.getElementById('data-import-json-file');
+  if (picker) picker.click();
+}
+async function handleDataImportChoiceFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    validatePlannerData(data);
+    pendingPlannerImport = { data, fileName: file.name };
+    const fileLabel = document.getElementById('planner-import-file-name');
+    if (fileLabel) fileLabel.textContent = file.name;
+    const error = document.getElementById('planner-import-error');
+    if (error) error.textContent = '';
+    document.getElementById('planner-import-personnel').checked = true;
+    document.getElementById('planner-import-activities').checked = true;
+    document.getElementById('planner-import-from').value = todayStr();
+    document.getElementById('planner-import-to').value = '';
+    updatePlannerImportPreview();
+    const isAdmin = unlockedBossView();
+    document.getElementById('planner-import-choices').style.display = isAdmin ? '' : 'none';
+    document.getElementById('planner-import-selection').style.display = 'none';
+    document.getElementById('planner-import-submit').style.display = '';
+    document.getElementById('planner-import-submit').textContent = 'Load everything';
+    document.getElementById('data-import-modal').classList.add('open');
+  } catch (error) {
+    showToast(`Could not open planner JSON: ${error?.message || 'Check the file format.'}`, 7000);
+  } finally {
+    event.target.value = '';
+  }
+}
+async function loadSelectedPlannerFile() {
+  if (!pendingPlannerImport?.data) return;
+  const data = pendingPlannerImport.data;
+  const fileName = pendingPlannerImport.fileName || '';
+  try {
+    if (!startupFileSelectionRequired && !confirm(`Load ${fileName || 'this planner'} as the active planner? This replaces the data currently open in this browser.`)) return;
+    document.getElementById('planner-import-submit').disabled = true;
+    document.getElementById('planner-import-choices').style.display = 'none';
+    await applyLoadedPlannerData(data, { fileName, remoteUpdateSource: 'none', closeSettings: false });
+    closePlannerImport();
+    completeStartupFileSelection();
+    showToast(`Loaded planner: ${fileName || 'selected file'}.`, 5000);
+  } catch (error) {
+    document.getElementById('planner-import-error').textContent = `Could not load planner: ${error?.message || 'Unknown error.'}`;
+    document.getElementById('planner-import-choices').style.display = unlockedBossView() ? '' : 'none';
+    document.getElementById('planner-import-submit').disabled = false;
+  }
+}
+function continuePlannerImport() {
+  if (!unlockedBossView() || !pendingPlannerImport) return;
+  document.getElementById('planner-import-selection').style.display = '';
+  document.getElementById('planner-import-advanced-button').style.display = 'none';
+  updatePlannerImportPreview();
 }
 function openPlannerImport() {
+  if (!unlockedBossView()) {
+    showToast('Unlock Boss View to selectively merge planner data.', 5000);
+    return;
+  }
   pendingPlannerImport = null;
+  document.getElementById('data-import-json-file').value = '';
   document.getElementById('planner-import-json-file').value = '';
+  document.getElementById('planner-import-selection').style.display = 'none';
+  document.getElementById('planner-import-advanced-button').style.display = '';
   document.getElementById('planner-import-file-name').textContent = 'No file selected';
   document.getElementById('planner-import-error').textContent = '';
+  document.getElementById('planner-import-choices').style.display = 'none';
+  document.getElementById('planner-import-submit').style.display = '';
+  document.getElementById('planner-selective-submit').style.display = 'none';
   document.getElementById('planner-import-personnel').checked = true;
   document.getElementById('planner-import-activities').checked = true;
   document.getElementById('planner-import-from').value = todayStr();
   document.getElementById('planner-import-to').value = '';
   updatePlannerImportPreview();
   document.querySelectorAll('.modal-bg.open').forEach(modal => closeModal(modal.id));
-  document.getElementById('planner-import-modal').classList.add('open');
+  document.getElementById('data-import-modal').classList.add('open');
 }
-function closePlannerImport() { pendingPlannerImport = null; closeModal('planner-import-modal'); }
+function closePlannerImport() { pendingPlannerImport = null; closeModal('data-import-modal'); }
 async function handlePlannerImportFile(event) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -2625,6 +2811,11 @@ async function handlePlannerImportFile(event) {
     pendingPlannerImport = { data: source, fileName: file.name };
     document.getElementById('planner-import-file-name').textContent = file.name;
     updatePlannerImportPreview();
+    document.getElementById('planner-import-submit').disabled = false;
+    document.getElementById('planner-import-selection').style.display = 'none';
+    document.getElementById('planner-import-advanced-button').style.display = '';
+    document.getElementById('planner-import-choices').style.display = unlockedBossView() ? '' : 'none';
+    document.getElementById('planner-import-modal').classList.add('open');
   } catch (err) {
     pendingPlannerImport = null;
     error.textContent = `Could not read planner file: ${err?.message || 'Check the JSON format.'}`;
@@ -2635,13 +2826,15 @@ async function commitPlannerImport() {
   if (!pendingPlannerImport) return;
   let plan;
   try {
+    if (!unlockedBossView()) throw new Error('Unlock Boss View to selectively merge planner data.');
     plan = buildPlannerImportPlan(pendingPlannerImport.data, {
       includePersonnel: document.getElementById('planner-import-personnel').checked,
       includeActivities: document.getElementById('planner-import-activities').checked,
+      onlyUnassignedDates: true,
       from: document.getElementById('planner-import-from').value,
       to: document.getElementById('planner-import-to').value,
     });
-    if (!plan.newEmployees.length && !plan.newActivities.length) return;
+    if (!plan.newEmployees.length && !plan.newActivities.length && !Object.keys(plan.newAssignments).length) return;
     await mutateState('importSelectedPlannerData', () => {
       categories.push(...plan.newCategories);
       employees.push(...plan.newEmployees);
@@ -2653,14 +2846,16 @@ async function commitPlannerImport() {
       ensureEmployeeSortOrders(employees); ensureDepartmentOrders(); ensureSubdepartmentOrders();
       employees.sort((a, b) => a.name.localeCompare(b.name, 'nb', { sensitivity: 'base' }));
       activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
+      saveGridPreferences();
     }, { saveDisk: true });
   } catch (err) {
     document.getElementById('planner-import-error').textContent = `Import failed: ${err?.message || 'The planner could not be saved.'}`;
     return;
   }
   const addedPersonnel = plan.newEmployees.length, addedActivities = plan.newActivities.length;
+  const addedAssignments = Object.keys(plan.newAssignments).length;
   closePlannerImport(); renderPage();
-  showToast(`Imported ${addedPersonnel} personnel and ${addedActivities} activities. Existing records were kept.`, 6000);
+  showToast(`Imported ${addedPersonnel} personnel, ${addedActivities} activities, and ${addedAssignments} work assignments. Existing planner data was kept.`, 7000);
 }
 function importData(options = {}) {
   if (!options.replace && !options.required) { openPlannerImport(); return false; }
@@ -2697,6 +2892,10 @@ async function applyLoadedPlannerData(parsed, options = {}) {
   const source = options.remoteUpdateSource || 'none';
   const shouldCloseSettings = options.closeSettings !== false;
   loadFromData(parsed);
+  pastActivitiesExpanded = false;
+  activityPageOffset = 0;
+  scheduleSectionFilter = '';
+  hiddenEmployees = new Set();
   portableDefaultLoadIssue = '';
   if (handle) {
     await storeLocalBackupHandle(handle);
@@ -2705,7 +2904,6 @@ async function applyLoadedPlannerData(parsed, options = {}) {
     activeFileName = fileName || activeFileName;
     setRemoteUpdateSource(source);
   }
-  hiddenEmployees = new Set([...hiddenEmployees].filter(id => employees.some(emp => emp.id === id)));
   saveGridPreferences();
   persistSettings();
   markFileSaved();
@@ -2741,13 +2939,18 @@ function validatePlannerData(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid JSON payload');
   const employeeList = data.employees;
   const activityList = data.activities || data.projects;
-  const statusList = data.statuses || data.statusTypes;
+  const rawStatusCandidates = [data.statuses, data.statusTypes, data.dailyStatuses, data.absenceCodes, data.absenceTypes, data.dailyStatusTypes, data.workCodes, data.workTimeCodes, data.appSettings?.dailyStatuses, data.appSettings?.absenceCodes, data.appSettings?.absenceTypes, data.appSettings?.workCodes, data.appSettings?.workTimeCodes];
+  const statusDefinitions = rawStatusCandidates.find(value => Array.isArray(value) && value.length);
+  const legacyStatusList = statusDefinitions
+    || (data.dailyStatusesSeparated !== true ? (data.activityTypes?.length ? data.activityTypes : data.appSettings?.activityTypes) : null)
+    || (data.workCodes?.length || data.workTimeCodes?.length || data.appSettings?.workCodes?.length || data.appSettings?.workTimeCodes?.length ? [] : null);
+  const statusList = Array.isArray(legacyStatusList) ? normalizeLegacyDailyStatuses(legacyStatusList) : legacyStatusList;
   if (!Array.isArray(employeeList) || !Array.isArray(activityList) || !Array.isArray(statusList)) {
     throw new Error('Planner JSON is missing employees, activities, or statuses');
   }
   statusList.forEach(status => {
     if (!status || typeof status !== 'object' || Array.isArray(status)) throw new Error('Invalid daily status definition');
-    if (typeof status.key !== 'string' || !status.key.trim()) throw new Error('Daily status is missing key');
+    if (!String(status.key || status.code || status.name || status.label || status.id || '').trim()) throw new Error('Daily status is missing key');
     if (status.isAbsence != null && typeof status.isAbsence !== 'boolean') throw new Error('Daily status absence flag is invalid');
     if (status.isOutOfOffice != null && typeof status.isOutOfOffice !== 'boolean') throw new Error('Daily status out-of-office flag is invalid');
   });
@@ -2805,7 +3008,13 @@ function validatePlannerData(data) {
     if (status.isAbsence != null && typeof status.isAbsence !== 'boolean') throw new Error('Daily status has an invalid absence flag');
     if (status.isOutOfOffice != null && typeof status.isOutOfOffice !== 'boolean') throw new Error('Daily status has an invalid out-of-office flag');
   });
-  const validEntryStatuses = new Set(['at_work', ...statusKeys]);
+  const legacyCodeStatuses = [data.absenceCodes, data.absenceTypes, data.workCodes, data.workTimeCodes, data.appSettings?.absenceCodes, data.appSettings?.absenceTypes, data.appSettings?.workCodes, data.appSettings?.workTimeCodes]
+    .flatMap(value => Array.isArray(value) ? value : [])
+    .flatMap(code => {
+      const identifiers = [code.key, code.code, code.id, code.name, code.label].map(value => String(value || '').trim()).filter(Boolean);
+      return isLegacyAbsenceStatus(code) ? identifiers : identifiers.filter(value => /^\d+$/.test(value) || /^[A-Z][A-Z0-9_-]{1,11}$/.test(value));
+    });
+  const validEntryStatuses = new Set(['at_work', ...statusKeys, ...legacyCodeStatuses]);
   activityList.forEach(activity => {
     const participants = Array.isArray(activity.participants) ? activity.participants : (activity.employeeIds || []).map(id => ({ id }));
     if (!Array.isArray(participants) || participants.some(participant => !employeeIds.has(Number(participant?.id)))) {
@@ -2994,6 +3203,8 @@ let gridViewMode = 'all';
 let scheduleSubview = 'activities';
 let scheduleSubViewDates = { month: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`, selected: todayStr() };
 let meetingsScopeFilter = '';
+let meetingsViewMode = 'month';
+let meetingsWeekAnchor = todayStr();
 let meetings = [];
 let dutyAssignments = [];
 let selectedDutyTypeId = '';
@@ -3300,7 +3511,7 @@ function safeColor(c) { return /^#[0-9a-fA-F]{3,8}$/.test(String(c || '')) ? c :
 function loadFromData(data) {
   const normalized = normalizeStateVersion(data || {});
   meetingTypes = normalizeMeetingTypes(normalized.meetingTypes);
-  meetings = normalizeMeetings(normalized.meetings);
+  meetings = normalizeMeetings(normalized.meetings, meetingTypes);
   appSettings.dutyTypes = normalizeDutyTypes(normalized.appSettings?.dutyTypes || appSettings.dutyTypes);
   workScheduleHistory = normalizeWorkScheduleHistory(normalized.workScheduleHistory);
   changeLog = normalizeChangeLog(normalized.changeLog);
@@ -3454,24 +3665,49 @@ function loadFromData(data) {
     });
   } else activityShiftsMap = {};
   shiftRotationMap = cleanShiftRotationMap(normalized.shiftRotationMap, employees);
-  const rawStatuses = Array.isArray(normalized.statuses) && normalized.statuses.length
-    ? normalized.statuses
-    : (Array.isArray(normalized.statusTypes) ? normalized.statusTypes.map(st => ({
-        id: st.id, key: st.key, label: st.label, abbr: st.initial || st.abbr,
-        color: st.color, isAbsence: st.isAbsence, isOutOfOffice: st.isOutOfOffice,
-      })) : []);
-  statuses = rawStatuses.map(s => ({
+  const rawStatuses = normalizeLegacyDailyStatuses(normalized.legacyDailyStatuses || []);
+  const statusKeys = new Set(rawStatuses.map(status => status.key));
+  const statusIds = new Set(rawStatuses.map(status => Number(status.id)));
+  const sourceLegacyAbsenceCodes = [...new Map([
+    ...[normalized.absenceCodes, normalized.appSettings?.absenceCodes, normalized.appSettings?.absenceTypes]
+      .flatMap(value => Array.isArray(value) ? value.map(code => ({ ...code, isAbsence: true })) : []),
+    ...(normalized.legacyDailyStatuses || []).filter(isLegacyAbsenceStatus),
+    ...(normalized.workCodes || []).filter(code => code.staffingImpact === 'unavailable'),
+    ...(normalized.appSettings?.workTimeCodes || []).filter(isLegacyAbsenceStatus),
+  ].map(code => [String(code.key || code.code || code.id || code.name || code.label || ''), code])).values()];
+  const statusLabels = new Set(rawStatuses.map(status => status.label.toLocaleLowerCase()));
+  const legacyCodesAsStatuses = sourceLegacyAbsenceCodes
+    .filter(code => !statusKeys.has(String(code.key || code.code || code.name || code.label || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')) && !statusLabels.has(String(code.label || code.name || code.description || '').trim().toLocaleLowerCase()) && !(Number.isFinite(Number(code.id)) && statusIds.has(Number(code.id))))
+    .map((code, index) => ({ id: Number.isFinite(Number(code.id)) ? Number(code.id) : rawStatuses.length + index + 1, key: String(code.key || code.code || `legacy_absence_${index + 1}`).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_'), label: String(code.label || code.name || code.description || code.code || `Absence ${index + 1}`), abbr: String(code.abbr || code.initial || code.abbreviation || code.code || code.name || 'ABS').toUpperCase().slice(0, 3), color: normalizeHexColor(code.color, PALETTE[(rawStatuses.length + index) % PALETTE.length]), isAbsence: true, isOutOfOffice: code.isOutOfOffice === true || code.outOfOffice === true || code.isUnavailable === true }));
+  statuses = [...rawStatuses, ...legacyCodesAsStatuses].map(s => ({
     ...s, id: +s.id, color: safeColor(s.color),
     abbr: String(s.abbr || '?').slice(0, 3),
     isAbsence: s.isAbsence === true, isOutOfOffice: s.isOutOfOffice === true,
   }));
-  appSettings.activityTypes = normalizeActivityTypes(normalized.activityTypes.length ? normalized.activityTypes : rawStatuses);
+  appSettings.activityTypes = normalizeActivityTypes(normalized.activityTypes.length ? normalized.activityTypes : (normalized.appSettings?.activityTypes?.length ? normalized.appSettings.activityTypes : rawStatuses));
   const maxId = arr => arr.length ? Math.max(...arr.map(x => x.id || 0)) : 0;
   nextEmpId    = Math.max(normalized.nextEmpId    || 1, maxId(employees) + 1);
   nextActId    = Math.max(normalized.nextActId    || 1, maxId(activities) + 1);
   nextStatusId = Math.max(normalized.nextStatusId || 1, maxId(statuses) + 1);
   nextCatId    = Math.max(normalized.nextCatId    || 1, maxId(categories) + 1);
-  if (normalized.dailyStatusesSeparated !== true) migrateLegacyDailyStatuses(appSettings.activityTypes);
+  if (normalized.dailyStatusesSeparated !== true && !normalized.legacyDailyStatuses) migrateLegacyDailyStatuses(appSettings.activityTypes);
+  const legacyCodeByIdentifier = new Map();
+  [...(normalized.legacyDailyStatuses || []), ...sourceLegacyAbsenceCodes].forEach(code => {
+    [code.key, code.code, code.id, code.name, code.label, code.description].forEach(identifier => {
+      if (identifier != null && String(identifier).trim()) legacyCodeByIdentifier.set(String(identifier).trim(), code);
+    });
+  });
+  Object.entries(entriesMap).forEach(([cellKey, value]) => {
+    if (value == null) return;
+    const currentStatusKey = typeof value === 'string' ? value : String(value.status || '');
+    if (!currentStatusKey || currentStatusKey === 'at_work' || statuses.some(status => status.key === currentStatusKey)) return;
+    const legacyDefinition = legacyCodeByIdentifier.get(currentStatusKey);
+    if (!legacyDefinition) return;
+    const migrated = normalizeLegacyDailyStatuses([{ ...legacyDefinition, id: nextStatusId++, isAbsence: true }])[0];
+    if (!statuses.some(status => status.key === migrated.key)) statuses.push(migrated);
+    const entry = typeof value === 'string' ? { status: value, durationType: 'fullday', time: null } : value;
+    entriesMap[cellKey] = { ...entry, status: migrated.key };
+  });
   sortDailyStatuses();
   pruneImplicitDefaultActivityShifts();
   employees.sort((a, b) => a.name.localeCompare(b.name));
@@ -4684,6 +4920,7 @@ async function loadExampleTestData() {
   showToast('Example test data added (3 employees, 3 activities).', 5000);
 }
 function nav(page) {
+  if (page === 'duty-planner' && appSettings.dutyPlannerEnabled === false) page = 'grid';
   if (page === 'duty-planner' && currentPage !== 'duty-planner') {
     dutyPlannerInitialScrollPending = true;
     highlightedScheduleEmployeeId = null;
@@ -4717,6 +4954,7 @@ function updateShiftRotationNavigation() {
 }
 function updateDutyPlannerNavigation() {
   document.querySelectorAll('.duty-planner-nav').forEach(button => {
+    button.style.display = appSettings.dutyPlannerEnabled !== false ? '' : 'none';
     button.classList.toggle('active', currentPage === 'duty-planner');
   });
 }
@@ -6059,9 +6297,9 @@ function renderGrid() {
 
   let monthCells = '', weekCells = '', dayCells = '';
   let mLabel = '', mCount = 0, mIndex = 0;
-  const flushMonth = () => { if (mCount) monthCells += `<th class="gh-month${mIndex % 2 ? ' period-alt' : ''}" colspan="${mCount}" style="top:0">${mLabel}</th>`; };
+  const flushMonth = () => { if (mCount) monthCells += `<th class="gh-month${mIndex % 2 ? ' period-alt' : ''}" colspan="${mCount}" style="top:0;height:${gridPeriod === 'year' ? 25 : 0}px;padding:${gridPeriod === 'year' ? '2px 0' : '0'};border:0">${mLabel}</th>`; };
   let wLabel = -1, wCount = 0;
-  const flushWeek = () => { if (wCount) weekCells += `<th class="gh-week${wLabel % 2 === 0 ? ' period-alt' : ''}" colspan="${wCount}" style="top:27px">W${wLabel}</th>`; };
+  const flushWeek = () => { if (wCount) weekCells += `<th class="gh-week${wLabel % 2 === 0 ? ' period-alt' : ''}" colspan="${wCount}" style="top:${gridPeriod === 'year' ? 25 : 0}px;height:${gridPeriod === 'year' ? 16 : 0}px;padding:${gridPeriod === 'year' ? '1px 0' : '0'};border:0;${gridPeriod === 'year' ? '' : 'visibility:hidden'}">W${wLabel}</th>`; };
   for (const d of days) {
     const lbl = d.toLocaleDateString('en-US', { month: 'short' });
     if (lbl !== mLabel) { flushMonth(); mLabel = lbl; mIndex = d.getMonth(); mCount = 0; }
@@ -6073,7 +6311,7 @@ function renderGrid() {
     const holiday = displayedHolidayFor(ds);
     const holidayIntensity = holiday?.isSpecialDay ? '41%' : '16%';
     const holidayStyle = holiday ? `background:color-mix(in srgb,${holiday.color || '#ef4444'} ${holidayIntensity},var(--surface)) !important;color:${holiday.color || '#ef4444'} !important;${isWknd(d) ? 'filter:brightness(.86);' : ''}` : '';
-    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : 'Click to add a special day'}" style="--grid-day-width:${dayColumnWidth}px;${holidayStyle}${planningHorizonStyle(ds)}${planningHorizonHeaderStyle(ds)}top:46px" onclick="openSpecialDayForDate('${ds}')"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
+    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : 'Click to add a special day'}" style="--grid-day-width:${dayColumnWidth}px;${holidayStyle}${planningHorizonStyle(ds)}${planningHorizonHeaderStyle(ds)}top:${gridPeriod === 'year' ? 41 : 0}px" onclick="openSpecialDayForDate('${ds}')"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
   const topbarActivityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
@@ -6082,8 +6320,11 @@ function renderGrid() {
     ? topbarYearActivities
     : topbarYearActivities.filter(activity => activityStatus(activity) === topbarActivityFilter);
   const topbarPastActivities = topbarFilteredActivities.filter(activity => activity.endDate < today);
+  const toolbarActivityWindow = scheduleSubview === 'activities' ? scheduleActivityWindow() : null;
+  const toolbarPaginateActivities = gridViewMode !== 'timeline' && toolbarActivityWindow?.candidates.length > toolbarActivityWindow.pageSize;
+  const scheduleHeaderHeight = gridPeriod === 'year' ? 25 + 16 + 28 : 28;
   document.getElementById('content').innerHTML = cleanHtml(`
-    <div id="grid-wrap" class="schedule-period-${gridPeriod}" style="min-height:0;--grid-day-width:${dayColumnWidth}px">
+    <div id="grid-wrap" class="schedule-period-${gridPeriod}" style="min-height:0;--grid-day-width:${dayColumnWidth}px;--schedule-header-height:${scheduleHeaderHeight}px">
       <div class="grid-topbar">
         <div>
           <div class="page-title organisation-name-header">${esc(appSettings.appName || 'Organisation')}</div>
@@ -6092,7 +6333,7 @@ function renderGrid() {
           <div class="schedule-subview-toolbar"><div class="schedule-subview-switch" role="group" aria-label="Schedule content">
             <button type="button" class="${scheduleSubview === 'activities' ? 'active' : ''}" aria-pressed="${scheduleSubview === 'activities'}" onclick="setScheduleSubview('activities')">Activities</button>
             <button type="button" class="${scheduleSubview === 'meetings' ? 'active' : ''}" aria-pressed="${scheduleSubview === 'meetings'}" onclick="setScheduleSubview('meetings')">Meetings</button>
-          </div>${scheduleSubview === 'activities' ? `<button id="change-log-preview-toggle" type="button" class="btn btn-sm change-log-open-button" aria-expanded="${changeLogPreviewOpen}" onclick="toggleChangeLogPreview()">${changeLogPreviewOpen ? 'Hide recent changes' : 'Recent changes'}</button>` : ''}</div>
+          </div>${scheduleSubview === 'activities' ? `<button id="change-log-preview-toggle" type="button" class="btn btn-sm change-log-open-button" aria-expanded="${changeLogPreviewOpen}" onclick="toggleChangeLogPreview()">${changeLogPreviewOpen ? 'Hide recent changes' : 'Recent changes'}</button>${toolbarPaginateActivities ? `<span class="schedule-section-controls schedule-topbar-activity-controls"><button class="icon-btn" title="Show earlier activities" aria-label="Show earlier activities" ${activityPageOffset === 0 ? 'disabled' : ''} onclick="changeActivityPage(-1)">${svgIcon('chevronUp')}</button><button class="icon-btn" title="Show later activities" aria-label="Show later activities" ${activityPageOffset >= toolbarActivityWindow.maxOffset ? 'disabled' : ''} onclick="changeActivityPage(1)">${svgIcon('chevronDown')}</button></span>` : ''}          <button class="btn btn-sm schedule-team-report-button" type="button" title="Team Work Schedule" aria-label="Team Work Schedule" onclick="openTeamScheduleReport()">${svgIcon('teamSchedule')}<span>Team Work Schedule</span></button>` : ''}</div>
         </div>
         <div class="flex items-center gap-2 schedule-topbar-controls">
           <button class="btn btn-sm" onclick="goToday()">Today</button>
@@ -6229,6 +6470,9 @@ function renderGrid() {
 function renderGridBody(days, today) {
   const tbody = document.getElementById('gtbody');
   if (!tbody) return;
+  const gridScroll = document.getElementById('grid-scroll');
+  const previousScrollTop = gridScroll?.scrollTop || 0;
+  const previousScrollLeft = gridScroll?.scrollLeft || 0;
   const range = scheduleRange();
   let html = '';
   const showTimelineSections = gridViewMode !== 'employees';
@@ -6260,7 +6504,7 @@ function renderGridBody(days, today) {
   if (showTimelineSections) {
     const pageEnd = Math.min(activityPageOffset + activityWindow.pageSize, allVisibleActivities.length);
     const paginateActivities = gridViewMode !== 'timeline' && allVisibleActivities.length > activityWindow.pageSize;
-    html += `<tr class="sect-row"><td class="sticky-left schedule-activities-header" style="z-index:60">
+    html += `<tr class="sect-row schedule-activities-header-row"><td class="sticky-left schedule-activities-header" style="z-index:60">
         <span class="schedule-section-header">
           <span class="flex items-center" style="gap:5px;font-size:10px"><button class="icon-btn" title="${collapsedGridSections.activities ? 'Expand activities' : 'Collapse activities'}" aria-label="${collapsedGridSections.activities ? 'Expand activities section' : 'Collapse activities section'}" aria-expanded="${collapsedGridSections.activities ? 'false' : 'true'}" onclick="toggleGridSection('activities')">${svgIcon(collapsedGridSections.activities ? 'chevronRight' : 'chevronDown')}</button>Activities <span class="schedule-activity-count">(${activityHeadingText})</span></span>
           <span class="schedule-section-controls" style="gap:6px">
@@ -6431,6 +6675,10 @@ function renderGridBody(days, today) {
     }
   }
   tbody.innerHTML = cleanHtml(html);
+  if (gridScroll) {
+    gridScroll.scrollTop = previousScrollTop;
+    gridScroll.scrollLeft = previousScrollLeft;
+  }
   reapplyChangeLogCellHighlight();
 }
 
@@ -6799,7 +7047,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   if (!tipParts.length) tipParts.push('Click to set status');
 
   const primaryActivity = rotationMeta ? null : acts[0];
-  const lockedBillableAssignment = Boolean(primaryActivity && assignmentWorkCodeIsLocked(emp.id, ds, primaryActivity.id));
+  const lockedBillableAssignment = appSettings.showBillableLockIndicator === true && Boolean(primaryActivity && assignmentWorkCodeIsLocked(emp.id, ds, primaryActivity.id));
   const unavailableConflict = Boolean(unavailable && acts.length);
   const checkedActivity = bossSessionActive ? participantActivitiesForDate(emp.id, ds).find(act => isBossCheckSet(emp.id, ds, 'activity', act.id)) : null;
   const checkedStatus = bossSessionActive && si && isBossCheckSet(emp.id, ds, 'status', si.key) ? si : null;
@@ -6990,15 +7238,45 @@ function setScheduleSubview(value) {
   renderPage();
 }
 function shiftMeetingMonth(delta) {
+  if (meetingsViewMode === 'week') {
+    const date = new Date(`${meetingsWeekAnchor}T00:00:00`);
+    date.setDate(date.getDate() + Number(delta) * 7);
+    meetingsWeekAnchor = fmt(date);
+    scheduleSubViewDates.selected = meetingsWeekAnchor;
+    scheduleSubViewDates.month = `${meetingsWeekAnchor.slice(0, 7)}-01`;
+    renderGrid();
+    return;
+  }
   const date = new Date(`${scheduleSubViewDates.month}T00:00:00`);
   date.setMonth(date.getMonth() + Number(delta), 1);
   scheduleSubViewDates.month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
   renderGrid();
 }
+function showMeetingsThisWeek() {
+  meetingsViewMode = 'week';
+  meetingsWeekAnchor = todayStr();
+  const dates = meetingsWeekViewDates(meetingsWeekAnchor);
+  scheduleSubViewDates.selected = todayStr();
+  scheduleSubViewDates.month = `${dates[0].slice(0, 7)}-01`;
+  renderGrid();
+}
+function showMeetingsMonth() {
+  meetingsViewMode = 'month';
+  const selected = isValidIsoDate(scheduleSubViewDates.selected) ? scheduleSubViewDates.selected : todayStr();
+  scheduleSubViewDates.month = `${selected.slice(0, 7)}-01`;
+  renderGrid();
+}
+function showMeetingsToday() {
+  if (meetingsViewMode === 'week') meetingsWeekAnchor = todayStr();
+  selectMeetingDate(todayStr());
+}
 function selectMeetingDate(date) {
   if (!isValidIsoDate(date)) return;
   scheduleSubViewDates.selected = date;
-  if (date.slice(0, 7) !== scheduleSubViewDates.month.slice(0, 7)) scheduleSubViewDates.month = `${date.slice(0, 7)}-01`;
+  if (meetingsViewMode === 'week') {
+    meetingsWeekAnchor = date;
+    scheduleSubViewDates.month = `${date.slice(0, 7)}-01`;
+  } else if (date.slice(0, 7) !== scheduleSubViewDates.month.slice(0, 7)) scheduleSubViewDates.month = `${date.slice(0, 7)}-01`;
   renderGrid();
 }
 function setMeetingLookaheadDays(value) {
@@ -7008,11 +7286,20 @@ function setMeetingLookaheadDays(value) {
   if (currentPage === 'grid' && scheduleSubview === 'activities') renderGrid();
 }
 function setMeetingsScopeFilter(value) {
-  meetingsScopeFilter = String(value || '');
+  const candidate = String(value || '');
+  const validated = validateMeetingsViewScopeFilter(candidate);
+  if (candidate && !validated) {
+    meetingsScopeFilter = '';
+    showToast('No personnel match that filter in the current planner. Showing everyone.', 4000);
+    renderGrid();
+    return;
+  }
+  meetingsScopeFilter = validated;
   renderGrid();
 }
 function meetingsForDate(date, applyScope = false) {
   return meetings.filter(meeting => {
+    if (currentPage === 'grid' && scheduleSubview === 'meetings' && !meetingMatchesScope(meeting, meetingsViewScopeParts())) return false;
     if (applyScope && !meetingMatchesScheduleScope(meeting)) return false;
     if (meeting.status === 'cancelled') return true;
     const end = meeting.endDate || '';
@@ -7058,35 +7345,72 @@ function meetingsDueForEmployeesOnDate(date) {
     return recurringMeetingOccurrenceDates(meeting, date, endDate).length > 0;
   });
 }
+function meetingsWeekViewDates(referenceDate = todayStr()) {
+  const weekStart = new Date(`${referenceDate}T00:00:00`);
+  const weekdayOffset = (weekStart.getDay() + 6) % 7;
+  weekStart.setDate(weekStart.getDate() - weekdayOffset);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + index);
+    return fmt(date);
+  });
+}
 function renderMeetingsView() {
+  meetingsScopeFilter = validateMeetingsViewScopeFilter(meetingsScopeFilter);
+  const weekViewDates = meetingsWeekViewDates(meetingsWeekAnchor);
   const monthStart = new Date(`${scheduleSubViewDates.month}T00:00:00`);
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth();
   const firstWeekday = new Date(year, month, 1).getDay();
   const offset = (firstWeekday + 6) % 7;
   const gridStart = new Date(year, month, 1 - offset);
-  const dates = Array.from({ length: 42 }, (_, index) => {
+  const monthDates = Array.from({ length: 42 }, (_, index) => {
     const date = new Date(gridStart);
     date.setDate(gridStart.getDate() + index);
     return fmt(date);
   });
-  const byDate = new Map(dates.map(date => [date, meetingsForDate(date, true)]));
-  const selectedDate = isValidIsoDate(scheduleSubViewDates.selected) ? scheduleSubViewDates.selected : todayStr();
-  const selectedMeetings = meetingsForDate(selectedDate, true);
+  const dates = meetingsViewMode === 'week' ? weekViewDates : monthDates;
+  const isWeekendDate = date => { const weekday = new Date(`${date}T00:00:00`).getDay(); return weekday === 0 || weekday === 6; };
   const typeOptions = meetingTypes.map(type => `<option value="${esc(type.id)}">${esc(type.name)}</option>`).join('');
   const scopeDepartments = [...new Set(employees.map(employee => String(employee.department || (employeeSection(employee) ? 'Independent sections' : '')).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb', { sensitivity: 'base' }));
   const scopeSections = [...new Set(employees.map(employeeSection).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb', { sensitivity: 'base' }));
   const scopeTeams = [...new Set(employees.map(employee => String(employee.team || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb', { sensitivity: 'base' }));
+  const meetingsForScopeOption = value => {
+    const scope = parseMeetingsScopeFilter(value);
+    const count = meetings.filter(meeting => meeting.status !== 'cancelled' && (meeting.participantIds.length > 0 || meeting.responsibleId) && meetingMatchesScope(meeting, scope)).length;
+    const hasPeopleInScope = !scope.level || employees.some(employee => scheduleEmployeeMatchesScopeFor(employee, scope));
+    return hasPeopleInScope ? String(count) : 'no people';
+  };
+  meetingsScopeFilter = validateMeetingsViewScopeFilter(meetingsScopeFilter);
+  const meetingsViewScope = meetingsViewScopeParts();
+  const meetingsInScope = meeting => meeting.status !== 'cancelled' && (meeting.participantIds.length > 0 || meeting.responsibleId) && meetingMatchesScope(meeting, meetingsViewScope);
+  const selectedScopeOption = (level, value) => meetingsViewScope.level === level && meetingsViewScope.value === value ? 'selected' : '';
+  const byDate = new Map(dates.map(date => [date, meetingsForDate(date).filter(meetingsInScope)]));
+  const selectedDate = isValidIsoDate(scheduleSubViewDates.selected) ? scheduleSubViewDates.selected : todayStr();
+  const selectedMeetings = meetingsForDate(selectedDate).filter(meetingsInScope);
   const filterId = document.getElementById('meetings-type-filter')?.value || '';
   const visibleSelectedMeetings = filterId ? selectedMeetings.filter(meeting => meeting.typeId === filterId) : selectedMeetings;
+
   document.getElementById('content').innerHTML = `<div class="meetings-view">
-    <header class="meetings-header"><div><div class="eyebrow">SCHEDULE / MEETINGS</div><h1 class="page-title">Meetings</h1><p class="page-sub">Meetings are managed separately from activity planning.</p><div class="schedule-subview-switch" role="group" aria-label="Schedule content"><button type="button" class="${scheduleSubview === 'activities' ? 'active' : ''}" aria-pressed="${scheduleSubview === 'activities'}" onclick="setScheduleSubview('activities')">Activities</button><button type="button" class="active" aria-pressed="true" onclick="setScheduleSubview('meetings')">Meetings</button></div></div><div class="meetings-actions"><label class="meetings-scope-filter">Show meetings for <select class="plain-select" aria-label="Filter meetings by department, section, or team" onchange="setMeetingsScopeFilter(this.value)"><option value="">Everyone</option><optgroup label="Departments">${scopeDepartments.map(value => `<option value="department::${esc(value)}" ${meetingsScopeFilter === `department::${value}` ? 'selected' : ''}>${esc(value)}</option>`).join('')}</optgroup><optgroup label="Sections">${scopeSections.map(value => `<option value="section::${esc(value)}" ${meetingsScopeFilter === `section::${value}` ? 'selected' : ''}>${esc(value)}</option>`).join('')}</optgroup><optgroup label="Teams">${scopeTeams.map(value => `<option value="team::${esc(value)}" ${meetingsScopeFilter === `team::${value}` ? 'selected' : ''}>${esc(value)}</option>`).join('')}</optgroup></select></label><button class="btn btn-sm" type="button" onclick="shiftMeetingMonth(-1)" aria-label="Previous month">‹</button><strong>${monthStart.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</strong><button class="btn btn-sm" type="button" onclick="shiftMeetingMonth(1)" aria-label="Next month">›</button><button class="btn btn-sm" type="button" onclick="selectMeetingDate(todayStr())">Today</button><button class="btn btn-primary" type="button" onclick="openMeetingEditor()">Add meeting</button></div></header>
-    <div class="meetings-layout"><section class="meetings-calendar card"><div class="meetings-weekdays">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day => `<span>${day}</span>`).join('')}</div><div class="meetings-month-grid">${dates.map(date => { const items = byDate.get(date) || []; const inMonth = date.slice(0,7) === scheduleSubViewDates.month.slice(0,7); const dots = items.slice(0,3).map(meeting => `<i style="--meeting-color:${esc(meetingTypes.find(type => type.id === meeting.typeId)?.color || meeting.color)}"></i>`).join(''); return `<button type="button" class="meeting-day${inMonth ? '' : ' outside-month'}${date === selectedDate ? ' selected' : ''}${date === todayStr() ? ' today' : ''}" aria-pressed="${date === selectedDate}" onclick="selectMeetingDate('${date}')"><span>${Number(date.slice(8,10))}</span>${items.length ? `<small>${items.length} meeting${items.length === 1 ? '' : 's'}</small><span class="meeting-dots">${dots}</span>` : ''}</button>`; }).join('')}</div></section>
+    <header class="meetings-header"><div><div class="eyebrow">SCHEDULE / MEETINGS</div><h1 class="page-title">Meetings</h1><p class="page-sub">Meetings are managed separately from activity planning.</p><div class="schedule-subview-switch" role="group" aria-label="Schedule content"><button type="button" class="${scheduleSubview === 'activities' ? 'active' : ''}" aria-pressed="${scheduleSubview === 'activities'}" onclick="setScheduleSubview('activities')">Activities</button><button type="button" class="active" aria-pressed="true" onclick="setScheduleSubview('meetings')">Meetings</button></div></div><div class="meetings-actions"><div class="meetings-view-mode" role="group" aria-label="Meeting calendar view"><button type="button" class="btn btn-sm${meetingsViewMode === 'week' ? ' btn-primary' : ''}" aria-pressed="${meetingsViewMode === 'week'}" onclick="showMeetingsThisWeek()">This week</button><button type="button" class="btn btn-sm${meetingsViewMode === 'month' ? ' btn-primary' : ''}" aria-pressed="${meetingsViewMode === 'month'}" onclick="showMeetingsMonth()">Month</button></div><label class="meetings-scope-filter">Show meetings for <select class="plain-select" aria-label="Filter meetings by department, section, or team" onchange="setMeetingsScopeFilter(this.value)"><option value="" ${!meetingsViewScope.level ? 'selected' : ''}>Everyone (${meetingsForScopeOption('')})</option><optgroup label="Departments">${scopeDepartments.map(value => { const option = `department::${value}`; return `<option value="${esc(option)}" ${selectedScopeOption('department', value)}>${esc(value)} (${meetingsForScopeOption(option)})</option>`; }).join('')}</optgroup><optgroup label="Sections">${scopeSections.map(value => { const option = `section::${value}`; return `<option value="${esc(option)}" ${selectedScopeOption('section', value)}>${esc(value)} (${meetingsForScopeOption(option)})</option>`; }).join('')}</optgroup><optgroup label="Teams">${scopeTeams.map(value => { const option = `team::${value}`; return `<option value="${esc(option)}" ${selectedScopeOption('team', value)}>${esc(value)} (${meetingsForScopeOption(option)})</option>`; }).join('')}</optgroup></select></label><button class="btn btn-sm" type="button" onclick="shiftMeetingMonth(-1)" aria-label="Previous month">‹</button><strong>${meetingsViewMode === 'week' ? `Week ${isoWeek(new Date(`${dates[0]}T00:00:00`))} · ${fmtShort(dates[0])} – ${fmtShort(dates[6])}` : monthStart.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</strong><button class="btn btn-sm" type="button" onclick="shiftMeetingMonth(1)" aria-label="Next month">›</button><button class="btn btn-sm" type="button" onclick="showMeetingsToday()">Today</button><button class="btn btn-primary" type="button" onclick="openMeetingEditor()">Add meeting</button></div></header>
+    <div class="meetings-layout"><section class="meetings-calendar card"><div class="meetings-weekdays">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day, index) => `<span class="${index >= 5 ? 'weekend' : ''}">${day}</span>`).join('')}</div><div class="meetings-month-grid${meetingsViewMode === 'week' ? ' week-view' : ''}">${dates.map(date => { const items = byDate.get(date) || []; const inMonth = meetingsViewMode === 'week' || date.slice(0,7) === scheduleSubViewDates.month.slice(0,7); const dots = items.slice(0,3).map(meeting => `<i style="--meeting-color:${esc(meetingTypes.find(type => type.id === meeting.typeId)?.color || meeting.color)}"></i>`).join(''); return `<button type="button" class="meeting-day${inMonth ? '' : ' outside-month'}${isWeekendDate(date) ? ' weekend' : ''}${date === selectedDate ? ' selected' : ''}${date === todayStr() ? ' today' : ''}" aria-pressed="${date === selectedDate}" onclick="selectMeetingDate('${date}')"><span>${Number(date.slice(8,10))}</span>${items.length ? `<small>${items.length} meeting${items.length === 1 ? '' : 's'}</small><span class="meeting-dots">${dots}</span>` : ''}</button>`; }).join('')}</div></section>
       <aside class="meetings-agenda card"><div class="meetings-agenda-heading"><div><span class="eyebrow">DAY AGENDA</span><h2>${new Date(`${selectedDate}T00:00:00`).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</h2></div><label>Type <select id="meetings-type-filter" class="plain-select" onchange="renderGrid()"><option value="">All types</option>${typeOptions}</select></label></div><div class="meeting-agenda-list">${visibleSelectedMeetings.length ? visibleSelectedMeetings.map(meeting => { const type = meetingTypes.find(item => item.id === meeting.typeId); const responsible = employees.find(employee => Number(employee.id) === Number(meeting.responsibleId)); const participants = meeting.participantIds.map(id => employees.find(employee => Number(employee.id) === Number(id))?.name).filter(Boolean); return `<button type="button" class="meeting-agenda-item status-${esc(meeting.status)}" style="--meeting-color:${esc(type?.color || meeting.color)}" onclick="openMeetingEditor('${esc(meeting.id)}')"><span class="meeting-time">${meeting.allDay ? 'All day' : `${esc(meeting.startTime || 'Time not set')}${meeting.endTime ? `–${esc(meeting.endTime)}` : ''}`}</span><span class="meeting-summary"><strong>${esc(meeting.title)}</strong><small>${esc(type?.name || 'Retired type')} · ${esc(meeting.status)}${meeting.location ? ` · ${esc(meeting.location)}` : ''}</small>${participants.length ? `<small>Participants: ${participants.map(esc).join(', ')}</small>` : ''}${responsible ? `<small>Responsible: ${esc(responsible.name)}</small>` : ''}${meeting.externalAttendees ? `<small>External: ${esc(meeting.externalAttendees)}</small>` : ''}</span><span class="meeting-edit-label">Edit</span></button>`; }).join('') : '<div class="meetings-empty"><strong>No meetings on this date</strong><span>Select another date or add a meeting.</span></div>'}</div>
       <div class="meeting-types-note"><strong>Meeting types</strong><span>${meetingTypes.map(type => `<i style="--meeting-color:${esc(type.color)}"></i>${esc(type.name)}`).join(' · ')}</span>${unlockedBossView() ? '<button type="button" class="btn btn-sm" onclick="manageMeetingTypes()">Manage types</button>' : '<small>Unlock Boss View to manage meeting types.</small>'}</div></aside></div>
   </div>`;
   const filter = document.getElementById('meetings-type-filter');
   if (filter) filter.value = filterId;
+}
+function updateMeetingTypeColorPreview() {
+  const typeId = document.getElementById('meeting-type')?.value || '';
+  const type = meetingTypes.find(item => item.id === typeId);
+  const preview = document.getElementById('meeting-type-color-preview');
+  if (!preview) return;
+  if (!type) { preview.innerHTML = '<span class="form-hint">No meeting types configured.</span>'; return; }
+  preview.innerHTML = `<span class="meeting-type-color-swatch" style="--meeting-color:${esc(type.color)}"></span><span><b>${esc(type.name)}</b><small>Color is configured in Meeting Types under Meetings.</small></span>`;
+}
+function meetingTypeScopeCount(typeId, scope) {
+  return meetings.filter(meeting => meeting.status !== 'cancelled' && meeting.typeId === typeId && meetingMatchesScope(meeting, scope)
+    && (meeting.participantIds.length > 0 || meeting.responsibleId)).length;
 }
 function openMeetingEditor(id = '') {
   const meeting = meetings.find(item => item.id === String(id));
@@ -7115,6 +7439,7 @@ function openMeetingEditor(id = '') {
   document.getElementById('meeting-notes').value = meeting?.notes || '';
   document.getElementById('meeting-delete').style.display = meeting ? '' : 'none';
   document.getElementById('meeting-modal').classList.add('open');
+  updateMeetingTypeColorPreview();
   setTimeout(() => document.getElementById('meeting-title').focus(), 20);
 }
 function renderMeetingParticipants() {
@@ -7217,7 +7542,16 @@ async function manageMeetingTypes() {
   }).filter(Boolean);
   const ids = parsed.map(type => type.id);
   if (!parsed.length || new Set(ids).size !== ids.length) { alert('Add at least one meeting type and use unique IDs.'); return; }
-  await mutateState('manageMeetingTypes', () => { meetingTypes = normalizeMeetingTypes(parsed); });
+  const parsedIdSet = new Set(ids);
+  const meetingTypeInUse = meetings.some(meeting => !parsedIdSet.has(meeting.typeId));
+  if (meetingTypeInUse && !confirm('One or more meeting types in use will be removed. Existing meetings keep their saved color and show as retired types. Continue?')) return;
+  await mutateState('manageMeetingTypes', () => {
+    const colorById = new Map(parsed.map(type => [type.id, type.color]));
+    meetingTypes = normalizeMeetingTypes(parsed);
+    meetings = meetings.map(meeting => colorById.has(meeting.typeId)
+      ? { ...meeting, color: colorById.get(meeting.typeId) }
+      : meeting);
+  });
   renderGrid();
 }
 function showAllEmployees() {
@@ -8687,8 +9021,7 @@ function activityReportWeekChunks(dates) {
 function activityReportHasAssignment(act, empId, date) {
   if (date < act.startDate || date > act.endDate) return false;
   if (!act.includeWeekends && isWknd(new Date(`${date}T00:00:00`))) return false;
-  const assignment = activityAssignment(`${empId}_${date}_${act.id}`);
-  return assignment.assigned === true && assignment.excluded !== true && Boolean(assignment.shift);
+  return Boolean(activityAssignmentInfo(act, empId, date, true));
 }
 function activityReportCellInfo(act, emp, date) {
   const info = activityAssignmentInfo(act, emp.id, date, true);
@@ -8737,15 +9070,56 @@ function ensureActivityReportHideOption() {
   checkbox = label.querySelector('input');
   checkbox.checked = activityReportHideInactiveByWeek;
   label.style.cssText = 'display:flex;align-items:center;gap:7px;margin:0 0 12px;font-size:12px;color:var(--muted);text-align:left';
-  content.insertBefore(label, content.firstChild);
+  if (label.parentElement !== content) content.insertBefore(label, content.firstChild);
 }
 function updateActivityReportPreview() {
-  activityReportHideInactiveByWeek = document.getElementById('activity-report-hide-inactive-week')?.checked === true;
-  if (activityReportId != null) openActivityReport(activityReportId);
+  updateActivityReport();
+}
+function applyActivityReportWeeklyPreview() {
+  const act = activities.find(item => Number(item.id) === Number(activityReportId));
+  const content = document.getElementById('activity-report-content');
+  const standardPreview = document.getElementById('activity-report-standard-preview');
+  if (!act || !content || !standardPreview) return null;
+  const hideInactive = document.getElementById('activity-report-hide-inactive-week')?.checked === true;
+  activityReportHideInactiveByWeek = hideInactive;
+  standardPreview.hidden = true;
+  content.querySelector('#activity-report-week-preview')?.remove();
+  const preview = document.createElement('div');
+  preview.id = 'activity-report-week-preview';
+  preview.setAttribute('aria-live', 'polite');
+  const dates = activityReportDates(act);
+  const groups = activityReportParticipantGroups(act);
+  preview.innerHTML = activityReportWeekChunks(dates)
+    .map(week => activityReportPreviewWeekHtml(act, week, groups, hideInactive)).join('');
+  content.appendChild(preview);
+  return preview;
+}
+function activityReportPreviewWeekHtml(act, week, participantGroups, hideInactive) {
+  const dates = week.dates;
+  const visibleGroups = activityReportGroupsForDates(act, participantGroups, dates, hideInactive);
+  const visiblePeople = visibleGroups.reduce((count, group) => count + group.participants.length, 0);
+  return `<section class="activity-report-week-preview" style="margin:12px 0;padding-top:10px;border-top:1px solid var(--border)">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px"><b>Week ${isoWeek(new Date(`${dates[0]}T00:00:00`))}</b><span class="muted">${fmtShort(dates[0])} – ${fmtShort(dates[dates.length - 1])}${hideInactive ? ` · ${visiblePeople} working` : ''}</span></div>
+    <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:${180 + dates.length * 92}px"><thead><tr style="text-align:left;border-bottom:2px solid var(--border)">
+      <th style="padding:7px 8px;min-width:150px">Employee</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 8px;min-width:92px;background:${weekend ? 'var(--weekend-bg)' : 'transparent'};color:${weekend ? 'var(--weekend-text)' : 'inherit'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}
+    </tr></thead><tbody>${visibleGroups.length ? visibleGroups.map(group => `<tr><td colspan="${dates.length + 1}" style="padding:7px 8px;background:${group.color}18;border-bottom:1px solid ${group.color}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${group.color};margin-right:5px"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ emp }) => `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${displayEmployeeNameMarkup(emp)}</td>${dates.map(date => {
+      const active = activityReportHasAssignment(act, emp.id, date);
+      const cell = active ? activityReportCellInfo(act, emp, date) : { className: isWknd(new Date(`${date}T00:00:00`)) ? 'weekend' : '', style: isWknd(new Date(`${date}T00:00:00`)) ? 'background:var(--weekend-bg);color:var(--muted);' : 'color:var(--muted);', html: '—' };
+      const deviation = active ? dailyDeviationLabel(emp.id, date) : '';
+      return `<td class="${cell.className}" style="padding:8px;${cell.style}">${cell.html}${deviation ? `<div style="font-size:10px;margin-top:3px;color:var(--destructive)">${esc(deviation)}</div>` : ''}</td>`;
+    }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${dates.length + 1}" class="empty-note" style="padding:18px;text-align:center">${hideInactive ? 'No personnel scheduled this week.' : 'No participants assigned.'}</td></tr>`}</tbody></table></div>
+  </section>`;
+}
+function updateActivityReport() {
+  if (activityReportId == null) return;
+  const preview = applyActivityReportWeeklyPreview();
+  preview?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 function activityReportRows(act, hideInactiveByWeek = false) {
   const rows = [];
   const dates = activityReportDates(act);
+  const weekForDate = new Map();
+  if (hideInactiveByWeek) activityReportWeekChunks(dates).forEach(week => week.dates.forEach(date => weekForDate.set(date, week.dates)));
   const participants = [...(act.participants || [])].sort((a, b) =>
     (empById(a.id)?.name || '').localeCompare(empById(b.id)?.name || ''));
   participants.forEach(participant => {
@@ -8754,7 +9128,7 @@ function activityReportRows(act, hideInactiveByWeek = false) {
     dates.forEach(date => {
       const info = activityAssignmentInfo(act, emp.id, date, true);
       if (hideInactiveByWeek) {
-        const weekDates = activityReportWeekChunks(dates).find(week => week.dates.includes(date))?.dates || [date];
+        const weekDates = weekForDate.get(date) || [date];
         if (!weekDates.some(weekDate => activityReportHasAssignment(act, emp.id, weekDate))) return;
       }
       rows.push({
@@ -8881,6 +9255,10 @@ function openActivityReport(id) {
   if (!act) return;
   if (activityStatus(act) === 'cancelled') return;
   if (activityReportId !== id) activityReportHideInactiveByWeek = false;
+  else activityReportHideInactiveByWeek = document.getElementById('activity-report-hide-inactive-week')?.checked === true || activityReportHideInactiveByWeek;
+  const contentScroll = document.getElementById('activity-report-content');
+  const previewScrollTop = contentScroll?.scrollTop || 0;
+  const weekPreviewScrollTop = contentScroll?.querySelector('#activity-report-week-preview')?.scrollTop || 0;
   activityReportId = id;
   const dates = activityReportDates(act);
   const participantGroups = activityReportParticipantGroups(act);
@@ -8888,18 +9266,33 @@ function openActivityReport(id) {
   document.getElementById('activity-report-title').textContent = `${activityStatus(act) === 'tentative' ? 'DRAFT · ' : ''}Work Schedule: ${act.name}`;
   document.getElementById('activity-report-content').innerHTML = `
     <div style="margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div style="flex:1;min-width:0"><div style="background:var(--muted-bg);border:1px solid var(--border);border-radius:6px;padding:10px"><div><b>Cost Center:</b> ${esc(act.project || 'Not specified')}</div><div style="margin-top:4px"><b>Order:</b> ${esc(act.order || 'Not specified')}</div><div style="margin-top:4px"><b>Billing explanation:</b> ${esc(act.billing || 'No note')}</div></div><div class="muted text-sm" style="margin-top:7px">Period: ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)} · ${(act.participants || []).length} participant${(act.participants || []).length === 1 ? '' : 's'}</div></div>${renderSecurityLabel()}</div>
-    <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:620px">
+    <div id="activity-report-standard-preview" style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:620px">
       <thead><tr style="text-align:left;border-bottom:2px solid var(--border)">
         <th style="padding:7px 8px;min-width:150px">Employee</th>${dates.map(date => { const weekend = isWknd(new Date(`${date}T00:00:00`)); return `<th style="padding:7px 8px;min-width:92px;background:${weekend ? 'var(--weekend-bg)' : 'transparent'};color:${weekend ? 'var(--weekend-text)' : 'inherit'};border-left:${weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${weekend ? '1px solid var(--weekend-border)' : '0'}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted" style="font-weight:400;margin-top:2px">${fmtShort(date)}</div></th>`; }).join('')}
       </tr></thead>
-      <tbody>${participantGroups.length ? participantGroups.map(group => `<tr><td colspan="${dates.length + 1}" style="padding:7px 8px;background:${group.color}18;border-bottom:1px solid ${group.color}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${group.color};margin-right:5px"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${displayEmployeeNameMarkup(emp)}</td>${dates.map(date => {
-          const cell = activityReportCellInfo(act, emp, date);
-          const deviation = dailyDeviationLabel(emp.id, date);
+      <tbody>${participantGroups.length ? participantGroups.map(group => `<tr class="activity-report-group-row" data-group-weeks="${activityReportWeekChunks(dates).filter(week => group.participants.some(({ emp: groupEmployee }) => week.dates.some(date => activityReportHasAssignment(act, groupEmployee.id, date)))).map(week => week.weekKey).join(' ')}"><td colspan="${dates.length + 1}" style="padding:7px 8px;background:${group.color}18;border-bottom:1px solid ${group.color}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${group.color};margin-right:5px"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => {
+        const activeWeeks = activityReportWeekChunks(dates).filter(week => week.dates.some(date => activityReportHasAssignment(act, emp.id, date))).map(week => week.weekKey);
+        const groupWeeks = activityReportWeekChunks(dates).filter(week => group.participants.some(({ emp: groupEmployee }) => week.dates.some(date => activityReportHasAssignment(act, groupEmployee.id, date)))).map(week => week.weekKey);
+        return `<tr class="activity-report-person-row" data-active-weeks="${activeWeeks.join(' ')}" style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${displayEmployeeNameMarkup(emp)}</td>${dates.map(date => {
+          const active = activityReportHasAssignment(act, emp.id, date);
+          const cell = active ? activityReportCellInfo(act, emp, date) : { className: isWknd(new Date(`${date}T00:00:00`)) ? 'weekend' : '', style: isWknd(new Date(`${date}T00:00:00`)) ? 'background:var(--weekend-bg);color:var(--muted);' : 'color:var(--muted);', html: '—', weekend: isWknd(new Date(`${date}T00:00:00`)) };
+          const deviation = active ? dailyDeviationLabel(emp.id, date) : '';
           const details = deviation ? `<div style="font-size:10px;margin-top:3px;color:var(--destructive)">${esc(deviation)}</div>` : '';
           return `<td class="${cell.className}" style="padding:8px;${cell.style}border-left:${cell.weekend ? '1px solid var(--weekend-border)' : '0'};border-right:${cell.weekend ? '1px solid var(--weekend-border)' : '0'}">${cell.html}${details}</td>`;
-        }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${dates.length + 1}" class="empty-note" style="padding:24px;text-align:center">No participants assigned.</td></tr>`}</tbody>
+        }).join('')}</tr>`;
+      }).join('')}<tr class="activity-report-group-end" data-group-weeks="${[...new Set(activityReportWeekChunks(dates).filter(week => group.participants.some(({ emp: groupEmployee }) => week.dates.some(date => activityReportHasAssignment(act, groupEmployee.id, date)))).map(week => week.weekKey))].join(' ')}"><td colspan="${dates.length + 1}" style="display:none"></td></tr>`).join('') : `<tr><td colspan="${dates.length + 1}" class="empty-note" style="padding:24px;text-align:center">No participants assigned.</td></tr>`}</tbody>
     </table>`;
   ensureActivityReportHideOption();
+  const content = document.getElementById('activity-report-content');
+  content.querySelector('#activity-report-week-preview')?.remove();
+  const standardPreview = document.getElementById('activity-report-standard-preview');
+  if (standardPreview) standardPreview.hidden = activityReportHideInactiveByWeek;
+  if (activityReportHideInactiveByWeek) {
+    applyActivityReportWeeklyPreview();
+    const weekPreview = content.querySelector('#activity-report-week-preview');
+    if (weekPreview) weekPreview.scrollTop = weekPreviewScrollTop;
+  }
+  content.scrollTop = previewScrollTop;
   document.getElementById('activity-report-modal').classList.add('open');
 }
 function activityReportCsvValue(value) { return `"${String(value ?? '').replace(/"/g, '""')}"`; }
@@ -8955,7 +9348,9 @@ function printActivityReport() {
         const weekend = isWknd(new Date(`${date}T00:00:00`));
         return `<th class="date-column${weekend ? ' weekend' : ''}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted">${fmtShort(date)}</div></th>`;
       }).join('')}</tr></thead><tbody>${visibleGroups.length ? visibleGroups.map(group => `<tr class="section-row"><td colspan="${chunkDates.length + 1}" style="background:${group.color}18;border-bottom-color:${group.color}"><span class="section-dot" style="background-color:${group.color}"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr><td>${displayEmployeeNameMarkup(emp)}</td>${chunkDates.map(date => {
-          const cell = activityReportCellInfo(act, emp, date);
+          const cell = hideInactiveByWeek && !activityReportHasAssignment(act, emp.id, date)
+            ? { className: isWknd(new Date(`${date}T00:00:00`)) ? 'weekend' : '', style: isWknd(new Date(`${date}T00:00:00`)) ? 'background:var(--weekend-bg);color:var(--muted);' : 'color:var(--muted);', html: '—' }
+            : activityReportCellInfo(act, emp, date);
           return `<td class="${cell.className}" style="${cell.style}">${cell.html}</td>`;
         }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${chunkDates.length + 1}" class="empty-note">${hideInactiveByWeek ? 'No personnel scheduled this week.' : 'No participants assigned.'}</td></tr>`}</tbody></table>
     </section>`);
