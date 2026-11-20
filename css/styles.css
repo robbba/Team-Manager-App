@@ -334,6 +334,16 @@ button.change-log-preview-row:hover,button.change-log-preview-row:focus-visible 
 .meetings-weekdays { margin-bottom:5px; color:var(--muted); font-size:10px; font-weight:700; text-align:center; }
 .meetings-weekdays span { padding:5px 2px; }
 .meetings-weekdays span.weekend { border-radius:4px; background:color-mix(in srgb,var(--primary) 8%,var(--muted-bg)); color:var(--text); }
+.important-date-targets { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:5px; max-height:210px; overflow:auto; padding:6px; border:1px solid var(--border); border-radius:6px; }
+.important-date-target { display:flex; align-items:flex-start; gap:7px; padding:6px; border-radius:5px; background:var(--muted-bg); font-size:11px; cursor:pointer; }
+.important-date-target input { margin-top:2px; }
+.important-date-target small,.important-date-row-label small { display:block; margin-top:2px; color:var(--muted); font-size:10px; }
+.important-date-row { display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:6px; background:var(--muted-bg); font-size:12px; }
+.important-date-swatch { width:10px; height:10px; flex:0 0 auto; border-radius:50%; }
+.important-date-row-label { flex:1; min-width:0; }
+.important-date-cell { box-shadow:inset 0 0 0 999px color-mix(in srgb,var(--important-date-color) 16%,transparent),inset 0 0 0 1px color-mix(in srgb,var(--important-date-color) 70%,transparent) !important; }
+.important-date-head { box-shadow:inset 0 -3px var(--important-date-color) !important; }
+.gtable tbody .gday.important-date-activity-cell::after { content:""; position:absolute; inset:0; z-index:6; pointer-events:none; background:color-mix(in srgb,var(--important-date-color) 16%,transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--important-date-color) 70%,transparent); }
 .meeting-day { display:flex; min-width:0; min-height:84px; flex-direction:column; align-items:flex-start; gap:4px; padding:7px; border:1px solid var(--border); border-radius:5px; background:var(--surface); color:var(--text); text-align:left; cursor:pointer; }
 .meeting-day:hover { border-color:var(--primary); background:color-mix(in srgb,var(--primary) 5%,var(--surface)); }
 .meeting-day.outside-month { color:var(--muted); background:var(--muted-bg); opacity:.72; }

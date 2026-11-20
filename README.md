@@ -45,14 +45,16 @@ Older planner files may store daily codes as `statusTypes`, `absenceCodes`, or l
 
 The **Enable Duty Planner** option in Application settings hides its navigation and page without deleting its types or assignments, so it can be enabled again later.
 
-The startup chooser keeps the routine options **Choose JSON file**, **Use recovered data** (when available), and **Create blank planner**. **Application settings → Data & Backup → Import data…** lets a Boss View administrator select a planner file, load it as the active planner, or selectively merge personnel and activities. Selective work assignments are added only on dates where the matched employee has no existing work, status, rotation, or unavailable marker. **Save As** creates a writable copy. When the browser has native file access to the selected folder, Team Manager can also write silent weekly backups into a `backups/` subfolder.
+The startup chooser keeps the routine options **Choose JSON file**, **Use recovered data** (when available), and **Create blank planner**. **Application settings → Data & Backup → Import data…** lets a Boss View administrator select a planner file, load it as the active planner, or selectively merge personnel and activities. Selective work assignments are added only on dates where the matched employee has no existing work, status, rotation, or unavailable marker. **Save As** creates a writable copy. In browsers without direct access to the selected JSON handle, the app requires a writable target file selection when saving; choose the shared `data.json` rather than an older downloaded copy. When the browser has native file access to the selected folder, Team Manager can also write silent weekly backups into a `backups/` subfolder.
+
+When a shared JSON file is open, the planner checks for external changes every 30 seconds. A viewing-only session stays clean and reloads colleague updates without writing to the shared file. If the session has local edits when the shared file changes, those edits are merged against the last loaded version; review the merged planner before using **Save Changes**. Avoid using stale downloaded copies as the shared source file.
 
 Team Manager checks for external changes and keeps a visible sync status:
 - **Updated** (green)
 - **Syncing…** (amber)
 - **Out of sync** (red)
 
-Auto-update runs every 60 seconds by default, and **Sync Now** is available next to **Save** for manual sync.
+Auto-update runs every 30 seconds by default, and **Sync Now** is available next to **Save** for manual sync.
 
 If no JSON file is attached yet, **Save** opens the Save As flow so a newly created blank planner can be saved to a file.
 
@@ -74,7 +76,7 @@ The Schedule includes separate **Activities** and **Meetings** views. Meetings u
 
 The Activities view has a **Recent changes** button that expands the five latest planner changes and a **View full audit** button for the separate **Change Log** page. Entries mark additions (+), removals (−), and edits (↔); clickable entries jump to and highlight the related schedule cell when available. The audit covers employee cell updates (daily status, activity/work-code assignment, overtime, notes and unavailability), activity creation/deletion, participant additions/removals, and key detail edits. It is stored in the planner JSON, retains the latest 1,000 entries, and can be searched/filtered. Individual operator identity is not recorded. Clearing the log requires Boss View.
 
-Employee cells can be marked unavailable for a full date using the compact **Unavailable** status button, with an optional reason. Existing activity assignments are retained and flagged if a date is marked unavailable; assigning work on such a date asks for explicit confirmation. Per-person work-time assignments also have an independent Planned/Confirmed lifecycle: planned work is visible with hatching but is excluded from confirmed workload calculations.
+Employee cells can be marked unavailable for a full date using the compact **Unavailable** status button, with an optional reason. Existing activity assignments are retained and flagged if a date is marked unavailable; assigning work on such a date asks for explicit confirmation. Per-person work-time assignments also have an independent Planned/Confirmed lifecycle: planned work is visible with hatching but is excluded from confirmed workload calculations. For dashboard availability, a full-day absence/out-of-office status takes precedence over overlapping activity work; timed activity assignments remain available in the schedule but are not counted as a second absence.
 
 The red planning deadline is a billable work-time lock, enabled by default. In Schedule settings, an authorized Boss can turn the restriction off for the planner. When enabled, employee cells with billable Work Codes on or before the red-line date require Boss View to add, change, or remove. Activity details and date ranges remain editable. Normal Working Hours without a billing Work Code, plus absence/unavailable assignments, remain editable. Dates after the red line are still open for planning. Setting the horizon to 0 also disables the lock.
 
@@ -98,8 +100,10 @@ The Schedule toolbar includes a **Show** selector for departments and sections. 
 Activities can optionally be targeted to one or more Departments and Sections. Activities created while a department or section is selected inherit that scope. An activity with no targets is global and appears in **Show: All**; scoped views show only activities targeted to the selected scope.
 Activities can target multiple Departments, Sections, and Processes. Values within a category use OR matching, and selected categories combine with AND matching. The participant list filters to matching personnel while keeping previously selected out-of-scope people visible. An activity with no targets is global and appears in **Show: All**.
 
-The Activities header contains separate report buttons for **Team Work Schedule** and **Activity Schedule**. Team Work Schedule opens with all activities overlapping the selected period included; individual activities can be unchecked before previewing or printing.
-Activity type colors can be standardized from Settings. The Activity Schedule print groups ISO weeks, omits weeks without assigned personnel, and places larger week labels at the left of each week group. Turnaround assignments can record a physical shift interval per date; Work Code compensation remains separate.
+The Activities header contains separate report buttons for **Team Work Schedule** and **Activity Schedule**. Team Work Schedule opens with all activities overlapping the selected period included; individual activities can be unchecked before previewing or printing. The print output is landscape A4 and splits the chosen date range into two-week pages, showing only personnel with scheduled assignments in each fortnight.
+Activity work schedules use a compact landscape A4 fortnight layout with employee/role at left and fourteen day columns under two ISO-week headers; each person’s code and physical shift are shown per day. Activity type colors can be standardized from Settings. The Activity Schedule print groups ISO weeks, omits weeks without assigned personnel, and places larger week labels at the left of each week group. Turnaround assignments can record a physical shift interval per date; Work Code compensation remains separate.
+
+**Important Dates** are one-off calendar highlights managed separately from global Holidays and Non-working Days and from Meetings. Administrators can target one or more hierarchy units from Schedule settings; only personnel in those units see the colored date highlight. Important Dates do not change availability, workload, or workday calculations.
 
 In Grid View, use **Import .ics holidays** in the Holidays section. Standard all-day `VEVENT` entries are shown for review before import. Only events in the active planner year are offered.
 

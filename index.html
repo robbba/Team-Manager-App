@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ATLAS — Adaptive Timeline, Load &amp; Allocation System</title>
-<link rel="stylesheet" href="css/styles.css?v=95">
+<link rel="stylesheet" href="css/styles.css?v=97">
 </head>
 <body>
 <aside id="sidebar">
@@ -621,7 +621,7 @@
     <p class="modal-desc">Configure working hours, schedule behavior, special days, and activity planning deadlines.</p>
     <div class="form-row"><label>Core workday time range</label><input id="set-core-time" type="text" placeholder="0730-1500"><div class="form-hint">Used in workload calculations. <span id="set-core-hours-display"></span></div></div>
     <div class="form-row"><label>Grid behavior</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-jump-to-today" type="checkbox"> Jump to today after changing grid settings</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:7px"><input id="set-auto-activity-page-scroll" type="checkbox"> Automatically show activities for dates visible while scrolling sideways</label><div class="form-hint">Turn this off to keep the activity rows fixed while browsing dates horizontally.</div><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:7px"><input id="set-show-level-rank" type="checkbox"> Show Level / Rank in Schedule and Shift Rotation</label></div>
-    <div class="form-row"><label>Special days</label><button class="btn" type="button" onclick="openSpecialDaysModal()">Manage Special Days</button></div>
+    <div class="form-row"><label>Calendar dates</label><div class="flex gap-2" style="flex-wrap:wrap"><button class="btn" type="button" onclick="openSpecialDaysModal()">Manage Holidays &amp; Non-working Days</button><button class="btn" type="button" onclick="openImportantDatesModal()">Manage Important Dates</button></div><div class="form-hint">Important dates are scoped, one-off visual highlights; holidays and non-working rules remain global.</div></div>
     <div class="form-row"><label>Planning configuration</label><button class="btn" type="button" onclick="closeModal('schedule-settings-modal');openStatusManager()">Manage Planning Options</button></div>
     <div class="form-row"><label>Billable work-time lock deadline</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input id="set-billable-work-lock-enabled" type="checkbox" checked> Require Boss View for locked billable work cells</label><div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:8px"><input id="set-planning-horizon-days" type="number" min="0" max="365" step="1" placeholder="Days from today"><input id="set-planning-horizon-color" type="color" style="width:48px;height:34px;padding:2px"></div><label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:8px"><input id="set-billable-lock-indicator" type="checkbox"> Show lock symbols on locked cells</label><div class="form-hint">When enabled, billable employee work cells on or before the red line require Boss View. Activity details, Normal Hours, and absence/unavailable work codes are not locked. Set days to 0 to disable the lock.</div></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal('schedule-settings-modal')">Cancel</button><button class="btn btn-primary" onclick="saveSettings();closeModal('schedule-settings-modal')">Save schedule settings</button></div>
@@ -699,10 +699,26 @@
   </div>
 </div>
 
+<div class="modal-bg" id="important-dates-modal">
+  <div class="modal" style="width:600px;max-height:88vh;display:flex;flex-direction:column">
+    <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Important dates</h3><button class="icon-btn" type="button" title="Close" onclick="closeImportantDatesModal()">&times;</button></div>
+    <p class="modal-desc">Add a one-off calendar highlight for selected departments, sections, processes, or teams. These dates do not affect availability or working-hour calculations.</p>
+    <div class="form-row" style="border-bottom:1px solid var(--border);padding-bottom:12px">
+      <label for="important-date-name">Name</label><input id="important-date-name" maxlength="120" placeholder="Team building">
+      <div class="form-row-2" style="margin:8px 0"><label>Date<input id="important-date-date" type="date"></label><label>Highlight color<input id="important-date-color" type="color" value="#7c3aed" style="width:48px;height:34px;padding:2px"></label></div>
+      <label>Apply to hierarchy units</label><div id="important-date-targets" class="important-date-targets"></div>
+      <div class="form-hint">Choose one or more units. People in selected units see the highlight in their schedule grid.</div>
+      <div class="flex gap-2" style="justify-content:flex-end;margin-top:10px"><button class="btn btn-sm" id="important-date-cancel-edit" type="button" onclick="resetImportantDateForm()" style="display:none">Cancel edit</button><button class="btn btn-sm btn-primary" id="important-date-save" type="button" onclick="saveImportantDate()">Add important date</button></div>
+    </div>
+    <div id="important-dates-list" style="overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeImportantDatesModal()">Done</button></div>
+  </div>
+</div>
+
 <div class="modal-bg" id="special-days-modal">
   <div class="modal" style="width:520px;max-height:84vh;display:flex;flex-direction:column">
-    <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Special days</h3><button class="icon-btn" title="Close" onclick="closeSpecialDaysModal()">&times;</button></div>
-    <p class="modal-desc">Hard-coded grid highlights for recurring or one-off special days. Non-working days are excluded from normal capacity calculations.</p>
+    <div class="flex items-center justify-between" style="gap:12px"><h3 style="margin:0">Holidays &amp; non-working days</h3><button class="icon-btn" title="Close" onclick="closeSpecialDaysModal()">&times;</button></div>
+    <p class="modal-desc">Manage global recurring and one-off holiday/non-working dates. Use Important Dates for scoped internal events that only highlight the calendar.</p>
     <div class="form-row" style="border-bottom:1px solid var(--border);padding-bottom:12px">
       <label>Add special day</label>
       <div class="form-row-2" style="margin:0 0 8px">
@@ -797,6 +813,6 @@
   </div>
 </div>
 <script src="app/workwheel.js?v=13"></script>
-<script src="app/app.js?v=121"></script>
+<script src="app/app.js?v=129"></script>
 </body>
 </html>

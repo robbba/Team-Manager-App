@@ -76,7 +76,7 @@ function lsSet(key, value) {
 }
 
 // ═══ APP SETTINGS ════════════════════════════════════════════════════════════
-const APP_VERSION = '0.3.2';
+const APP_VERSION = '0.3.3';
 const DATA_VERSION = 11;
 const DEFAULT_WORK_CODES = [
   { id: 'wc1', name: 'Øvelse Dag', abbreviation: 'ØV D', staffingImpact: 'available', aggregationMode: 'hours', color: '#3b82f6' },
@@ -97,7 +97,7 @@ let appSettings = {
   activityStatusFilter: 'all', jumpToTodayOnGridChange: true, autoActivityPageOnHorizontalScroll: true,
   showLevelRankInSchedule: true, dutyPlannerEnabled: true, coreHoursPerDay: 7.5, coreWorkdayRange: '0730-1500',
   lightMax: 70, normalMax: 100, highMax: 120, planningHorizonDays: 14, planningHorizonColor: '#ef4444',
-  holidays: [], specialDays: { recurring: [], oneOff: [] }, specialDaysVisible: true, adminPasswordHash: '',
+  holidays: [], specialDays: { recurring: [], oneOff: [] }, importantDates: [], specialDaysVisible: true, adminPasswordHash: '',
   departmentColors: {}, subdepartmentColors: {}, sectionColors: {}, processColors: {}, activityTypes: [],
   workCodes: DEFAULT_WORK_CODES.map(code => ({ ...code })), shiftTemplates: DEFAULT_SHIFT_TEMPLATES.map(shift => ({ ...shift })),
   summaryColumns: null, securityLabel: { enabled: false, text: 'BEGRENSET', color: '#16a34a' },
@@ -168,6 +168,7 @@ function loadSettings() {
       appSettings.holidays = Array.isArray(parsed.holidays) ? parsed.holidays : [];
       appSettings.specialDays = normalizeSpecialDays(parsed.specialDays);
       appSettings.specialDaysVisible = parsed.specialDaysVisible !== false;
+      appSettings.importantDates = normalizeImportantDates(parsed.importantDates);
       appSettings.adminPasswordHash = String(parsed.adminPasswordHash || '');
       appSettings.showLevelRankInSchedule = parsed.showLevelRankInSchedule !== false;
       appSettings.showBillableLockIndicator = parsed.showBillableLockIndicator === true;
@@ -356,6 +357,19 @@ function activityRelevantToEmployee(activity, employee) {
   if (!activity || !employee) return false;
   const relevance = activityRelevance(activity);
   return (!relevance.departments.length || relevance.departments.includes(String(employee.department || '').trim())) && (!relevance.sections.length || relevance.sections.includes(employeeSection(employee))) && (!relevance.processes.length || relevance.processes.includes(String(employee.process || '').trim()));
+}
+function hierarchyLevelLabel(level) {
+  return ({ department: 'Department', section: 'Section', process: 'Process', team: 'Team' })[level] || level;
+}
+function hierarchyTargetForEmployee(employee, level) {
+  const path = hierarchyParentPath(employee, level);
+  return path.every(Boolean) && !path.some(value => /^Unassigned /.test(value)) ? { level, path } : null;
+}
+function hierarchyTargetLabel(target) {
+  return `${hierarchyLevelLabel(target.level)}: ${target.path.at(-1)}`;
+}
+function employeeMatchesHierarchyTarget(employee, target) {
+  return JSON.stringify(hierarchyParentPath(employee, target.level)) === JSON.stringify(target.path);
 }
 function scheduleScopeParts() {
   const match = /^(department|section|team)::([\s\S]+)$/.exec(scheduleSectionFilter);
@@ -671,6 +685,7 @@ function loadSettings() {
       appSettings.holidays = Array.isArray(parsed.holidays) ? parsed.holidays : [];
       appSettings.specialDays = normalizeSpecialDays(parsed.specialDays);
       appSettings.specialDaysVisible = parsed.specialDaysVisible !== false;
+      appSettings.importantDates = normalizeImportantDates(parsed.importantDates);
       appSettings.adminPasswordHash = String(parsed.adminPasswordHash || '');
       appSettings.departmentColors = parsed.departmentColors && typeof parsed.departmentColors === 'object'
         ? Object.fromEntries(Object.entries(parsed.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
@@ -699,6 +714,7 @@ function persistSettings() {
 }
 function plannerAppSettingsSnapshot() {
   const settings = JSON.parse(JSON.stringify(appSettings));
+  settings.importantDates = normalizeImportantDates(settings.importantDates);
   LOCAL_ONLY_APP_SETTING_KEYS.forEach(key => delete settings[key]);
   return settings;
 }
@@ -716,6 +732,18 @@ function normalizeSpecialDays(value) {
       date: String(item.date), name: String(item.name || 'Special day'), nonWorking: item.nonWorking !== false, color: normalizeHexColor(item.color, '#ef4444'),
     })),
   };
+}
+function normalizeImportantDates(value) {
+  return (Array.isArray(value) ? value : []).filter(item => isValidIsoDate(item?.date) && String(item?.name || '').trim()).map((item, index) => ({
+    id: String(item.id || `important-date-${Date.now()}-${index}`),
+    date: String(item.date),
+    name: String(item.name).trim().slice(0, 120),
+    color: normalizeHexColor(item.color, '#7c3aed'),
+    targets: (Array.isArray(item.targets) ? item.targets : []).filter(target => ['department', 'section', 'process', 'team'].includes(target?.level)
+      && Array.isArray(target.path) && target.path.length === ({ department: 2, section: 3, process: 4, team: 5 }[target.level])
+      && target.path.every(part => typeof part === 'string' && part.trim()))
+      .map(target => ({ level: target.level, path: target.path.map(part => part.trim()) })),
+  }));
 }
 const GRID_YEAR_KEY = 'teamManagerGridYear';
 const GRID_PERIOD_KEY = 'teamManagerGridPeriod';
@@ -1238,6 +1266,13 @@ function openSpecialDayForDate(date) {
   toggleSpecialDayFields();
   setTimeout(() => document.getElementById('special-day-name')?.focus(), 50);
 }
+function openImportantDateForDate(date) {
+  if (!isValidIsoDate(date)) return;
+  openImportantDatesModal();
+  document.getElementById('important-date-date').value = date;
+  renderImportantDateTargets([]);
+  document.getElementById('important-date-name').focus();
+}
 function closeSpecialDaysModal() { document.getElementById('special-days-modal')?.classList.remove('open'); }
 function resetSpecialDayForm() {
   editingSpecialDay = null;
@@ -1269,7 +1304,74 @@ function renderSpecialDaysList() {
     ...specialDays.recurring.map((item, index) => ({ ...item, kind: 'recurring', value: item.monthDay, index })),
     ...specialDays.oneOff.map((item, index) => ({ ...item, kind: 'oneOff', value: item.date, index })),
   ];
-  list.innerHTML = rows.length ? rows.map(item => `<div class="flex items-center justify-between" style="padding:7px 9px;background:var(--muted-bg);border-radius:6px;font-size:12px"><span class="flex items-center gap-2"><span style="width:9px;height:9px;border-radius:50%;background:${item.color};flex:0 0 auto"></span><span><b>${esc(item.name)}</b> · ${esc(item.kind === 'recurring' ? specialDayDisplayValue(item.value) : item.value)} <span class="muted">(${item.kind === 'recurring' ? 'recurring' : 'one-off'}${item.nonWorking ? ', non-working' : ', highlight only'})</span></span></span><span class="flex gap-2"><button class="icon-btn" type="button" title="Edit" onclick="startEditSpecialDay('${item.kind}',${item.index})">${svgIcon('edit')}</button><button class="icon-btn danger" type="button" title="Remove" onclick="removeSpecialDay('${item.kind}',${item.index})">&times;</button></span></div>`).join('') : '<div class="muted text-sm">No special days added.</div>';
+  list.innerHTML = rows.length ? rows.map(item => `<div class="flex items-center justify-between" style="padding:7px 9px;background:var(--muted-bg);border-radius:6px;font-size:12px"><span class="flex items-center gap-2"><span style="width:9px;height:9px;border-radius:50%;background:${item.color};flex:0 0 auto"></span><span><b>${esc(item.name)}</b> · ${esc(item.kind === 'recurring' ? specialDayDisplayValue(item.value) : item.value)} <span class="muted">(${item.kind === 'recurring' ? 'recurring' : 'one-off'}${item.nonWorking ? ', non-working' : ', highlight only'})</span></span></span><span class="flex gap-2"><button class="icon-btn" type="button" title="Edit" onclick="startEditSpecialDay('${item.kind}',${item.index})">${svgIcon('edit')}</button><button class="icon-btn danger" type="button" title="Remove" onclick="removeSpecialDay('${item.kind}',${item.index})">&times;</button></span></div>`).join('') : '<div class="muted text-sm">No holidays or special days added.</div>';
+}
+let editingImportantDateId = '';
+function openImportantDatesModal() {
+  appSettings.importantDates = normalizeImportantDates(appSettings.importantDates);
+  resetImportantDateForm();
+  renderImportantDatesList();
+  document.getElementById('important-dates-modal').classList.add('open');
+}
+function closeImportantDatesModal() { document.getElementById('important-dates-modal')?.classList.remove('open'); }
+function resetImportantDateForm() {
+  editingImportantDateId = '';
+  document.getElementById('important-date-name').value = '';
+  document.getElementById('important-date-date').value = '';
+  document.getElementById('important-date-color').value = '#7c3aed';
+  document.getElementById('important-date-save').textContent = 'Add important date';
+  document.getElementById('important-date-cancel-edit').style.display = 'none';
+  renderImportantDateTargets([]);
+}
+function renderImportantDateTargets(selectedTargets) {
+  const container = document.getElementById('important-date-targets');
+  if (!container) return;
+  const targets = importantDateTargets();
+  if (!targets.length) { container.innerHTML = '<div class="form-hint">Add personnel with hierarchy details before creating a scoped date.</div>'; return; }
+  const selected = new Set(selectedTargets.map(target => JSON.stringify(target)));
+  container.innerHTML = targets.map(target => `<label class="important-date-target"><input type="checkbox" value="${esc(JSON.stringify(target))}" ${selected.has(JSON.stringify(target)) ? 'checked' : ''}><span>${esc(hierarchyTargetLabel(target))}<small>${esc(target.path.join(' › '))}</small></span></label>`).join('');
+}
+function renderImportantDatesList() {
+  const list = document.getElementById('important-dates-list');
+  if (!list) return;
+  const dates = normalizeImportantDates(appSettings.importantDates).sort((left, right) => left.date.localeCompare(right.date) || left.name.localeCompare(right.name, 'nb'));
+  list.innerHTML = dates.length ? dates.map(item => `<div class="important-date-row"><span class="important-date-swatch" style="background:${esc(item.color)}"></span><span class="important-date-row-label"><strong>${esc(item.name)}</strong><small>${fmtMed(item.date)} · ${item.targets.length ? item.targets.map(hierarchyTargetLabel).map(esc).join(', ') : 'Everyone'}</small></span><button class="icon-btn" type="button" title="Edit" onclick="editImportantDate('${esc(item.id)}')">${svgIcon('edit')}</button><button class="icon-btn danger" type="button" title="Remove" onclick="removeImportantDate('${esc(item.id)}')">&times;</button></div>`).join('') : '<div class="muted text-sm">No important dates added.</div>';
+}
+function editImportantDate(id) {
+  const item = normalizeImportantDates(appSettings.importantDates).find(date => date.id === id);
+  if (!item) return;
+  editingImportantDateId = item.id;
+  document.getElementById('important-date-name').value = item.name;
+  document.getElementById('important-date-date').value = item.date;
+  document.getElementById('important-date-color').value = item.color;
+  document.getElementById('important-date-save').textContent = 'Save changes';
+  document.getElementById('important-date-cancel-edit').style.display = '';
+  renderImportantDateTargets(item.targets);
+}
+async function saveImportantDate() {
+  const name = document.getElementById('important-date-name').value.trim();
+  const date = document.getElementById('important-date-date').value;
+  const targets = [...document.querySelectorAll('#important-date-targets input:checked')].map(input => {
+    try { return JSON.parse(input.value); } catch { return null; }
+  }).filter(Boolean);
+  if (!name || !isValidIsoDate(date) || !targets.length) { alert('Enter a name and valid date, then select at least one hierarchy unit.'); return; }
+  const item = { id: editingImportantDateId || `important-date-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name, date, color: normalizeHexColor(document.getElementById('important-date-color').value, '#7c3aed'), targets };
+  await mutateState(editingImportantDateId ? 'updateImportantDate' : 'addImportantDate', () => {
+    appSettings.importantDates = normalizeImportantDates([...(appSettings.importantDates || []).filter(existing => existing.id !== item.id), item]);
+    persistSettings();
+  });
+  resetImportantDateForm();
+  renderImportantDatesList();
+  renderPage();
+}
+async function removeImportantDate(id) {
+  await mutateState('removeImportantDate', () => {
+    appSettings.importantDates = normalizeImportantDates(appSettings.importantDates).filter(item => item.id !== String(id));
+    persistSettings();
+  });
+  if (editingImportantDateId === id) resetImportantDateForm();
+  renderImportantDatesList();
+  renderPage();
 }
 function specialDayDisplayValue(monthDay) {
   const [month, day] = String(monthDay || '').split('-');
@@ -1341,6 +1443,21 @@ function specialDayFor(date) {
   const recurring = specialDays.recurring.find(item => item.monthDay === date.slice(5));
   return recurring ? { ...recurring, date, startDate: date, endDate: date, isSpecialDay: true } : null;
 }
+function importantDateTargets() {
+  const levels = ['department', 'section', 'process', 'team'];
+  const targets = new Map();
+  employees.forEach(employee => levels.forEach(level => {
+    const target = hierarchyTargetForEmployee(employee, level);
+    if (target) targets.set(JSON.stringify(target), target);
+  }));
+  return [...targets.values()].sort((left, right) => left.path.join(' › ').localeCompare(right.path.join(' › '), 'nb', { sensitivity: 'base' }) || levels.indexOf(left.level) - levels.indexOf(right.level));
+}
+function importantDateMatchesEmployee(item, employee) {
+  return item.targets.some(target => employeeMatchesHierarchyTarget(employee, target));
+}
+function importantDateForEmployee(employee, date) {
+  return normalizeImportantDates(appSettings.importantDates).find(item => item.date === date && importantDateMatchesEmployee(item, employee)) || null;
+}
 function displayedSpecialDayFor(date) {
   return appSettings.specialDaysVisible === false ? null : specialDayFor(date);
 }
@@ -1358,6 +1475,24 @@ function displayedHolidayFor(date) {
     return item.date === date;
   });
   return holiday || displayedSpecialDayFor(date);
+}
+function scheduleDayHeaderImportantDate(date) {
+  const visibleEmployees = employees.filter(scheduleEmployeeMatchesScope);
+  return normalizeImportantDates(appSettings.importantDates).find(item => item.date === date
+    && visibleEmployees.some(employee => importantDateMatchesEmployee(item, employee))) || null;
+}
+function scheduleImportantDateForCell(date, rowKey) {
+  const match = /^emp-(\d+)$/.exec(String(rowKey || ''));
+  const employee = match ? empById(Number(match[1])) : null;
+  return employee ? importantDateForEmployee(employee, date) : scheduleDayHeaderImportantDate(date);
+}
+function addImportantDateClasses(className, date, rowKey = '') {
+  const item = scheduleImportantDateForCell(date, rowKey);
+  return item ? `${className} important-date-head` : className;
+}
+function importantDateColorStyle(date, rowKey = '') {
+  const item = scheduleImportantDateForCell(date, rowKey);
+  return item ? `--important-date-color:${esc(item.color)};` : '';
 }
 function holidayPeriodsForYear(year) {
   const periods = [];
@@ -1694,6 +1829,14 @@ async function saveSettings() {
 function canUseFileSystemSave() {
   return typeof window.showSaveFilePicker === 'function';
 }
+async function plannerHandlesReferToSameFile(left, right) {
+  if (!left || !right) return false;
+  if (left === right) return true;
+  if (typeof left.isSameEntry === 'function') {
+    try { return await left.isSameEntry(right); } catch (error) { return false; }
+  }
+  return false;
+}
 
 function isDownloadFallbackResult(value) {
   return typeof value === 'string' && value.toLowerCase().includes('.json');
@@ -1960,6 +2103,7 @@ async function checkForRemoteFileUpdate(options = {}) {
   updateSyncButton();
   try {
     let parsedDiskData = null;
+    let parsedDiskSignature = null;
     if (remoteUpdateSource === 'file-handle') {
       if (!localBackupFileHandle) {
         setSyncStatusState('out-of-sync');
@@ -1974,6 +2118,7 @@ async function checkForRemoteFileUpdate(options = {}) {
       }
       const diskFile = await localBackupFileHandle.getFile();
       const diskText = await diskFile.text();
+      parsedDiskSignature = plannerFileSignature(diskText);
       if (!diskText || !diskText.trim()) {
         setSyncStatusState('out-of-sync');
         return false;
@@ -1983,6 +2128,142 @@ async function checkForRemoteFileUpdate(options = {}) {
       parsedDiskData = await fetchPortableDefaultPlannerData();
     } else {
       return false;
+    }
+    if (remoteUpdateSource === 'file-handle' && parsedDiskSignature && lastLoadedFileHandle === localBackupFileHandle
+      && (pendingRemoteSignatureNeedsCheck || (lastLoadedFileSignature && parsedDiskSignature !== lastLoadedFileSignature))) {
+      pendingRemoteSignatureNeedsCheck = false;
+      validatePlannerData(parsedDiskData);
+      if (hasUnsavedChanges && baseSnapshot) {
+        const baseMaps = baseSnapshot.plannerMaps || {};
+        const mergedEntriesMap = mergePlannerMap(baseMaps.entriesMap, entriesMap, parsedDiskData.entriesMap);
+        const mergedOvertimeMap = mergePlannerMap(baseMaps.overtimeMap, overtimeMap, parsedDiskData.overtimeMap);
+        const mergedActivityShiftsMap = mergePlannerMap(baseMaps.activityShiftsMap, activityShiftsMap, parsedDiskData.activityShiftsMap);
+        const mergedUnavailableMap = mergePlannerMap(baseMaps.unavailableMap, unavailableMap, parsedDiskData.unavailableMap);
+        const mergedShiftRotationMap = mergePlannerMap(baseMaps.shiftRotationMap, shiftRotationMap, parsedDiskData.shiftRotationMap);
+        const mergedCellNotesMap = mergePlannerMap(baseMaps.cellNotesMap, cellNotesMap, parsedDiskData.cellNotesMap);
+        const mergedWorkScheduleChecksMap = mergePlannerMap(baseMaps.workScheduleChecksMap, workScheduleChecksMap, parsedDiskData.workScheduleChecksMap);
+        let diskShiftRotationMap = mergedShiftRotationMap;
+        const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
+        const employeeMerge = mergeEntityArray(baseSnapshot.employees, employees, parsedDiskData.employees, 'id', allocateId);
+        const activityMerge = mergeEntityArray(baseSnapshot.activities, activities, parsedDiskData.activities, 'id', allocateId);
+        diskShiftRotationMap = remapLeadingRelationIds(diskShiftRotationMap, employeeMerge.theirsIdRemap);
+        const merged = {
+          entriesMap: withoutNullMap(mergedEntriesMap),
+          overtimeMap: withoutNullMap(mergedOvertimeMap),
+          activityShiftsMap: withoutNullMap(mergedActivityShiftsMap),
+          unavailableMap: withoutNullMap(mergedUnavailableMap),
+          shiftRotationMap: withoutNullMap(diskShiftRotationMap),
+          cellNotesMap: withoutNullMap(mergedCellNotesMap),
+          workScheduleChecksMap: withoutNullMap(mergedWorkScheduleChecksMap),
+          employees: employeeMerge.merged.sort((left, right) => left.name.localeCompare(right.name)),
+          activities: activityMerge.merged.sort((left, right) => left.startDate.localeCompare(right.startDate)),
+        };
+        const changed = stableJson({ entriesMap, overtimeMap, activityShiftsMap, unavailableMap, shiftRotationMap, cellNotesMap, workScheduleChecksMap, employees, activities })
+          !== stableJson(merged);
+        entriesMap = merged.entriesMap;
+        overtimeMap = merged.overtimeMap;
+        activityShiftsMap = merged.activityShiftsMap;
+        unavailableMap = merged.unavailableMap;
+        shiftRotationMap = merged.shiftRotationMap;
+        cellNotesMap = merged.cellNotesMap;
+        workScheduleChecksMap = merged.workScheduleChecksMap;
+        employees = merged.employees;
+        activities = merged.activities;
+        nextEmpId = Math.max(nextEmpId, ...employees.map(employee => employee.id || 0)) + 1;
+        nextActId = Math.max(nextActId, ...activities.map(activity => activity.id || 0)) + 1;
+        baseSnapshot = { employees: JSON.parse(JSON.stringify(parsedDiskData.employees)), activities: JSON.parse(JSON.stringify(parsedDiskData.activities || parsedDiskData.projects || [])), plannerMaps: plannerMapsFrom(parsedDiskData) };
+        lastLoadedFileSignature = parsedDiskSignature;
+        lastSyncTime = parsedDiskData.savedAt || lastSyncTime;
+        pendingRemoteRefreshData = null;
+        pendingRemoteRefreshSavedAt = null;
+        if (changed) {
+          markUnsaved();
+          saveConflictRequiresManualSave = true;
+          renderPage();
+          setSyncStatusState('out-of-sync');
+          showToast('The shared file changed while you were viewing it. Latest colleague changes are merged. Review them before saving.', 12000);
+        } else {
+          saveConflictRequiresManualSave = false;
+          applyRemotePlannerData(parsedDiskData);
+          lastLoadedFileHandle = localBackupFileHandle;
+          lastLoadedFileSignature = parsedDiskSignature;
+          baseSnapshot = { employees: JSON.parse(JSON.stringify(parsedDiskData.employees)), activities: JSON.parse(JSON.stringify(parsedDiskData.activities || parsedDiskData.projects || [])), plannerMaps: plannerMapsFrom(parsedDiskData), data: JSON.parse(JSON.stringify(parsedDiskData)) };
+          setSyncStatusState('updated');
+          showToast('Colleague changes detected and loaded.', 8000);
+        }
+        return true;
+      }
+      if (hasUnsavedChanges) {
+        if (!baseSnapshot) {
+          pendingRemoteRefreshData = parsedDiskData;
+          pendingRemoteRefreshSavedAt = parsedDiskData.savedAt || null;
+          setSyncStatusState('out-of-sync');
+          showToast('The shared file changed. Reload the latest data before saving.', 10000);
+          return false;
+        }
+        const baseMaps = baseSnapshot.plannerMaps || {};
+        const mergedEntriesMap = mergePlannerMap(baseMaps.entriesMap, entriesMap, parsedDiskData.entriesMap);
+        const mergedOvertimeMap = mergePlannerMap(baseMaps.overtimeMap, overtimeMap, parsedDiskData.overtimeMap);
+        const mergedActivityShiftsMap = mergePlannerMap(baseMaps.activityShiftsMap, activityShiftsMap, parsedDiskData.activityShiftsMap);
+        const mergedUnavailableMap = mergePlannerMap(baseMaps.unavailableMap, unavailableMap, parsedDiskData.unavailableMap);
+        const mergedCellNotesMap = mergePlannerMap(baseMaps.cellNotesMap, cellNotesMap, parsedDiskData.cellNotesMap);
+        const mergedWorkScheduleChecksMap = mergePlannerMap(baseMaps.workScheduleChecksMap, workScheduleChecksMap, parsedDiskData.workScheduleChecksMap);
+        let mergedShiftRotationMap = mergePlannerMap(baseMaps.shiftRotationMap, shiftRotationMap, parsedDiskData.shiftRotationMap);
+        for (const map of [mergedEntriesMap, mergedOvertimeMap, mergedActivityShiftsMap, mergedUnavailableMap, mergedCellNotesMap, mergedWorkScheduleChecksMap, mergedShiftRotationMap]) {
+          for (const key of Object.keys(map)) if (map[key] === null) delete map[key];
+        }
+        const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
+        const employeeMerge = mergeEntityArray(baseSnapshot.employees, employees, parsedDiskData.employees, 'id', allocateId);
+        const activityMerge = mergeEntityArray(baseSnapshot.activities, activities, parsedDiskData.activities, 'id', allocateId);
+        mergedShiftRotationMap = remapLeadingRelationIds(mergedShiftRotationMap, employeeMerge.theirsIdRemap);
+        const merged = {
+          entriesMap: withoutNullMap(mergedEntriesMap), overtimeMap: withoutNullMap(mergedOvertimeMap),
+          activityShiftsMap: withoutNullMap(mergedActivityShiftsMap), unavailableMap: withoutNullMap(mergedUnavailableMap),
+          shiftRotationMap: withoutNullMap(mergedShiftRotationMap), cellNotesMap: withoutNullMap(mergedCellNotesMap),
+          workScheduleChecksMap: withoutNullMap(mergedWorkScheduleChecksMap),
+          employees: employeeMerge.merged.sort((left, right) => left.name.localeCompare(right.name)),
+          activities: activityMerge.merged.sort((left, right) => left.startDate.localeCompare(right.startDate)),
+        };
+        const changed = stableJson({ entriesMap, overtimeMap, activityShiftsMap, unavailableMap, shiftRotationMap, cellNotesMap, workScheduleChecksMap, employees, activities }) !== stableJson(merged);
+        entriesMap = merged.entriesMap;
+        overtimeMap = merged.overtimeMap;
+        activityShiftsMap = merged.activityShiftsMap;
+        unavailableMap = merged.unavailableMap;
+        shiftRotationMap = merged.shiftRotationMap;
+        cellNotesMap = merged.cellNotesMap;
+        workScheduleChecksMap = merged.workScheduleChecksMap;
+        employees = merged.employees;
+        activities = merged.activities;
+        nextEmpId = Math.max(nextEmpId, ...employees.map(employee => employee.id || 0)) + 1;
+        nextActId = Math.max(nextActId, ...activities.map(activity => activity.id || 0)) + 1;
+        lastSyncTime = parsedDiskData.savedAt || lastSyncTime;
+        baseSnapshot = { employees: JSON.parse(JSON.stringify(parsedDiskData.employees)), activities: JSON.parse(JSON.stringify(parsedDiskData.activities || parsedDiskData.projects || [])), plannerMaps: plannerMapsFrom(parsedDiskData), data: JSON.parse(JSON.stringify(parsedDiskData)) };
+        lastLoadedFileSignature = parsedDiskSignature;
+        pendingRemoteRefreshData = null;
+        pendingRemoteRefreshSavedAt = null;
+        if (changed) {
+          markUnsaved();
+          saveConflictRequiresManualSave = true;
+          renderPage();
+          setSyncStatusState('out-of-sync');
+          showToast('Shared data changed. Your edits and colleague changes are merged; review before saving.', 12000);
+        } else {
+          saveConflictRequiresManualSave = false;
+          applyRemotePlannerData(parsedDiskData);
+          lastLoadedFileHandle = localBackupFileHandle;
+          lastLoadedFileSignature = parsedDiskSignature;
+          baseSnapshot = { employees: JSON.parse(JSON.stringify(parsedDiskData.employees)), activities: JSON.parse(JSON.stringify(parsedDiskData.activities || parsedDiskData.projects || [])), plannerMaps: plannerMapsFrom(parsedDiskData), data: JSON.parse(JSON.stringify(parsedDiskData)) };
+          setSyncStatusState('updated');
+        }
+        return true;
+      }
+      applyRemotePlannerData(parsedDiskData);
+      lastLoadedFileHandle = localBackupFileHandle;
+      lastLoadedFileSignature = parsedDiskSignature;
+      baseSnapshot = { employees: JSON.parse(JSON.stringify(parsedDiskData.employees)), activities: JSON.parse(JSON.stringify(parsedDiskData.activities || parsedDiskData.projects || [])), plannerMaps: plannerMapsFrom(parsedDiskData), data: JSON.parse(JSON.stringify(parsedDiskData)) };
+      setSyncStatusState('updated');
+      showToast('Colleague changes detected and loaded.', 8000);
+      return true;
     }
     if (!parsedDiskData.savedAt || !lastSyncTime || !(parsedDiskData.savedAt > lastSyncTime)) {
       setSyncStatusState('updated');
@@ -2020,28 +2301,25 @@ async function checkForRemoteFileUpdate(options = {}) {
     }
     pendingRemoteRefreshData = null;
     pendingRemoteRefreshSavedAt = null;
-    const diskEntriesMap = isObjectMap(parsedDiskData.entriesMap);
-    const diskOvertimeMap = isObjectMap(parsedDiskData.overtimeMap);
-    const diskActivityShiftsMap = isObjectMap(parsedDiskData.activityShiftsMap);
-    const diskUnavailableMap = isObjectMap(parsedDiskData.unavailableMap);
-    let diskShiftRotationMap = isObjectMap(parsedDiskData.shiftRotationMap);
-    const mergedEntriesMap = { ...diskEntriesMap, ...isObjectMap(entriesMap) };
-    const mergedOvertimeMap = { ...diskOvertimeMap, ...isObjectMap(overtimeMap) };
-    const mergedActivityShiftsMap = { ...diskActivityShiftsMap, ...isObjectMap(activityShiftsMap) };
-    const mergedUnavailableMap = { ...diskUnavailableMap, ...isObjectMap(unavailableMap) };
-    for (const key of Object.keys(mergedEntriesMap)) if (mergedEntriesMap[key] === null) delete mergedEntriesMap[key];
-    for (const key of Object.keys(mergedOvertimeMap)) if (mergedOvertimeMap[key] === null) delete mergedOvertimeMap[key];
-    for (const key of Object.keys(mergedActivityShiftsMap)) if (mergedActivityShiftsMap[key] === null) delete mergedActivityShiftsMap[key];
-    for (const key of Object.keys(mergedUnavailableMap)) if (mergedUnavailableMap[key] === null) delete mergedUnavailableMap[key];
+    const baseMaps = baseSnapshot?.plannerMaps || {};
+    const mergedEntriesMap = mergePlannerMap(baseMaps.entriesMap, entriesMap, parsedDiskData.entriesMap);
+    const mergedOvertimeMap = mergePlannerMap(baseMaps.overtimeMap, overtimeMap, parsedDiskData.overtimeMap);
+    const mergedActivityShiftsMap = mergePlannerMap(baseMaps.activityShiftsMap, activityShiftsMap, parsedDiskData.activityShiftsMap);
+    const mergedUnavailableMap = mergePlannerMap(baseMaps.unavailableMap, unavailableMap, parsedDiskData.unavailableMap);
+    const mergedShiftRotationMap = mergePlannerMap(baseMaps.shiftRotationMap, shiftRotationMap, parsedDiskData.shiftRotationMap);
+    const mergedCellNotesMap = mergePlannerMap(baseMaps.cellNotesMap, cellNotesMap, parsedDiskData.cellNotesMap);
+    const mergedWorkScheduleChecksMap = mergePlannerMap(baseMaps.workScheduleChecksMap, workScheduleChecksMap, parsedDiskData.workScheduleChecksMap);
 
     const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
     const employeeMerge = mergeEntityArray(baseSnapshot?.employees, employees, parsedDiskData.employees, 'id', allocateId);
     const activityMerge = mergeEntityArray(baseSnapshot?.activities, activities, parsedDiskData.activities, 'id', allocateId);
-    diskShiftRotationMap = remapLeadingRelationIds(diskShiftRotationMap, employeeMerge.theirsIdRemap);
-    const mergedShiftRotationMap = { ...diskShiftRotationMap, ...isObjectMap(shiftRotationMap) };
+    const remappedShiftRotationMap = remapLeadingRelationIds(mergedShiftRotationMap, employeeMerge.theirsIdRemap);
 
-    const before = stableJson({ entriesMap: isObjectMap(entriesMap), overtimeMap: isObjectMap(overtimeMap), activityShiftsMap: isObjectMap(activityShiftsMap), unavailableMap: isObjectMap(unavailableMap), shiftRotationMap: isObjectMap(shiftRotationMap), employees, activities });
-    const after = stableJson({ entriesMap: mergedEntriesMap, overtimeMap: mergedOvertimeMap, activityShiftsMap: mergedActivityShiftsMap, unavailableMap: mergedUnavailableMap, shiftRotationMap: mergedShiftRotationMap, employees: employeeMerge.merged, activities: activityMerge.merged });
+    for (const map of [mergedEntriesMap, mergedOvertimeMap, mergedActivityShiftsMap, mergedUnavailableMap, mergedShiftRotationMap, mergedCellNotesMap, mergedWorkScheduleChecksMap]) {
+      for (const key of Object.keys(map)) if (map[key] === null) delete map[key];
+    }
+    const before = stableJson({ entriesMap: isObjectMap(entriesMap), overtimeMap: isObjectMap(overtimeMap), activityShiftsMap: isObjectMap(activityShiftsMap), unavailableMap: isObjectMap(unavailableMap), shiftRotationMap: isObjectMap(shiftRotationMap), cellNotesMap: isObjectMap(cellNotesMap), workScheduleChecksMap: isObjectMap(workScheduleChecksMap), employees, activities });
+    const after = stableJson({ entriesMap: mergedEntriesMap, overtimeMap: mergedOvertimeMap, activityShiftsMap: mergedActivityShiftsMap, unavailableMap: mergedUnavailableMap, shiftRotationMap: remappedShiftRotationMap, cellNotesMap: mergedCellNotesMap, workScheduleChecksMap: mergedWorkScheduleChecksMap, employees: employeeMerge.merged, activities: activityMerge.merged });
     if (before === after) {
       lastSyncTime = parsedDiskData.savedAt;
       setSyncStatusState('updated');
@@ -2052,13 +2330,16 @@ async function checkForRemoteFileUpdate(options = {}) {
     overtimeMap = mergedOvertimeMap;
     activityShiftsMap = mergedActivityShiftsMap;
     unavailableMap = mergedUnavailableMap;
-    shiftRotationMap = mergedShiftRotationMap;
+    shiftRotationMap = remappedShiftRotationMap;
+    cellNotesMap = mergedCellNotesMap;
+    workScheduleChecksMap = mergedWorkScheduleChecksMap;
     employees = employeeMerge.merged.sort((a, b) => a.name.localeCompare(b.name));
     activities = activityMerge.merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
     nextEmpId = Math.max(nextEmpId, ...employees.map(e => e.id || 0)) + 1;
     nextActId = Math.max(nextActId, ...activities.map(a => a.id || 0)) + 1;
     lastSyncTime = parsedDiskData.savedAt;
-    baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
+    baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)), plannerMaps: plannerMapsFrom(parsedDiskData), data: JSON.parse(JSON.stringify(parsedDiskData)) };
+    lastLoadedFileSignature = parsedDiskSignature || lastLoadedFileSignature;
     renderPage();
     const conflicts = [...employeeMerge.conflicts, ...activityMerge.conflicts];
     const conflictNote = conflicts.length ? ` ${conflicts.length} record(s) had conflicting edits — yours were kept.` : '';
@@ -2081,7 +2362,14 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) chec
 
 function refreshPendingRemoteData() {
   if (!pendingRemoteRefreshData) return;
-  applyRemotePlannerData(pendingRemoteRefreshData);
+  const pendingData = pendingRemoteRefreshData;
+  applyRemotePlannerData(pendingData);
+  if (remoteUpdateSource === 'file-handle' && localBackupFileHandle) {
+    lastLoadedFileHandle = localBackupFileHandle;
+    lastLoadedFileSignature = null;
+    saveConflictRequiresManualSave = true;
+    pendingRemoteSignatureNeedsCheck = true;
+  }
   setSyncStatusState('updated');
   showToast('Updated to the latest JSON file changes.');
 }
@@ -2102,6 +2390,7 @@ async function requestLocalBackupHandle() {
   };
   const handle = await window.showSaveFilePicker(pickerOptions);
   await storeLocalBackupHandle(handle);
+  saveConflictRequiresManualSave = false;
   return handle;
 }
 
@@ -2158,8 +2447,46 @@ async function importDataWithPicker(options = {}) {
 function isObjectMap(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
+function mergePlannerValue(base, local, disk) {
+  const equal = (left, right) => stableJson(left) === stableJson(right);
+  if (equal(local, base)) return disk;
+  if (equal(disk, base) || equal(local, disk)) return local;
+  if (base && local && disk && [base, local, disk].every(value => typeof value === 'object' && !Array.isArray(value))) {
+    const merged = {};
+    for (const key of new Set([...Object.keys(base), ...Object.keys(local), ...Object.keys(disk)])) {
+      const value = mergePlannerValue(base[key], local[key], disk[key]);
+      if (value !== undefined) merged[key] = value;
+    }
+    return merged;
+  }
+  return local;
+}
+function mergePlannerMap(baseValue, localValue, diskValue) {
+  const base = isObjectMap(baseValue);
+  const local = isObjectMap(localValue);
+  const disk = isObjectMap(diskValue);
+  const merged = {};
+  for (const key of new Set([...Object.keys(base), ...Object.keys(local), ...Object.keys(disk)])) {
+    const value = mergePlannerValue(base[key], local[key], disk[key]);
+    if (value !== undefined) merged[key] = value;
+  }
+  return merged;
+}
+function plannerMapsFrom(data) {
+  return Object.fromEntries(['entriesMap', 'overtimeMap', 'activityShiftsMap', 'unavailableMap', 'shiftRotationMap', 'cellNotesMap', 'workScheduleChecksMap']
+    .map(key => [key, JSON.parse(JSON.stringify(isObjectMap(data?.[key])))]));
+}
 function withoutNullMap(value) {
   return Object.fromEntries(Object.entries(isObjectMap(value)).filter(([, entry]) => entry !== null));
+}
+
+function plannerFileSignature(text) {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${text.length}:${hash >>> 0}`;
 }
 
 function stableJson(value) {
@@ -2276,38 +2603,106 @@ async function preserveLastKnownGoodPlanner(handle, originalText) {
 }
 
 async function writeLocalBackupFile(handle) {
+  if (saveConflictRequiresManualSave && !manualSaveInProgress) {
+    throw new Error('The shared file changed since it was opened. Review the merged updates and use Save Changes to write again.');
+  }
   const localSnapshot = snapshotData();
   let mergedWithDisk = false;
   let entityConflicts = [];
   let originalText = '';
+  let originalSignature = null;
+  let writeStarted = false;
+  let preserveExternalChanges = manualSaveInProgress && saveConflictRequiresManualSave && lastLoadedFileHandle === handle;
   try {
     const diskFile = await handle.getFile();
     const diskText = await diskFile.text();
     originalText = diskText;
+    originalSignature = plannerFileSignature(diskText);
     if (diskText && diskText.trim()) {
       const parsedDiskData = JSON.parse(diskText);
       validatePlannerData(parsedDiskData);
-      if (parsedDiskData.savedAt && lastSyncTime && parsedDiskData.savedAt > lastSyncTime) {
-        const diskEntriesMap = isObjectMap(parsedDiskData.entriesMap);
-        const diskOvertimeMap = isObjectMap(parsedDiskData.overtimeMap);
-        const diskActivityShiftsMap = isObjectMap(parsedDiskData.activityShiftsMap);
-        const diskUnavailableMap = isObjectMap(parsedDiskData.unavailableMap);
-        let diskShiftRotationMap = isObjectMap(parsedDiskData.shiftRotationMap);
-
-        const mergedEntriesMap = { ...diskEntriesMap, ...isObjectMap(entriesMap) };
-        const mergedOvertimeMap = { ...diskOvertimeMap, ...isObjectMap(overtimeMap) };
-        const mergedActivityShiftsMap = { ...diskActivityShiftsMap, ...isObjectMap(activityShiftsMap) };
-        const mergedUnavailableMap = { ...diskUnavailableMap, ...isObjectMap(unavailableMap) };
-        for (const key of Object.keys(mergedEntriesMap)) if (mergedEntriesMap[key] === null) delete mergedEntriesMap[key];
-        for (const key of Object.keys(mergedOvertimeMap)) if (mergedOvertimeMap[key] === null) delete mergedOvertimeMap[key];
-        for (const key of Object.keys(mergedActivityShiftsMap)) if (mergedActivityShiftsMap[key] === null) delete mergedActivityShiftsMap[key];
-        for (const key of Object.keys(mergedUnavailableMap)) if (mergedUnavailableMap[key] === null) delete mergedUnavailableMap[key];
-
+      const diskSignature = plannerFileSignature(diskText);
+      const externalFileChanged = !preserveExternalChanges && lastLoadedFileHandle === handle && lastLoadedFileSignature && diskSignature !== lastLoadedFileSignature;
+      if (externalFileChanged && !hasUnsavedChanges && !saveConflictRequiresManualSave) {
+        applyRemotePlannerData(parsedDiskData);
+        lastLoadedFileHandle = handle;
+        lastLoadedFileSignature = diskSignature;
+        lastSyncTime = parsedDiskData.savedAt || lastSyncTime;
+        const savedText = await handle.getFile().then(file => file.text());
+        lastLoadedFileSignature = plannerFileSignature(savedText);
+        baseSnapshot = { employees: JSON.parse(JSON.stringify(parsedDiskData.employees)), activities: JSON.parse(JSON.stringify(parsedDiskData.activities || parsedDiskData.projects || [])), plannerMaps: plannerMapsFrom(parsedDiskData), data: JSON.parse(JSON.stringify(parsedDiskData)) };
+        return;
+      }
+      if (externalFileChanged) {
+        if (!baseSnapshot) {
+          saveConflictRequiresManualSave = true;
+          throw new Error('The shared file changed since it was opened. Reload the latest file before saving.');
+        }
+        const baseMaps = baseSnapshot.plannerMaps || {};
+        const mergedEntriesMap = mergePlannerMap(baseMaps.entriesMap, entriesMap, parsedDiskData.entriesMap);
+        const mergedOvertimeMap = mergePlannerMap(baseMaps.overtimeMap, overtimeMap, parsedDiskData.overtimeMap);
+        const mergedActivityShiftsMap = mergePlannerMap(baseMaps.activityShiftsMap, activityShiftsMap, parsedDiskData.activityShiftsMap);
+        const mergedUnavailableMap = mergePlannerMap(baseMaps.unavailableMap, unavailableMap, parsedDiskData.unavailableMap);
+        const mergedCellNotesMap = mergePlannerMap(baseMaps.cellNotesMap, cellNotesMap, parsedDiskData.cellNotesMap);
+        const mergedWorkScheduleChecksMap = mergePlannerMap(baseMaps.workScheduleChecksMap, workScheduleChecksMap, parsedDiskData.workScheduleChecksMap);
+        let diskShiftRotationMap = mergePlannerMap(baseMaps.shiftRotationMap, shiftRotationMap, parsedDiskData.shiftRotationMap);
+        for (const map of [mergedEntriesMap, mergedOvertimeMap, mergedActivityShiftsMap, mergedUnavailableMap, mergedCellNotesMap, mergedWorkScheduleChecksMap, diskShiftRotationMap]) {
+          for (const key of Object.keys(map)) if (map[key] === null) delete map[key];
+        }
         const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
         const employeeMerge = mergeEntityArray(baseSnapshot?.employees, employees, parsedDiskData.employees, 'id', allocateId);
         const activityMerge = mergeEntityArray(baseSnapshot?.activities, activities, parsedDiskData.activities, 'id', allocateId);
         diskShiftRotationMap = remapLeadingRelationIds(diskShiftRotationMap, employeeMerge.theirsIdRemap);
-        const mergedShiftRotationMap = { ...diskShiftRotationMap, ...isObjectMap(shiftRotationMap) };
+        entriesMap = mergedEntriesMap;
+        overtimeMap = mergedOvertimeMap;
+        activityShiftsMap = mergedActivityShiftsMap;
+        unavailableMap = mergedUnavailableMap;
+        cellNotesMap = mergedCellNotesMap;
+        workScheduleChecksMap = mergedWorkScheduleChecksMap;
+        shiftRotationMap = diskShiftRotationMap;
+        employees = employeeMerge.merged.sort((a, b) => a.name.localeCompare(b.name));
+        activities = activityMerge.merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
+        nextEmpId = Math.max(nextEmpId, ...employees.map(employee => employee.id || 0)) + 1;
+        nextActId = Math.max(nextActId, ...activities.map(activity => activity.id || 0)) + 1;
+        lastSyncTime = parsedDiskData.savedAt || lastSyncTime;
+        baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)), plannerMaps: plannerMapsFrom(parsedDiskData), data: JSON.parse(JSON.stringify(parsedDiskData)) };
+        lastLoadedFileSignature = diskSignature;
+        pendingRemoteRefreshData = null;
+        pendingRemoteRefreshSavedAt = null;
+        saveConflictRequiresManualSave = true;
+        preserveExternalChanges = false;
+        markUnsaved();
+        renderPage();
+        setSyncStatusState('out-of-sync');
+        const conflicts = [...employeeMerge.conflicts, ...activityMerge.conflicts];
+        const conflictNote = conflicts.length ? ` ${conflicts.length} personnel/activity conflict(s) were resolved in favor of your local edits.` : '';
+        showToast(`The file changed since you opened it. Latest data has been merged with your edits. Review the result, then save again to write it.${conflictNote}`, 12000);
+        throw new Error('The shared file changed since it was opened. Latest data was loaded and merged with your edits; review it and save again.');
+      }
+      validatePlannerData(parsedDiskData);
+      if (parsedDiskData.savedAt && lastSyncTime && parsedDiskData.savedAt > lastSyncTime) {
+        if (!baseSnapshot) {
+          pendingRemoteRefreshData = parsedDiskData;
+          pendingRemoteRefreshSavedAt = parsedDiskData.savedAt || null;
+          setSyncStatusState('out-of-sync');
+          return false;
+        }
+        const baseMaps = baseSnapshot.plannerMaps || {};
+        const mergedEntriesMap = mergePlannerMap(baseMaps.entriesMap, entriesMap, parsedDiskData.entriesMap);
+        const mergedOvertimeMap = mergePlannerMap(baseMaps.overtimeMap, overtimeMap, parsedDiskData.overtimeMap);
+        const mergedActivityShiftsMap = mergePlannerMap(baseMaps.activityShiftsMap, activityShiftsMap, parsedDiskData.activityShiftsMap);
+        const mergedUnavailableMap = mergePlannerMap(baseMaps.unavailableMap, unavailableMap, parsedDiskData.unavailableMap);
+        let mergedShiftRotationMap = mergePlannerMap(baseMaps.shiftRotationMap, shiftRotationMap, parsedDiskData.shiftRotationMap);
+        const mergedCellNotesMap = mergePlannerMap(baseMaps.cellNotesMap, cellNotesMap, parsedDiskData.cellNotesMap);
+        const mergedWorkScheduleChecksMap = mergePlannerMap(baseMaps.workScheduleChecksMap, workScheduleChecksMap, parsedDiskData.workScheduleChecksMap);
+        for (const map of [mergedEntriesMap, mergedOvertimeMap, mergedActivityShiftsMap, mergedUnavailableMap, mergedShiftRotationMap, mergedCellNotesMap, mergedWorkScheduleChecksMap]) {
+          for (const key of Object.keys(map)) if (map[key] === null) delete map[key];
+        }
+
+        const allocateId = makeIdAllocator(employees, parsedDiskData.employees, activities, parsedDiskData.activities);
+        const employeeMerge = mergeEntityArray(baseSnapshot?.employees, employees, parsedDiskData.employees, 'id', allocateId);
+        const activityMerge = mergeEntityArray(baseSnapshot?.activities, activities, parsedDiskData.activities, 'id', allocateId);
+        mergedShiftRotationMap = remapLeadingRelationIds(mergedShiftRotationMap, employeeMerge.theirsIdRemap);
         entityConflicts = [...employeeMerge.conflicts, ...activityMerge.conflicts];
 
         const localBeforeMerge = {
@@ -2316,14 +2711,18 @@ async function writeLocalBackupFile(handle) {
           activityShiftsMap: isObjectMap(activityShiftsMap),
           unavailableMap: isObjectMap(unavailableMap),
           shiftRotationMap: isObjectMap(shiftRotationMap),
+          cellNotesMap: isObjectMap(cellNotesMap),
+          workScheduleChecksMap: isObjectMap(workScheduleChecksMap),
           employees, activities,
         };
         const localAfterMerge = {
-          entriesMap: mergedEntriesMap,
-          overtimeMap: mergedOvertimeMap,
-          activityShiftsMap: mergedActivityShiftsMap,
-          unavailableMap: mergedUnavailableMap,
-          shiftRotationMap: mergedShiftRotationMap,
+          entriesMap: withoutNullMap(mergedEntriesMap),
+          overtimeMap: withoutNullMap(mergedOvertimeMap),
+          activityShiftsMap: withoutNullMap(mergedActivityShiftsMap),
+          unavailableMap: withoutNullMap(mergedUnavailableMap),
+          shiftRotationMap: withoutNullMap(mergedShiftRotationMap),
+          cellNotesMap: withoutNullMap(mergedCellNotesMap),
+          workScheduleChecksMap: withoutNullMap(mergedWorkScheduleChecksMap),
           employees: employeeMerge.merged, activities: activityMerge.merged,
         };
         mergedWithDisk = stableJson(localBeforeMerge) !== stableJson(localAfterMerge);
@@ -2333,6 +2732,8 @@ async function writeLocalBackupFile(handle) {
           activityShiftsMap = mergedActivityShiftsMap;
           unavailableMap = mergedUnavailableMap;
           shiftRotationMap = mergedShiftRotationMap;
+          cellNotesMap = mergedCellNotesMap;
+          workScheduleChecksMap = mergedWorkScheduleChecksMap;
           employees = employeeMerge.merged.sort((a, b) => a.name.localeCompare(b.name));
           activities = activityMerge.merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
           nextEmpId = Math.max(nextEmpId, ...employees.map(e => e.id || 0)) + 1;
@@ -2349,7 +2750,7 @@ async function writeLocalBackupFile(handle) {
   for (const key of Object.keys(unavailableMap)) if (unavailableMap[key] === null) delete unavailableMap[key];
   const persistedShiftRotationMap = withoutNullMap(shiftRotationMap);
 
-  const saveTimestamp = new Date().toISOString();
+  let saveTimestamp = new Date().toISOString();
   localSnapshot.savedAt = saveTimestamp;
   const payloadData = {
     ...localSnapshot,
@@ -2359,19 +2760,60 @@ async function writeLocalBackupFile(handle) {
     activityShiftsMap: isObjectMap(activityShiftsMap),
     unavailableMap: isObjectMap(unavailableMap),
     shiftRotationMap: persistedShiftRotationMap,
+    cellNotesMap: isObjectMap(cellNotesMap),
+    workScheduleChecksMap: isObjectMap(workScheduleChecksMap),
   };
   const payload = validatedPlannerPayload(payloadData);
+  if (preserveExternalChanges) {
+    const confirmation = await handle.getFile();
+    if (plannerFileSignature(await confirmation.text()) !== originalSignature) {
+      throw new Error('The shared file changed again. Review the latest version and save again.');
+    }
+  }
   try {
     await preserveLastKnownGoodPlanner(handle, originalText);
   } catch (backupError) {
     console.warn('Could not create the last-known-good backup before saving:', backupError?.message || backupError);
   }
   try {
-    await replacePlannerFileContents(handle, payload);
-    await verifyPlannerFileContents(handle, payload);
+    if (preserveExternalChanges) {
+      const currentFile = await handle.getFile();
+      const currentText = await currentFile.text();
+      if (plannerFileSignature(currentText) !== originalSignature) throw new Error('The shared file changed again. Review the latest version and save again.');
+      const currentData = JSON.parse(currentText);
+      const savedPayload = JSON.parse(payload);
+      for (const [key, value] of Object.entries(currentData)) {
+        if (!['employees', 'activities', 'entriesMap', 'overtimeMap', 'activityShiftsMap', 'unavailableMap', 'shiftRotationMap', 'savedAt', 'nextEmpId', 'nextActId'].includes(key)) {
+          savedPayload[key] = value;
+        }
+      }
+      const protectedPayload = validatedPlannerPayload(savedPayload);
+      writeStarted = true;
+      await replacePlannerFileContents(handle, protectedPayload);
+      await verifyPlannerFileContents(handle, protectedPayload);
+      saveTimestamp = savedPayload.savedAt;
+      localSnapshot.savedAt = saveTimestamp;
+    } else {
+      writeStarted = true;
+      await replacePlannerFileContents(handle, payload);
+      await verifyPlannerFileContents(handle, payload);
+    }
+    const savedText = await (await handle.getFile()).text();
+    if (lastLoadedFileHandle === handle) {
+      lastLoadedFileSignature = plannerFileSignature(savedText);
+      const savedData = JSON.parse(savedText);
+      baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)), plannerMaps: plannerMapsFrom(savedData) };
+      if (preserveExternalChanges) saveConflictRequiresManualSave = false;
+    }
     lastSyncTime = saveTimestamp;
+    localSnapshot.savedAt = saveTimestamp;
     for (const key of Object.keys(shiftRotationMap)) if (shiftRotationMap[key] === null) delete shiftRotationMap[key];
-    baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
+    baseSnapshot = {
+      employees: JSON.parse(JSON.stringify(employees)),
+      activities: JSON.parse(JSON.stringify(activities)),
+      plannerMaps: plannerMapsFrom({ ...payloadData, ...JSON.parse(savedText) }),
+      data: JSON.parse(savedText),
+    };
     if (mergedWithDisk) {
       renderPage();
       const conflictNote = entityConflicts.length
@@ -2380,7 +2822,7 @@ async function writeLocalBackupFile(handle) {
       setTimeout(() => alert(`Your changes were saved along with new updates from your colleagues.${conflictNote}`), 0);
     }
   } catch (err) {
-    if (originalText?.trim()) {
+    if (writeStarted && originalText?.trim()) {
       try {
         await replacePlannerFileContents(handle, originalText);
         await verifyPlannerFileContents(handle, originalText);
@@ -2413,7 +2855,9 @@ async function saveLocalBackupFile(forcePrompt = false) {
   if (!canUseFileSystemSave()) {
     return downloadDataFile();
   }
+  if (startupFileSelectionRequired) throw new Error('Choose a planner file before saving changes.');
   let handle = null;
+  const mustChooseSaveTarget = forcePrompt;
   if (!forcePrompt) {
     handle = localBackupFileHandle;
     if (handle) {
@@ -2426,7 +2870,7 @@ async function saveLocalBackupFile(forcePrompt = false) {
       }
     }
   }
-  if (!handle) {
+  if (!handle || mustChooseSaveTarget) {
     try {
       handle = await requestLocalBackupHandle();
     } catch (err) {
@@ -2457,8 +2901,31 @@ async function saveLocalBackupFile(forcePrompt = false) {
     }
   }
   try {
+    if (lastLoadedFileHandle && await plannerHandlesReferToSameFile(handle, lastLoadedFileHandle)) {
+      lastLoadedFileHandle = handle;
+    }
+    if (lastLoadedFileHandle && !await plannerHandlesReferToSameFile(handle, lastLoadedFileHandle)) {
+      const selectedFile = await handle.getFile();
+      const selectedText = await selectedFile.text();
+      if (!selectedText.trim()) throw new Error('The selected save file is empty. Choose the shared planner JSON file.');
+      const selectedData = JSON.parse(selectedText);
+      validatePlannerData(selectedData);
+      applyRemotePlannerData(selectedData);
+      lastLoadedFileHandle = handle;
+      lastLoadedFileSignature = plannerFileSignature(selectedText);
+      lastSyncTime = selectedData.savedAt || lastSyncTime;
+      baseSnapshot = { employees: JSON.parse(JSON.stringify(selectedData.employees)), activities: JSON.parse(JSON.stringify(selectedData.activities || selectedData.projects || [])), plannerMaps: plannerMapsFrom(selectedData), data: JSON.parse(JSON.stringify(selectedData)) };
+      throw new Error('The selected file contained newer planner data. It has been reloaded—review it, then select the file again to save your changes.');
+    }
     await writeLocalBackupFile(handle);
     activeFileName = handle.name || activeFileName;
+    if (!lastLoadedFileHandle) {
+      const savedText = await handle.getFile().then(file => file.text());
+      lastLoadedFileHandle = handle;
+      lastLoadedFileSignature = plannerFileSignature(savedText);
+      const savedData = JSON.parse(savedText);
+      baseSnapshot = { employees: JSON.parse(JSON.stringify(savedData.employees || [])), activities: JSON.parse(JSON.stringify(savedData.activities || savedData.projects || [])), plannerMaps: plannerMapsFrom(savedData) };
+    }
     return activeFileName;
   } catch (err) {
     const shouldRePrompt = !forcePrompt && (err?.name === 'NotAllowedError' || err?.name === 'NotFoundError' || err?.name === 'SecurityError');
@@ -2480,6 +2947,10 @@ async function saveLocalBackupFile(forcePrompt = false) {
 }
 
 async function saveDataAs() {
+  if (startupFileSelectionRequired) {
+    showToast('Choose a planner JSON file to start viewing or editing.', 6000);
+    return;
+  }
   const btn = document.getElementById('save-btn');
   const originalText = btn ? btn.innerHTML : '';
   try {
@@ -2899,6 +3370,9 @@ async function applyLoadedPlannerData(parsed, options = {}) {
   portableDefaultLoadIssue = '';
   if (handle) {
     await storeLocalBackupHandle(handle);
+    if (lastLoadedFileHandle === handle && pendingRemoteSignatureNeedsCheck) {
+      saveConflictRequiresManualSave = true;
+    }
   } else {
     localBackupFileHandle = null;
     activeFileName = fileName || activeFileName;
@@ -2925,8 +3399,21 @@ async function loadDataFile(file, handle, options = {}) {
   }
   const parsed = JSON.parse(text);
   validatePlannerData(parsed);
+  lastLoadedFileHandle = handle || null;
+  lastLoadedFileSignature = handle ? plannerFileSignature(text) : null;
+  saveConflictRequiresManualSave = false;
+  if (handle) {
+    lastSyncTime = parsed.savedAt || lastSyncTime;
+    baseSnapshot = {
+      employees: JSON.parse(JSON.stringify(parsed.employees || [])),
+      activities: JSON.parse(JSON.stringify(parsed.activities || parsed.projects || [])),
+      plannerMaps: plannerMapsFrom(parsed),
+      data: JSON.parse(JSON.stringify(parsed)),
+    };
+  }
   await applyLoadedPlannerData(parsed, {
     handle,
+    fileText: text,
     fileName: file.name || '',
     remoteUpdateSource: handle ? 'file-handle' : 'none',
   });
@@ -3264,6 +3751,11 @@ let autoSaveTimer = null;
 let workwheelDiskSaveTimer = null;
 let lastSyncTime = null;
 let baseSnapshot = null;
+let lastLoadedFileSignature = null;
+let lastLoadedFileHandle = null;
+let saveConflictRequiresManualSave = false;
+let manualSaveInProgress = false;
+let pendingRemoteSignatureNeedsCheck = false;
 let remoteUpdatePollTimer = null;
 let remoteUpdateCheckInFlight = false;
 let pendingRemoteRefreshData = null;
@@ -3396,17 +3888,28 @@ async function mutateState(actionName, updateFn, options = { saveDisk: true }) {
     return true;
   }
 
-  if (options.saveDisk || appSettings.autoSaveEnabled !== false) {
+  if ((options.saveDisk || appSettings.autoSaveEnabled !== false) && canUseFileSystemSave() && !localBackupFileHandle && appSettings.autoSaveEnabled !== false) {
+    try {
+      await saveLocalBackupFile(false);
+      markFileSaved();
+    } catch (err) {
+      if (err?.name !== 'AbortError') {
+        console.warn(`Could not select a JSON file for ${actionName}:`, err?.message || err);
+        showToast('Your change is in browser recovery only. Choose the shared data.json file to save it.', 9000);
+      }
+    }
+  } else if (options.saveDisk || appSettings.autoSaveEnabled !== false) {
     if (canUseFileSystemSave() && localBackupFileHandle) {
       try {
         await writeLocalBackupFile(localBackupFileHandle);
         markFileSaved();
       } catch (err) {
         console.warn(`Direct disk write skipped (${actionName}):`, err.message);
+        if (saveConflictRequiresManualSave) showToast('The shared file changed. Your edits are retained; use Save Changes to review the merged data before writing.', 10000);
       }
     }
+    updateSbStatus();
   }
-  updateSbStatus();
   return true;
 }
 
@@ -3443,7 +3946,14 @@ async function undoLastChange() {
   }
   markUnsaved();
   await saveState();
-  if (canUseFileSystemSave() && localBackupFileHandle) {
+  if (canUseFileSystemSave() && !localBackupFileHandle && appSettings.autoSaveEnabled !== false) {
+    try {
+      await saveLocalBackupFile(false);
+      markFileSaved();
+    } catch (err) {
+      if (err?.name !== 'AbortError') showToast('Undo is in browser recovery only. Choose the shared data.json file to save it.', 8000);
+    }
+  } else if (canUseFileSystemSave() && localBackupFileHandle && appSettings.autoSaveEnabled !== false) {
     try {
       await writeLocalBackupFile(localBackupFileHandle);
       markFileSaved();
@@ -3532,6 +4042,7 @@ function loadFromData(data) {
     appSettings.dutyTypes = normalizeDutyTypes(appSettings.dutyTypes);
     appSettings.holidays = Array.isArray(appSettings.holidays) ? appSettings.holidays : [];
     appSettings.specialDays = normalizeSpecialDays(appSettings.specialDays);
+    appSettings.importantDates = normalizeImportantDates(appSettings.importantDates);
   }
   appSettings.departmentColors = normalized.departmentColors && typeof normalized.departmentColors === 'object'
     ? Object.fromEntries(Object.entries(normalized.departmentColors).map(([dept, value]) => [String(dept), normalizeHexColor(value)]))
@@ -3712,7 +4223,7 @@ function loadFromData(data) {
   pruneImplicitDefaultActivityShifts();
   employees.sort((a, b) => a.name.localeCompare(b.name));
   activities.sort((a, b) => a.startDate.localeCompare(b.startDate));
-  baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)) };
+  baseSnapshot = { employees: JSON.parse(JSON.stringify(employees)), activities: JSON.parse(JSON.stringify(activities)), plannerMaps: plannerMapsFrom({ ...normalized, entriesMap, activityShiftsMap, overtimeMap, cellNotesMap, unavailableMap, workScheduleChecksMap, shiftRotationMap }), data: JSON.parse(JSON.stringify(normalized)) };
 }
 
 
@@ -3810,18 +4321,21 @@ async function saveState(force = false) {
 
 async function saveData() {
   if (canUseFileSystemSave()) {
-    const existingHandle = localBackupFileHandle;
-    if (!existingHandle) {
-      await saveDataAs();
-      return;
-    }
+    await saveDataAs();
+    return;
   }
   const btn = document.getElementById('save-btn');
   const originalText = btn ? btn.innerHTML : '';
   try {
     if (btn) btn.innerHTML = 'Saving...';
     if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
-    const saveResult = await saveLocalBackupFile(false);
+    manualSaveInProgress = true;
+    let saveResult;
+    try {
+      saveResult = await saveLocalBackupFile(false);
+    } finally {
+      manualSaveInProgress = false;
+    }
     try {
       await saveState(true);
     } catch (recoveryError) {
@@ -6309,9 +6823,10 @@ function renderGrid() {
     wCount++;
     const ds = fmt(d);
     const holiday = displayedHolidayFor(ds);
+    const importantDatesForDay = [scheduleDayHeaderImportantDate(ds)].filter(Boolean);
     const holidayIntensity = holiday?.isSpecialDay ? '41%' : '16%';
     const holidayStyle = holiday ? `background:color-mix(in srgb,${holiday.color || '#ef4444'} ${holidayIntensity},var(--surface)) !important;color:${holiday.color || '#ef4444'} !important;${isWknd(d) ? 'filter:brightness(.86);' : ''}` : '';
-    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}" data-date="${ds}" title="${holiday ? esc(holiday.name || 'Holiday') : 'Click to add a special day'}" style="--grid-day-width:${dayColumnWidth}px;${holidayStyle}${planningHorizonStyle(ds)}${planningHorizonHeaderStyle(ds)}top:${gridPeriod === 'year' ? 41 : 0}px" onclick="openSpecialDayForDate('${ds}')"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
+    dayCells += `<th class="gh-day${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${importantDatesForDay.length ? ' important-date-head' : ''}" data-date="${ds}" title="${[holiday?.name, ...importantDatesForDay.map(item => item.name)].filter(Boolean).map(esc).join(' · ') || 'Click to add a special day'}" style="--grid-day-width:${dayColumnWidth}px;${importantDatesForDay[0] ? `--important-date-color:${esc(importantDatesForDay[0].color) };` : ''}${holidayStyle}${planningHorizonStyle(ds)}${planningHorizonHeaderStyle(ds)}top:${gridPeriod === 'year' ? 41 : 0}px" onclick="openSpecialDayForDate('${ds}')"><span class="dow">${'SMTWTFS'[d.getDay()]}</span>${d.getDate()}</th>`;
   }
   flushMonth(); flushWeek();
   const topbarActivityFilter = normalizeActivityStatusFilter(appSettings.activityStatusFilter, appSettings.showOnlyConfirmedActivities);
@@ -6559,16 +7074,17 @@ function renderGridBody(days, today) {
       const ds = fmt(d), inR = ds >= act.startDate && ds <= act.endDate;
       const specialDay = displayedSpecialDayFor(ds);
       const calendarHoliday = displayedHolidayFor(ds);
+      const importantDatesForDay = [scheduleDayHeaderImportantDate(ds)].filter(Boolean);
       const specialDayStyle = specialDay ? `background:color-mix(in srgb,${specialDay.color || '#ef4444'} 41%,var(--surface)) !important;` : '';
       const isS = ds === visibleStart, isE = ds === visibleEnd;
       if (inR) {
         const brl = isS ? '4px 0 0 4px' : '0', brr = isE ? '0 4px 4px 0' : '0';
-        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${calendarHoliday ? ' holiday-col' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="--holiday-color:${calendarHoliday?.color || '#ef4444'};height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)}${typeMeta ? ` · ${esc(typeMeta.label)}` : ''} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
+        row += `<td class="gday act-bar-cell activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${calendarHoliday ? ' holiday-col' : ''}${importantDatesForDay.length ? ' important-date-activity-cell' : ''}${isS ? ' span-label-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" title="${importantDatesForDay.map(item => esc(item.name)).join(' · ')}" style="--holiday-color:${calendarHoliday?.color || '#ef4444'};${importantDatesForDay[0] ? `--important-date-color:${esc(importantDatesForDay[0].color)};` : ''}height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})" title="${esc(act.name)}${typeMeta ? ` · ${esc(typeMeta.label)}` : ''} · ${fmtMed(act.startDate)} – ${fmtMed(act.endDate)}${act.notes ? '\n' + esc(act.notes) : ''}\nAttending: ${act.participants.map(p => empById(p.id)?.name).filter(Boolean).map(esc).join(', ') || '—'}\nClick to edit">
           <div class="act-bar${lifecycle.status === 'cancelled' ? ' cancelled-bar' : ''}" style="position:absolute;top:4px;bottom:4px;left:${isS ? '3px' : '0'};right:${isE ? '3px' : '0'};background:${barBackground};opacity:${barOpacity};border-radius:${brl} ${brr}"></div>
           ${isS ? `<span class="grid-span-label${lifecycle.status === 'cancelled' ? ' cancelled-label' : ''}" title="${esc(act.name)}" style="color:${activityDisplayColor(act)};width:${labelWidth}px;${dim && lifecycle.status !== 'cancelled' ? 'opacity:.6' : ''}">${esc(activityDisplayName(act))}${lifecycle.status === 'confirmed' ? '' : (lifecycle.status === 'cancelled' ? `<span class="grid-span-status cancelled">${lifecycle.label}</span>` : ` · ${lifecycle.label}`)}</span>` : ''}
         </td>`;
       } else {
-        row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${calendarHoliday ? ' holiday-col' : ''}" data-row-key="act-${act.id}" data-date="${ds}" style="--holiday-color:${calendarHoliday?.color || '#ef4444'};height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
+        row += `<td class="gday activity-select-cell${isWknd(d) ? ' weekend' : ''}${ds === today ? ' today-col' : ''}${calendarHoliday ? ' holiday-col' : ''}${importantDatesForDay.length ? ' important-date-activity-cell' : ''}" data-row-key="act-${act.id}" data-date="${ds}" title="${importantDatesForDay.map(item => esc(item.name)).join(' · ')}" style="--holiday-color:${calendarHoliday?.color || '#ef4444'};${importantDatesForDay[0] ? `--important-date-color:${esc(importantDatesForDay[0].color)};` : ''}height:28px;${specialDayStyle}${planningHorizonStyle(ds)}" onpointerdown="startActivityRangeSelection(event,'act-${act.id}','${ds}')" onclick="handleActivityCellClick(event,${act.id})"></td>`;
       }
     }
     return row + '</tr>';
@@ -6986,6 +7502,7 @@ function activityCellLabel(activity, spanDays = 1) {
 
 function buildEmployeeCell(emp, ds, weekend, isToday) {
   const holiday = displayedHolidayFor(ds);
+  const importantDate = importantDateForEmployee(emp, ds);
   const entry = getEntryObj(`${emp.id}_${ds}`);
   const unavailable = cellUnavailable(emp.id, ds);
   const overtime = overtimeMap[`${emp.id}_${ds}`] || null;
@@ -7006,6 +7523,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
 
   const tipParts = [];
   if (holiday?.isSpecialDay && !acts.length) tipParts.push(`Special day: ${holiday.name}${holiday.nonWorking ? ' (non-working)' : ''}`);
+  if (importantDate) tipParts.push(`Important date: ${importantDate.name}`);
   if (rotationMeta) tipParts.push(`${rotationMeta.label}${rotationMeta.range ? ` (${rotationMeta.range})` : ''}${rotation?.shift === 'leave' ? '\nOff work — no planned hours' : '\nReserved for Shift Rotation'}`);
   scheduleDuties.forEach(assignment => {
     const type = appSettings.dutyTypes.find(item => item.id === assignment.dutyTypeId);
@@ -7063,6 +7581,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
     cellStyleStr = activityStatus(primaryActivity) === 'tentative' || workTimeIsPlanned(primaryActivity.assignment)
       ? `background:repeating-linear-gradient(135deg,color-mix(in srgb,${activityColor} 28%,transparent) 0 5px,color-mix(in srgb,${activityColor} 7%,transparent) 5px 10px);color:${activityColor}`
       : `background:${activityColor}20;color:${activityColor}`;
+    if (importantDate) cellStyleStr += `;box-shadow:inset 0 0 0 999px color-mix(in srgb,${importantDate.color} 9%,transparent),inset 0 0 0 1px color-mix(in srgb,${importantDate.color} 55%,transparent)`;
   } else if (!isPartial && si) {
     cellText = si.abbr;
     cellStyleStr = isPlannedStatus
@@ -7086,6 +7605,7 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const holidayTint = holiday && !primaryActivity && !si
     ? `background:${holiday.color || '#ef4444'}28 !important;color:${holiday.color || '#ef4444'} !important;border-color:${holiday.color || '#ef4444'}55;${weekend ? 'filter:brightness(.86);' : ''}`
     : '';
+  if (importantDate && !primaryActivity && !si) cellStyleStr += `;background-image:linear-gradient(color-mix(in srgb,${importantDate.color} 9%,transparent),color-mix(in srgb,${importantDate.color} 9%,transparent));box-shadow:inset 0 0 0 1px color-mix(in srgb,${importantDate.color} 55%,transparent)`;
   const birthdayBadge = birthday ? `<span class="birthday-cake" title="${esc(`Birthday: ${emp.name}${birthdayAge !== null ? ` · turns ${birthdayAge}` : ''}`)}" aria-label="${esc(`Birthday: ${emp.name}${birthdayAge !== null ? ` · turns ${birthdayAge}` : ''}`)}">${svgIcon('cake', 'Birthday')}</span>` : '';
   let workwheelMarker = appSettings.showWorkwheelCellMarkers !== false && workwheelEvents.length ? `<span class="workwheel-cell-marker" style="--workwheel-color:${esc(workwheelEvents[0].color || '#3b82f6')}" title="${esc(workwheelEvents.map(event => event.title).join('\n'))}">◉${workwheelEvents.length > 1 ? `<small>${workwheelEvents.length}</small>` : ''}</span>` : '';
   if (appSettings.showMeetingCellMarkers !== false && meetingEvents.length) workwheelMarker += `<span class="meeting-cell-marker" title="${esc(meetingEvents.map(meeting => `${meeting.startTime ? `${meeting.startTime} ` : ''}${meeting.title}`).join('\n'))}" aria-label="${meetingEvents.length} upcoming meeting${meetingEvents.length === 1 ? '' : 's'}">●${meetingEvents.length > 1 ? `<small>${meetingEvents.length}</small>` : ''}</span>`;
@@ -7102,7 +7622,8 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const fullDayStatusStyle = !primaryActivity && !isPartial && si && !isPlannedStatus
     ? `background:${si.color}20 !important;color:${si.color} !important;`
     : '';
-  const finalCellStyle = `${cellStyleStr}${holidayTint}${fullDayStatusStyle}${planningHorizonStyle(ds)}`;
+  const importantDateTint = importantDate ? `--important-date-color:${importantDate.color};` : '';
+  const finalCellStyle = `${cellStyleStr}${holidayTint}${fullDayStatusStyle}${importantDateTint}${planningHorizonStyle(ds)}`;
 
   const shiftClass = rotationMeta ? ' rotation-reserved-cell' : (primaryActivity?.assignment.shift === 'day'
     ? ' day-shift-cell'
@@ -7114,8 +7635,8 @@ function buildEmployeeCell(emp, ds, weekend, isToday) {
   const cancelledTextStyle = isCancelledActivity ? 'text-decoration:line-through;text-decoration-color:var(--destructive);text-decoration-thickness:2px;' : '';
 
   const rotationMarker = rotationMeta ? `<span class="rotation-marker${rotation?.shift === 'leave' ? ' rotation-leave-marker' : ''}${rotation?.shift === 'overtime' ? ' rotation-overtime-marker' : ''}" title="${esc(rotationMeta.label)}">${rotation?.shift === 'leave' ? 'OFF' : (rotation?.shift === 'overtime' ? 'OT' : 'SR')}</span><span class="shift-symbol rotation-shift-symbol">${rotationMeta.icon}</span>` : '';
-  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${shiftClass}${activityClass}${plannedClass}${unavailable ? ' unavailable-cell' : ''}${unavailableConflict ? ' unavailable-conflict' : ''}${lockedBillableAssignment ? ' locked-billable-cell' : ''}${isPlannedStatus ? ' planned-status-cell' : ''}${checkedActivity || checkedStatus ? ' work-schedule-checked-cell' : ''}"
-    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
+  return `<td class="gday status-cell${weekend ? ' weekend' : ''}${isToday ? ' today-col' : ''}${holiday ? ' holiday-col' : ''}${importantDate ? ' important-date-cell' : ''}${shiftClass}${activityClass}${plannedClass}${unavailable ? ' unavailable-cell' : ''}${unavailableConflict ? ' unavailable-conflict' : ''}${lockedBillableAssignment ? ' locked-billable-cell' : ''}${isPlannedStatus ? ' planned-status-cell' : ''}${checkedActivity || checkedStatus ? ' work-schedule-checked-cell' : ''}"
+    data-empid="${emp.id}" data-date="${ds}" title="${esc(tipParts.join('\n'))}" style="--important-date-color:${importantDate?.color || 'transparent'};--shift-color:${activityColor};--activity-color:${primaryActivity?.color || 'transparent'};--holiday-color:${holiday?.color || '#ef4444'};${finalCellStyle}"
     onpointerdown="startCellSelection(event,${emp.id},'${ds}')"
      onclick="handleCellClick(event,${emp.id},'${ds}')"
   oncontextmenu="openPicker(event,${emp.id},'${ds}'); return false;">${rotationMarker}${rotation ? '' : `${dot}${activityStatusBadge}${shiftSymbol}${overtimeBadge}${workScheduleCheckBadge}`}<div class="gday-inner" style="${rotationMeta ? 'color:var(--accent-blue);font-weight:800;' : `${activityTextStyle}${cancelledTextStyle}`}\">${rotationMeta ? '' : esc(cellText)}${rotation ? '' : birthdayBadge}</div>${workwheelMarker}${dutyMarkers}</td>`;
@@ -7297,6 +7818,12 @@ function setMeetingsScopeFilter(value) {
   meetingsScopeFilter = validated;
   renderGrid();
 }
+function meetingFortnightlyMatches(meeting, date) {
+  const start = new Date(`${meeting.date}T00:00:00`);
+  const cursor = new Date(`${date}T00:00:00`);
+  const elapsedDays = Math.round((cursor - start) / 86400000);
+  return elapsedDays >= 0 && cursor.getDay() === meeting.weekday && elapsedDays % 14 === 0;
+}
 function meetingsForDate(date, applyScope = false) {
   return meetings.filter(meeting => {
     if (currentPage === 'grid' && scheduleSubview === 'meetings' && !meetingMatchesScope(meeting, meetingsViewScopeParts())) return false;
@@ -7307,10 +7834,10 @@ function meetingsForDate(date, applyScope = false) {
     const cursor = new Date(`${date}T00:00:00`);
     const start = new Date(`${meeting.date}T00:00:00`);
     if (meeting.recurrence === 'daily') return true;
-    if (meeting.recurrence === 'weekly' || meeting.recurrence === 'fortnightly') {
+    if (meeting.recurrence === 'fortnightly') return meetingFortnightlyMatches(meeting, date);
+    if (meeting.recurrence === 'weekly') {
       const days = Math.round((cursor - start) / 86400000);
-      const cadence = meeting.recurrence === 'weekly' ? 7 : 14;
-      return cursor.getDay() === meeting.weekday && days >= 0 && days % cadence === 0;
+      return cursor.getDay() === meeting.weekday && days >= 0 && days % 7 === 0;
     }
     if (meeting.recurrence === 'monthly') return cursor.getDate() === start.getDate();
     return date <= meeting.endDate;
@@ -7327,7 +7854,8 @@ function recurringMeetingOccurrenceDates(meeting, from, to) {
     if (date < meeting.date || (meeting.endDate && date > meeting.endDate)) continue;
     const elapsed = Math.round((cursor - start) / 86400000);
     if (meeting.recurrence === 'daily'
-      || ((meeting.recurrence === 'weekly' || meeting.recurrence === 'fortnightly') && cursor.getDay() === meeting.weekday && elapsed % (meeting.recurrence === 'fortnightly' ? 14 : 7) === 0)
+      || (meeting.recurrence === 'weekly' && cursor.getDay() === meeting.weekday && elapsed % 7 === 0)
+      || (meeting.recurrence === 'fortnightly' && meetingFortnightlyMatches(meeting, date))
       || (meeting.recurrence === 'monthly' && cursor.getDate() === start.getDate())) result.push(date);
   }
   return result;
@@ -7892,14 +8420,28 @@ function _showPicker(event, empId, dates) {
   const pointedCell = event ? cellFromEl(document.elementFromPoint(event.clientX, event.clientY)) : null;
   const fallbackCell = document.querySelector(`td.status-cell[data-empid="${empId}"][data-date="${pickerDate}"]`);
   const anchor = (pointedCell?.dataset.empid === String(empId) ? pointedCell : fallbackCell)?.getBoundingClientRect();
+  const viewport = window.visualViewport;
+  const viewportLeft = viewport?.offsetLeft ?? 0;
+  const viewportTop = viewport?.offsetTop ?? 0;
+  const viewportWidth = viewport?.width ?? window.innerWidth;
+  const viewportHeight = viewport?.height ?? window.innerHeight;
+  const viewportRight = viewportLeft + viewportWidth;
+  const viewportBottom = viewportTop + viewportHeight;
+  const appScale = appZoom / 100;
+  picker.style.maxHeight = `${Math.max(0, viewportHeight - pad * 2) / appScale}px`;
   picker.style.left = '0px'; picker.style.top = '0px';
-  const pw = picker.offsetWidth, ph = picker.offsetHeight;
-  const preferredLeft = anchor ? anchor.right + 6 : (event?.clientX || window.innerWidth / 2);
-  const left = preferredLeft + pw <= window.innerWidth - pad
+  const pickerRect = picker.getBoundingClientRect();
+  const pw = pickerRect.width, ph = pickerRect.height;
+  const pointerX = event?.clientX || viewportLeft + viewportWidth / 2;
+  const pointerY = event?.clientY || viewportTop + viewportHeight / 2;
+  const preferredLeft = anchor ? anchor.right + 6 : pointerX;
+  const left = preferredLeft + pw <= viewportRight - pad
     ? preferredLeft
-    : (anchor ? anchor.left - pw - 6 : (event?.clientX || window.innerWidth / 2) - pw);
-  picker.style.left = Math.max(pad, Math.min(left, window.innerWidth - pw - pad)) + 'px';
-  picker.style.top = Math.max(pad, Math.min(anchor?.top ?? (event?.clientY || window.innerHeight / 2), window.innerHeight - ph - pad)) + 'px';
+    : (anchor ? anchor.left - pw - 6 : pointerX - pw);
+  const visibleLeft = Math.max(viewportLeft + pad, Math.min(left, viewportRight - pw - pad));
+  const visibleTop = Math.max(viewportTop + pad, Math.min(anchor?.top ?? pointerY, viewportBottom - ph - pad));
+  picker.style.left = `${visibleLeft / appScale}px`;
+  picker.style.top = `${visibleTop / appScale}px`;
 }
 function openActivityFromSelection() {
   if (!pickerDates.length) return;
@@ -8139,9 +8681,18 @@ function setPickerStatusLifecycle(lifecycle) {
 }
 async function savePickerStatusLifecycle() {
   if (pickerEmpId == null || !pickerDate || !pickerSelectedStatus) return;
-  const existing = getEntryObj(`${pickerEmpId}_${pickerDate}`);
+  const key = `${pickerEmpId}_${pickerDate}`;
+  const existing = getEntryObj(key);
   if (!existing || existing.status !== pickerSelectedStatus) return;
-  await saveWithDuration(existing.durationType === 'time' ? 'time' : existing.durationType === '24hours' ? '24hours' : 'fullday');
+  if (existing.lifecycle === 'planned' && pickerStatusLifecycle === 'confirmed' && hostedMode && hostedUser?.role === 'viewer') {
+    showToast('Read-only users cannot confirm a planned absence.', 3500);
+    return;
+  }
+  await mutateState('savePickerStatusLifecycle', () => {
+    entriesMap[key] = { ...existing, lifecycle: pickerStatusLifecycle };
+  });
+  updateCell(pickerEmpId, pickerDate);
+  closePicker();
 }
 async function removeSelectedStatus() {
   if (pickerEmpId == null || !pickerDate) return;
@@ -9008,15 +9559,97 @@ function activityReportDates(act) {
   }
   return dates;
 }
-function activityReportWeekChunks(dates) {
+function activityReportCalendarDates(act) {
+  const dates = [];
+  for (const d = new Date(`${act.startDate}T00:00:00`); fmt(d) <= act.endDate; d.setDate(d.getDate() + 1)) dates.push(fmt(d));
+  return dates;
+}
+function activityReportPrintFortnightChunks(act) {
+  const start = new Date(`${act.startDate}T00:00:00`);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
   const chunks = [];
-  for (const date of dates) {
-    const weekKey = isoWeekStringFromDate(new Date(`${date}T00:00:00`));
-    const chunk = chunks[chunks.length - 1];
-    if (chunk?.weekKey === weekKey) chunk.dates.push(date);
-    else chunks.push({ weekKey, dates: [date] });
+  for (let cursor = new Date(start); fmt(cursor) <= act.endDate; cursor.setDate(cursor.getDate() + 14)) {
+    const dates = Array.from({ length: 14 }, (_, index) => {
+      const date = new Date(cursor);
+      date.setDate(cursor.getDate() + index);
+      return fmt(date);
+    });
+    chunks.push({ dates, weekKeys: activityReportWeekChunks(dates).map(week => week.weekKey) });
   }
   return chunks;
+}
+function activityReportPrintWeekChunks(act) {
+  const start = new Date(`${act.startDate}T00:00:00`);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const chunks = [];
+  for (let monday = new Date(start); fmt(monday) <= act.endDate; monday.setDate(monday.getDate() + 7)) {
+    const dates = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      return fmt(date);
+    });
+    chunks.push({ dates, weekKeys: activityReportWeekChunks(dates).map(week => week.weekKey) });
+  }
+  return chunks;
+}
+function activityReportWeekChunks(dates) {
+  const weekKeys = [...new Set(dates.map(date => isoWeekStringFromDate(new Date(`${date}T00:00:00`))))];
+  const chunks = weekKeys.map(weekKey => ({ weekKey, dates: [] }));
+  return chunks.map(chunk => {
+    const monday = isoWeekStartDate(chunk.weekKey);
+    if (!monday) return { ...chunk, dates: [] };
+    chunk.dates = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      return fmt(date);
+    });
+    return chunk;
+  });
+}
+function activityReportFortnightChunks(dates) {
+  if (!dates.length) return [];
+  const chunks = [];
+  let current = [];
+  for (const date of dates) {
+    const day = new Date(`${date}T00:00:00`).getDay();
+    if (day === 1 && current.length) {
+      chunks.push(current);
+      current = [];
+    }
+    current.push(date);
+    if (current.length === 14) {
+      chunks.push(current);
+      current = [];
+    }
+  }
+  if (current.length) chunks.push(current);
+  return chunks.map(fortnightDates => {
+    const weeks = activityReportWeekChunks(fortnightDates);
+    return { weekKeys: weeks.map(week => week.weekKey), dates: fortnightDates };
+  });
+}
+function activityReportFortnightHeaders(dates, trailingHeaders = '') {
+  const weeks = activityReportWeekChunks(dates);
+  return `<tr class="week-number-row"><th rowspan="2" class="employee-column">Employee / role</th>${weeks.map(week => `<th colspan="${dates.filter(date => isoWeekStringFromDate(new Date(`${date}T00:00:00`)) === week.weekKey).length}">Week ${isoWeek(new Date(`${week.dates[0]}T00:00:00`))}</th>`).join('')}${trailingHeaders}</tr><tr class="date-heading-row">${dates.map(date => `<th class="date-column${isWknd(new Date(`${date}T00:00:00`)) ? ' weekend' : ''}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short' })}<small>${fmtShort(date)}</small></th>`).join('')}</tr>`;
+}
+function activityReportCompactShift(act, assignment) {
+  const shift = String(assignment?.shift || '').trim();
+  const labels = { normal: 'NORM', day: 'DAY', evening: 'EVE', night: 'NIGHT', turn: 'TURN', fullday: 'FULL' };
+  if (labels[shift]) return labels[shift];
+  const info = activityShiftMeta(act, shift);
+  const label = String(info?.label || shift || '').trim();
+  if (/^custom$/i.test(label)) return 'CUSTOM';
+  return label.length > 10 ? label.slice(0, 9).trimEnd() + '…' : label;
+}
+function activityReportPrintCellContent(act, info, shiftIcon) {
+  const code = String(info.workCode.abbreviation || info.workCode.name || 'CODE').trim();
+  if (info.assignment.shift === 'normal' && code.toUpperCase() === 'NA') {
+    return `<div class="report-shift-code">${shiftIcon}<strong>NA</strong></div><small>(Normal Arbeidstid)</small>`;
+  }
+  const fullCodeName = String(info.workCode.name || info.workCode.abbreviation || 'CODE').trim();
+  const shift = activityShiftMeta(act, info.assignment.shift);
+  const duration = shift?.range || info.physicalShift;
+  return `<div class="report-shift-code"><strong>${esc(fullCodeName)}</strong></div><small>Shift duration: ${esc(duration)}</small>`;
 }
 function activityReportHasAssignment(act, empId, date) {
   if (date < act.startDate || date > act.endDate) return false;
@@ -9037,7 +9670,7 @@ function activityReportCellInfo(act, emp, date) {
   }
   const shiftMeta = activityShiftMeta(act, info.assignment.shift);
   const shiftKey = shiftMeta?.key || 'custom';
-  const tint = shiftKey === 'night' ? 30 : (shiftKey === 'evening' ? 22 : (shiftKey === 'day' ? 14 : 10));
+  const tint = shiftKey === 'night' ? 68 : (shiftKey === 'evening' ? 34 : (shiftKey === 'day' ? 24 : 16));
   const color = normalizeHexColor(info.workCode.color, normalizeHexColor(activityDisplayColor(act), '#2563eb'));
   const baseColor = weekend ? 'var(--weekend-bg)' : 'var(--surface)';
   const shiftIcon = ['day', 'evening', 'night'].includes(shiftKey) ? shiftMeta.icon : '';
@@ -9134,6 +9767,7 @@ function activityReportRows(act, hideInactiveByWeek = false) {
       rows.push({
         employeeId: Number(emp.id),
         employee: displayEmployeeName(emp),
+        employeeRole: String(emp.role || '').trim(),
         department: emp.department,
         date,
         workCodeId: info?.workCode.id || '',
@@ -9151,6 +9785,7 @@ function workScheduleRevisionSnapshot(act, hideInactiveByWeek = false) {
     employeeId: row.employeeId,
     employee: row.employee,
     department: row.department || '',
+    employeeRole: row.employeeRole || '',
     date: row.date,
     workCodeId: row.workCodeId || '',
     workCode: row.shiftType,
@@ -9228,7 +9863,9 @@ function recordActivityWorkSchedulePrint(act, hideInactiveByWeek) {
   markUnsaved();
   saveState().catch(error => showToast(`Print requested, but revision history could not be saved to browser recovery: ${error.message}`, 7000));
   if (canUseFileSystemSave() && localBackupFileHandle) {
-    writeLocalBackupFile(localBackupFileHandle).then(() => markFileSaved()).catch(error => console.warn('Work schedule revision was not directly written to planner file:', error?.message || error));
+    if (localBackupFileHandle) {
+      writeLocalBackupFile(localBackupFileHandle).then(() => markFileSaved()).catch(error => console.warn('Work schedule revision was not directly written to planner file:', error?.message || error));
+    }
   }
   updateUndoButton();
   updateSbStatus();
@@ -9239,16 +9876,15 @@ function recordActivityWorkSchedulePrint(act, hideInactiveByWeek) {
 function workScheduleSnapshotHtml(snapshot, options = {}) {
   const activity = snapshot.activity || {};
   const dates = [...new Set((snapshot.rows || []).map(row => row.date))].sort();
-  const weeks = activityReportWeekChunks(dates);
   const reportLabel = options.historical ? 'ARCHIVED WORK SCHEDULE' : `${activity.status === 'tentative' ? 'DRAFT · ' : ''}Work Schedule`;
-  const sections = weeks.map(week => {
-    const weekRows = (snapshot.rows || []).filter(row => week.dates.includes(row.date));
-    const people = new Map();
-    weekRows.forEach(row => { if (!people.has(row.employeeId)) people.set(row.employeeId, { name: row.employee, rows: new Map() }); people.get(row.employeeId).rows.set(row.date, row); });
-    return `<section class="report-section"><div class="report-header"><h1>${reportLabel}: ${esc(activity.name || 'Activity')}</h1><div class="week-label">Week ${isoWeek(new Date(`${week.dates[0]}T00:00:00`))}</div></div><div class="info-box"><div><b>Cost Center:</b> ${esc(activity.costCenter || 'Not specified')}</div><div><b>Order:</b> ${esc(activity.order || 'Not specified')}</div><div><b>Billing explanation:</b> ${esc(activity.billing || 'No note')}</div></div><div class="period">Period: ${fmtMed(week.dates[0])} – ${fmtMed(week.dates[week.dates.length - 1])}</div><table><thead><tr><th class="employee-column">Employee</th>${week.dates.map(date => `<th class="date-column${isWknd(new Date(`${date}T00:00:00`)) ? ' weekend' : ''}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US',{weekday:'short'})}<div class="muted">${fmtShort(date)}</div></th>`).join('')}</tr></thead><tbody>${people.size ? [...people.values()].map(person => `<tr><td>${esc(person.name)}</td>${week.dates.map(date => { const row=person.rows.get(date); return `<td>${row?.assigned?`<strong>${esc(row.workCode)}</strong><div class="report-physical-shift">${esc(row.physicalShift)}</div>${row.deviation?`<div class="report-deviation">${esc(row.deviation)}</div>`:''}`:'—'}</td>`; }).join('')}</tr>`).join('') : `<tr><td colspan="${week.dates.length+1}" class="empty-note">No participants scheduled this week.</td></tr>`}</tbody></table></section>`;
+  const fortnightSections = activityReportPrintFortnightChunks(activity).map(fortnight => {
+    const fortnightPeople = new Map();
+    const fortnightRows = (snapshot.rows || []).filter(row => fortnight.dates.includes(row.date));
+    fortnightRows.forEach(row => { if (!fortnightPeople.has(row.employeeId)) fortnightPeople.set(row.employeeId, { name: row.employee, role: row.employeeRole || '', rows: new Map() }); fortnightPeople.get(row.employeeId).rows.set(row.date, row); });
+    return `<section class="report-section"><div class="report-header"><div><h1>${reportLabel}: ${esc(activity.name || 'Activity')}</h1><div class="period">${fmtMed(fortnight.dates[0])} – ${fmtMed(fortnight.dates[fortnight.dates.length - 1])}</div></div><div class="week-label">Weeks ${fortnight.weekKeys.map(key => key.split('-W')[1]).join(' & ')}</div></div><div class="info-box"><div><b>Cost Center:</b> ${esc(activity.costCenter || '—')}</div><div><b>Order:</b> ${esc(activity.order || '—')}</div><div><b>Billing:</b> ${esc(activity.billing || '—')}</div></div><table class="fortnight-grid"><thead>${activityReportFortnightHeaders(fortnight.dates)}</thead><tbody>${fortnightPeople.size ? [...fortnightPeople.values()].map(person => `<tr class="person-row"><td class="employee-cell"><strong>${esc(person.name)}</strong>${person.role ? `<small>${esc(person.role)}</small>` : ''}</td>${fortnight.dates.map(date => { const row=person.rows.get(date); return `<td class="report-cell${isWknd(new Date(`${date}T00:00:00`)) ? ' weekend' : ''}" title="${row?.assigned ? esc(`${row.workCode} · ${row.physicalShift}`) : ''}">${row?.assigned?`<strong>${esc(row.workCode.split(' ')[0])}</strong><small>${esc(row.physicalShift.split(' ')[0])}</small>${row.deviation?`<small class="report-deviation">${esc(row.deviation)}</small>`:''}`:''}</td>`; }).join('')}</tr>`).join('') : `<tr><td colspan="${fortnight.dates.length+1}" class="empty-note">No participants scheduled in this period.</td></tr>`}</tbody></table></section>`;
   });
   const title = `${options.historical ? 'Archived ' : ''}Work Schedule - ${activity.name || 'Activity'}`;
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}:root{--weekend-bg:#fff7ed;--weekend-text:#c2410c;--weekend-border:#fed7aa}html,body{width:100%}body{font:9px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.week-label{font-size:12px;font-weight:700;color:#475569}h1{font-size:18px;margin:0 0 5px}.info-box{background:#f5f5f5;border:1px solid #d8d8d8;border-radius:6px;padding:8px;margin-top:8px;display:flex;gap:20px}.period{color:#666;margin:7px 0 10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:5px 4px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:145px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:var(--weekend-bg);color:var(--weekend-text);border-left-color:var(--weekend-border);border-right-color:var(--weekend-border)}.empty-note{text-align:center;padding:20px}.report-physical-shift,.report-deviation{font-size:8px;margin-top:2px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>@page{size:A4 landscape;margin:5mm}*{box-sizing:border-box}:root{--weekend-bg:#fff7ed;--weekend-text:#c2410c;--weekend-border:#fed7aa}html,body{width:100%;height:100%}body{font:7.5px/1.05 Arial,sans-serif;color:#111;margin:0}.report-section{height:200mm;max-height:200mm;overflow:hidden;page-break-after:always;break-after:page;display:flex;flex-direction:column}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:2mm}.week-label{font-size:12px;font-weight:700;color:#333;white-space:nowrap}h1{font-size:12px;line-height:1.1;margin:0 0 2px}.period{color:#555;margin:0;font-size:7px}.info-box{background:#f5f5f5;border:1px solid #bbb;padding:3px 5px;margin:0 0 2mm;display:flex;gap:14px;font-size:7px}table{width:100%;border-collapse:collapse;table-layout:fixed;flex:1}thead{display:table-header-group}.fortnight-grid th,.fortnight-grid td{padding:1px 2px;border:1px solid #999;text-align:center;vertical-align:middle;overflow-wrap:anywhere}.fortnight-grid .employee-column{width:37mm;text-align:left}.fortnight-grid .date-column{width:auto}.week-number-row th{height:5mm;background:#e8e8e8;font-size:7px;border-bottom:0}.date-heading-row th{height:9mm;background:#f5f5f5;font-size:7px}.date-heading-row small{display:block;font-weight:400;color:#555;font-size:6px;margin-top:1px}.date-heading-row .weekend{background:#eee4d8;color:#8b4513}.muted{display:block;color:#555;font-size:6.5px;margin-top:1px}.weekend{background:var(--weekend-bg)}th.weekend{color:var(--weekend-text)}.person-row{break-inside:avoid;page-break-inside:avoid;height:7mm}.employee-cell{text-align:left!important;padding-left:3px!important}.employee-cell strong,.employee-cell small,.report-cell strong,.report-cell small{display:block}.employee-cell strong{font-size:7px}.employee-cell small,.report-cell small{font-size:6px;color:#333;margin-top:1px}.report-cell{height:7mm}.report-cell strong{font-size:7px}.empty-cell{color:#777}.report-deviation{color:#b91c1c!important}.empty-note{text-align:center;padding:8px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`;
 }
 function openActivityReport(id) {
   const act = activities.find(item => item.id === id);
@@ -9329,39 +9965,96 @@ function printActivityReport() {
   const act = activities.find(item => item.id === activityReportId);
   if (!act) return;
   const draftLabel = activityStatus(act) === 'tentative' ? 'DRAFT · ' : '';
-  const dates = activityReportDates(act);
+  const dates = activityReportCalendarDates(act);
   if (!dates.length) {
-    alert('This activity has no reportable workdays. Enable weekends or extend the activity period before printing.');
+    alert('This activity has no reportable workdays. Extend the activity period before printing.');
     return;
   }
   const participantGroups = activityReportParticipantGroups(act);
   const hideInactiveByWeek = document.getElementById('activity-report-hide-inactive-week')?.checked === true;
+  const peoplePerPage = 40;
   const sections = [];
-  for (const week of activityReportWeekChunks(dates)) {
-    const chunkDates = week.dates;
-    const visibleGroups = activityReportGroupsForDates(act, participantGroups, chunkDates, hideInactiveByWeek);
-    sections.push(`<section class="report-section">
-      <div class="report-header"><h1>${draftLabel}Work Schedule: ${esc(act.name)}</h1><div class="week-label">Week ${isoWeek(new Date(`${chunkDates[0]}T00:00:00`))}</div></div>
-      <div class="info-box"><div><b>Cost Center:</b> ${esc(act.project || 'Not specified')}</div><div><b>Order:</b> ${esc(act.order || 'Not specified')}</div><div><b>Billing explanation:</b> ${esc(act.billing || 'No note')}</div></div>
-      <div class="period">Period: ${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])}</div>
-      <table><thead><tr><th class="employee-column">Employee</th>${chunkDates.map(date => {
-        const weekend = isWknd(new Date(`${date}T00:00:00`));
-        return `<th class="date-column${weekend ? ' weekend' : ''}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted">${fmtShort(date)}</div></th>`;
-      }).join('')}</tr></thead><tbody>${visibleGroups.length ? visibleGroups.map(group => `<tr class="section-row"><td colspan="${chunkDates.length + 1}" style="background:${group.color}18;border-bottom-color:${group.color}"><span class="section-dot" style="background-color:${group.color}"></span><strong>${esc(group.name)}</strong></td></tr>${group.participants.map(({ participant, emp }) => `<tr><td>${displayEmployeeNameMarkup(emp)}</td>${chunkDates.map(date => {
-          const cell = hideInactiveByWeek && !activityReportHasAssignment(act, emp.id, date)
-            ? { className: isWknd(new Date(`${date}T00:00:00`)) ? 'weekend' : '', style: isWknd(new Date(`${date}T00:00:00`)) ? 'background:var(--weekend-bg);color:var(--muted);' : 'color:var(--muted);', html: '—' }
-            : activityReportCellInfo(act, emp, date);
-          return `<td class="${cell.className}" style="${cell.style}">${cell.html}</td>`;
-        }).join('')}</tr>`).join('')}`).join('') : `<tr><td colspan="${chunkDates.length + 1}" class="empty-note">${hideInactiveByWeek ? 'No personnel scheduled this week.' : 'No participants assigned.'}</td></tr>`}</tbody></table>
+  for (const fortnight of activityReportPrintFortnightChunks(act)) {
+    const scheduledWeeks = activityReportWeekChunks(fortnight.dates).filter(week =>
+      participantGroups.some(group => group.participants.some(({ emp }) =>
+        week.dates.some(date => date >= act.startDate && date <= act.endDate && activityAssignmentInfo(act, emp.id, date, true)))));
+    const chunkDates = scheduledWeeks.flatMap(week => week.dates).filter(date => fortnight.dates.includes(date));
+    if (!chunkDates.length) continue;
+    const weeks = scheduledWeeks;
+    const visiblePeople = participantGroups.flatMap(group => group.participants.map(({ emp }) => emp))
+      .filter(emp => !hideInactiveByWeek || chunkDates.some(date => date >= act.startDate && date <= act.endDate && activityAssignmentInfo(act, emp.id, date, true)));
+    const weekLabel = weeks.map(week => `W${isoWeek(new Date(`${week.dates[0]}T00:00:00`))}`).join(' / ');
+    const peoplePages = [];
+    for (let index = 0; index < visiblePeople.length; index += peoplePerPage) peoplePages.push(visiblePeople.slice(index, index + peoplePerPage));
+    if (!peoplePages.length) peoplePages.push([]);
+    for (const [pageIndex, pagePeople] of peoplePages.entries()) {
+      const participantCount = pagePeople.length;
+      const legendEntries = new Map();
+      for (const emp of pagePeople) for (const date of chunkDates) {
+        const info = activityAssignmentInfo(act, emp.id, date, true);
+        if (!info) continue;
+        const code = String(info.workCode.abbreviation || 'CODE').trim();
+        const shiftKey = activityReportCompactShift(act, info.assignment);
+        const shiftMeta = activityShiftMeta(act, info.assignment.shift);
+        const shiftName = shiftMeta?.label || info.assignment.shift || shiftKey;
+        const shiftRange = shiftMeta?.range || '';
+        const shiftColor = normalizeHexColor(info.workCode.color, normalizeHexColor(activityDisplayColor(act), '#2563eb'));
+        const tint = shiftKey === 'NIGHT' ? 25 : (shiftKey === 'EVE' ? 32 : (shiftKey === 'DAY' ? 22 : 12));
+        const swatch = shiftKey === 'NIGHT'
+          ? `background:color-mix(in srgb,${shiftColor} 42%,#fff);`
+          : `background:color-mix(in srgb,${shiftColor} ${tint}%,#fff);`;
+        const shiftIconSource = shiftMeta?.key === 'day' ? svgIcon('sun', shiftName) : shiftMeta?.key === 'night' ? svgIcon('moon', shiftName) : shiftMeta?.key === 'evening' ? svgIcon('evening', shiftName) : '';
+        const shiftIcon = shiftIconSource.replace('<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="false" role="img"><title>', '<svg class="legend-shift-icon" viewBox="0 0 24 24" aria-hidden="true"><title>').replace(/<title>[^<]*<\/title>/, '');
+        const specialMeaning = /^ØV\b/i.test(code) ? 'ATF døgn' : shiftKey === 'DAY' ? 'Dagskift 1930–0730' : '';
+        const key = `${info.workCode.id || code}\u0000${info.administrativeValue || ''}`;
+        if (!legendEntries.has(key)) legendEntries.set(key, {
+          code: specialMeaning === 'ATF døgn' ? 'ØV' : specialMeaning ? 'DAY' : code,
+          label: `${specialMeaning ? `${specialMeaning} · ` : ''}${info.workCode.name}${info.administrativeValue ? ` (${info.administrativeValue})` : ''}`,
+          swatch,
+          shifts: new Set(),
+        });
+        legendEntries.get(key).shifts.add(`${shiftIcon}${esc(shiftKey)}${shiftRange ? ` (${esc(shiftRange)})` : ''}`);
+      }
+      const legendRows = [...legendEntries.values()];
+      const legendMarkup = legendRows.length ? `<table class="report-legend"><thead><tr><th colspan="3">Legend</th></tr><tr><th>Code</th><th>Meaning</th><th>Shift</th></tr></thead><tbody>${legendRows.map(entry => `<tr><td><span class="legend-swatch" style="${entry.swatch}"></span><strong>${esc(entry.code)}</strong></td><td>${esc(entry.label)}</td><td>${[...entry.shifts].join(', ') || '—'}</td></tr>`).join('')}</tbody></table>` : '';
+      sections.push(`<section class="report-section">
+      <div class="report-header"><div><h1>${draftLabel}Work Schedule: ${esc(act.name)}</h1><div class="period">${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])} · ${participantCount} personnel${peoplePages.length > 1 ? ` · page ${pageIndex + 1}/${peoplePages.length}` : ''}</div></div><div class="week-label">${weekLabel}</div></div>
+      <div class="info-box"><span><b>CC</b> ${esc(act.project || '—')}</span><span><b>Order</b> ${esc(act.order || '—')}</span><span><b>Billing</b> ${esc(act.billing || '—')}</span></div>
+      <table class="fortnight-grid"><thead>${activityReportFortnightHeaders(chunkDates)}</thead><tbody>${participantCount ? pagePeople.map(emp => `<tr class="person-row"><td class="employee-cell"><strong>${displayEmployeeNameMarkup(emp)}</strong>${emp.role ? `<small>${esc(emp.role)}</small>` : ''}</td>${chunkDates.map(date => {
+          const active = activityReportHasAssignment(act, emp.id, date);
+          const week = weeks.find(item => item.weekKey === isoWeekStringFromDate(new Date(`${date}T00:00:00`)));
+          const showInactiveCell = hideInactiveByWeek && weeks.find(item => item.weekKey === isoWeekStringFromDate(new Date(`${date}T00:00:00`)))?.dates.some(weekDate => weekDate >= act.startDate && weekDate <= act.endDate && activityAssignmentInfo(act, emp.id, weekDate, true)) && !active;
+          const info = active ? activityAssignmentInfo(act, emp.id, date, true) : null;
+          const deviation = active ? dailyDeviationLabel(emp.id, date) : '';
+          const weekend = isWknd(new Date(`${date}T00:00:00`));
+          const shiftKey = info ? (activityShiftMeta(act, info.assignment.shift)?.key || 'custom') : '';
+          const shiftColor = info ? normalizeHexColor(info.workCode.color, normalizeHexColor(activityDisplayColor(act), '#2563eb')) : '';
+          const tint = shiftKey === 'evening' ? 32 : (shiftKey === 'day' ? 22 : 12);
+          const cellStyle = info
+            ? shiftKey === 'night'
+              ? `background:color-mix(in srgb,${shiftColor} 25%,#fff);color:#111;`
+              : `background:color-mix(in srgb,${shiftColor} ${tint}%,${weekend ? '#fff7ed' : '#fff'});`
+            : '';
+          const shiftMeta = info ? activityShiftMeta(act, info.assignment.shift) : null;
+          const shiftIconName = shiftMeta?.key === 'day' ? 'sun' : shiftMeta?.key === 'night' ? 'moon' : '';
+          const shiftIconSvg = shiftIconName ? svgIcon(shiftIconName, shiftMeta.label) : '';
+          const shiftIcon = shiftIconSvg.replace('<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="false" role="img"><title>', '<svg class="print-shift-icon" viewBox="0 0 24 24" aria-hidden="true"><title>').replace(/<title>[^<]*<\/title>/, '');
+          return `<td class="report-cell ${weekend ? 'weekend ' : ''}${shiftKey ? `${shiftKey}-shift` : ''}" style="${cellStyle}" title="${info ? esc(`${info.workCode.name} · ${info.physicalShift} · ${info.administrativeValue}`) : ''}">${info ? activityReportPrintCellContent(act, info, shiftIcon) : showInactiveCell ? '<span class="empty-cell">—</span>' : ''}${deviation ? `<small class="report-deviation">${esc(deviation)}</small>` : ''}</td>`;
+        }).join('')}</tr>`).join('') : `<tr><td colspan="${chunkDates.length + 1}" class="empty-note">${hideInactiveByWeek ? 'No personnel scheduled in these weeks.' : 'No participants assigned.'}</td></tr>`}</tbody></table>
+      ${legendMarkup}
     </section>`);
+    }
   }
   const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the activity report.'); return; }
   recordActivityWorkSchedulePrint(act, hideInactiveByWeek);
   printWindow.document.write(`<!doctype html><html><head><title>Work Schedule - ${esc(act.name)}</title><style>
-    @page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}:root{--surface:#fff;--text:#111;--muted:#666;--weekend-bg:#fff7ed;--weekend-text:#c2410c;--weekend-border:#fed7aa}html,body{width:100%}body{font:9px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.week-label{font-size:12px;font-weight:700;color:#475569}h1{font-size:18px;margin:0 0 5px}.info-box{background:#f5f5f5;border:1px solid #d8d8d8;border-radius:6px;padding:8px;margin-top:8px;display:flex;gap:20px}.period{color:#666;margin:7px 0 10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:5px 4px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:145px}.date-column{width:auto}.muted{color:#666;font-size:8px;margin-top:2px}.weekend{background:var(--weekend-bg);color:var(--weekend-text);border-left-color:var(--weekend-border);border-right-color:var(--weekend-border);box-shadow:inset 0 0 0 1px var(--weekend-border)}.empty-note{text-align:center;padding:20px}.scheduled{color:#111}.report-shift-line{display:flex;align-items:center;gap:4px}.report-shift-line .ui-icon{width:11px;height:11px;flex:0 0 11px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--shift-color)}.report-physical-shift{font-size:8px;margin-top:2px}.section-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+    @page{size:297mm 210mm;margin:5mm}*{box-sizing:border-box}:root{--surface:#fff;--text:#111;--muted:#555;--weekend-bg:#fff7ed;--weekend-text:#c2410c;--weekend-border:#fed7aa}html,body{width:100%;height:100%;margin:0}body{font:7px/1 Arial,sans-serif;color:#111}.report-section{width:287mm;height:200mm;max-height:200mm;overflow:hidden;page-break-before:always;break-before:page;page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid;display:flex;flex-direction:column}.report-section:first-child{page-break-before:auto;break-before:auto}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:1mm}.week-label{font-size:10px;font-weight:700;color:#333;white-space:nowrap}h1{font-size:10px;line-height:1;margin:0 0 1px}.period{color:#555;margin:0;font-size:6px}.info-box{background:#f5f5f5;border:1px solid #bbb;padding:2px 4px;margin:0 0 1mm;display:flex;gap:8px;font-size:6px}.report-legend{width:auto;max-width:150mm;margin-top:1mm;font-size:6px;line-height:1.15;table-layout:auto}.report-legend th,.report-legend td{border:1px solid #777;padding:1px 3px;text-align:left}.report-legend thead tr:first-child th{background:#e8e8e8;font-size:7px}.report-legend thead tr:nth-child(2) th{background:#f5f5f5}.report-legend td:first-child{min-width:24mm;white-space:nowrap}.report-legend td:last-child{min-width:38mm}.legend-swatch{display:inline-block;width:9px;height:7px;margin-right:3px;border:1px solid #555;vertical-align:middle}.legend-shift-icon{width:9px;height:9px;margin-right:2px;vertical-align:-1px;stroke:#172554;stroke-width:2;fill:none}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}.fortnight-grid th,.fortnight-grid td{padding:.4px 1px;border:1px solid #777;text-align:center;vertical-align:middle;overflow:hidden}.fortnight-grid .employee-column{width:42mm;text-align:left}.fortnight-grid .date-column{width:auto}.report-section .date-heading-row th{white-space:nowrap}.week-number-row th{height:2.5mm;background:#e8e8e8;font-size:5.5px;border-bottom:0}.date-heading-row th{height:4mm;background:#f5f5f5;font-size:5px}.date-heading-row small{display:block;font-weight:400;color:#555;font-size:4.5px;margin-top:0}.date-heading-row .weekend{background:#eee4d8;color:#8b4513}.muted{display:block;color:#555;font-size:5px;margin-top:0}.weekend{background:var(--weekend-bg)}th.weekend{color:var(--weekend-text)}.section-row td{padding:0 3px!important;text-align:left!important;background:color-mix(in srgb,var(--section-color) 13%,white);border-color:color-mix(in srgb,var(--section-color) 60%,#999);font-size:5.5px;font-weight:700;height:2mm}.section-dot{display:inline-block;width:4px;height:4px;border-radius:50%;margin-right:2px;background:var(--section-color)}.person-row{break-inside:avoid;page-break-inside:avoid;height:3mm}.fortnight-grid td{padding:0;line-height:1}.employee-cell{text-align:left!important;padding-left:1.5px!important}.employee-cell strong,.employee-cell small,.report-cell strong,.report-cell small{display:block}.employee-cell strong{font-size:5.2px;line-height:1}.employee-cell small,.report-cell small{font-size:4.3px;color:#333;margin-top:0;line-height:1}.employee-cell small{max-height:1em;overflow:hidden}.report-cell{height:3mm}.report-cell strong{font-size:5px;white-space:nowrap;overflow:hidden}.report-cell small{white-space:nowrap;overflow:hidden}.report-shift-code{display:flex;align-items:center;justify-content:center;gap:1px}.print-shift-icon{width:7px;height:7px;flex:0 0 auto;stroke:#172554;stroke-width:2;fill:none} .report-cell.weekend{background-color:#f6f1eb}.report-section .person-row,.report-section .report-cell{height:4mm}.report-section .employee-cell strong,.report-section .report-cell strong{font-size:6.5px;line-height:1.05}.report-section .employee-cell small,.report-section .report-cell small{font-size:5px;line-height:1.05}.empty-cell{color:#777}.report-deviation{color:#b91c1c!important}.empty-note{text-align:center;padding:4px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
   </style></head><body>${sections.join('')}</body></html>`);
-  printWindow.document.close(); printWindow.focus(); printWindow.print();
+  printWindow.document.close();
+  printWindow.addEventListener('afterprint', () => printWindow.close(), { once: true });
+  printWindow.focus();
+  printWindow.print();
 }
 
 function teamReportDates(start, end) {
@@ -9384,7 +10077,7 @@ function teamReportActivities(entries) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 function teamReportBillingSummary(reportActivities) {
-  return `<div style="margin-bottom:15px;padding:10px;background:var(--muted-bg, #f8f9fa);border:1px solid #ccc;font-size:11px"><strong style="display:block;margin-bottom:7px">Billing codes for the period:</strong>${reportActivities.length ? `<table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">Activity</th><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">CC</th><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">Order</th><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">Free text</th></tr></thead><tbody>${reportActivities.map(act => `<tr><td style="padding:5px 7px;border:1px solid #ccc;font-weight:600;color:${act.color || 'inherit'}">${esc(act.name)}</td><td style="padding:5px 7px;border:1px solid #ccc">${esc(act.project || '-')}</td><td style="padding:5px 7px;border:1px solid #ccc">${esc(act.order || '-')}</td><td style="padding:5px 7px;border:1px solid #ccc">${esc(act.billing || '-')}</td></tr>`).join('')}</tbody></table>` : 'No activities in this period'}</div>`;
+  return `<div class="billing-summary" style="margin-bottom:15px;padding:10px;background:var(--muted-bg, #f8f9fa);border:1px solid #ccc;font-size:11px"><strong style="display:block;margin-bottom:7px">Billing codes for the period:</strong>${reportActivities.length ? `<table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">Activity</th><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">CC</th><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">Order</th><th style="padding:5px 7px;border:1px solid #ccc;text-align:left">Free text</th></tr></thead><tbody>${reportActivities.map(act => `<tr><td style="padding:5px 7px;border:1px solid #ccc;font-weight:600;color:${act.color || 'inherit'}">${esc(act.name)}</td><td style="padding:5px 7px;border:1px solid #ccc">${esc(act.project || '-')}</td><td style="padding:5px 7px;border:1px solid #ccc">${esc(act.order || '-')}</td><td style="padding:5px 7px;border:1px solid #ccc">${esc(act.billing || '-')}</td></tr>`).join('')}</tbody></table>` : 'No activities in this period'}</div>`;
 }
 function teamReportShiftRange(act, participant, shift) {
   const shiftType = assignmentShiftType(shift, participant);
@@ -9405,8 +10098,13 @@ function teamReportCellInfo(emp, act, date) {
   const days = info.administrativeMeasure.units;
   const tint = info.assignment.shift === 'night' ? 0.22 : (info.assignment.shift === 'evening' ? 0.18 : 0.12);
   const activityLabel = act.abbreviation || act.name;
+  const workCodeName = String(info.workCode.name || info.workCode.abbreviation || 'CODE').trim();
+  const workCodeLine = info.assignment.shift === 'normal' && String(info.workCode.abbreviation || '').toUpperCase() === 'NA'
+    ? 'NA (Normal Arbeidstid)'
+    : workCodeName;
+  const duration = activityShiftMeta(act, info.assignment.shift)?.range || info.physicalShift;
   return {
-    html: `<div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:${act.color || 'inherit'}"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:${act.color || 'currentColor'};flex:0 0 auto"></span>${esc(activityLabel)}</div><div style="font-weight:700">${esc(info.workCode.abbreviation || info.workCode.name)} (${esc(info.administrativeValue)})</div><div style="font-size:10px;margin-top:2px">${esc(info.physicalShift)}</div>`,
+    html: `<div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:${act.color || 'inherit'}"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:${act.color || 'currentColor'};flex:0 0 auto"></span>${esc(activityLabel)}</div><div style="font-weight:700">${esc(workCodeLine)}</div><div style="font-size:10px;margin-top:2px">Shift duration: ${esc(duration)}</div>`,
     hours,
     days,
     tint,
@@ -9506,30 +10204,38 @@ function printTeamScheduleReport() {
   const secCfg = normalizeSecurityLabel(appSettings.securityLabel);
   const secLabelHtml = secCfg.enabled ? `<span class="security-label" style="--security-label-color:${esc(secCfg.color)}">${esc(secCfg.text)}</span>` : '';
   const sections = [];
-  for (let i = 0; i < dates.length; i += 14) {
-    const chunkDates = dates.slice(i, i + 14);
+  const fortnightChunks = activityReportPrintFortnightChunks({ startDate: start, endDate: end });
+  for (let fortnightIndex = 0; fortnightIndex < fortnightChunks.length; fortnightIndex++) {
+    const fortnight = fortnightChunks[fortnightIndex];
+    const chunkDates = fortnight.dates;
+    const weeksInChunk = activityReportWeekChunks(chunkDates);
+    const visibleEntries = entries.map(entry => ({ ...entry, activities: entry.activities.filter(activity => chunkDates.some(date => teamReportCellInfo(entry.emp, activity, date))) })).filter(entry => entry.activities.length);
     sections.push(`<section class="report-section">
-      <div class="report-header"><h1>Team Work Schedule</h1>${secLabelHtml}</div>
-      <div class="period">Period: ${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])}</div>
-      ${i === 0 ? teamReportBillingSummary(reportActivities) : ''}
-      <table><thead><tr><th class="employee-column">Employee / Activity</th>${chunkDates.map(date => {
-        const weekend = isWknd(new Date(`${date}T00:00:00`));
-        return `<th class="date-column${weekend ? ' weekend' : ''}">${new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}<div class="muted">${fmtShort(date)}</div></th>`;
-      }).join('')}<th class="total-column">Days</th><th class="total-column">Hours</th></tr></thead>
-      <tbody>${entries.map(entry => {
+      <div class="report-header"><div><h1>Team Work Schedule</h1><div class="period">${fmtMed(chunkDates[0])} – ${fmtMed(chunkDates[chunkDates.length - 1])} · ${visibleEntries.length} personnel</div></div><div class="week-label">${weeksInChunk.map(week => `W${isoWeek(new Date(`${week.dates[0]}T00:00:00`))}`).join(' / ')}</div>${secLabelHtml}</div>
+      ${fortnightIndex === 0 ? teamReportBillingSummary(reportActivities) : ''}
+      <table class="fortnight-grid"><thead>${activityReportFortnightHeaders(chunkDates, '<th rowspan="2" class="total-column">Days</th><th rowspan="2" class="total-column">Hours</th>')}</thead>
+      <tbody>${visibleEntries.map(entry => {
         const chunkHours = chunkDates.reduce((sum, date) => sum + (teamReportEntryCellInfo(entry, date)?.hours || 0), 0);
         const chunkDays = chunkDates.reduce((sum, date) => sum + (teamReportEntryCellInfo(entry, date)?.days || 0), 0);
-        return `<tr><td><b>${esc(entry.emp.name)}</b><div class="muted activity-name">${teamReportActivityLabels(entry.activities)}</div></td>${chunkDates.map(date => {
+        return `<tr class="person-row"><td class="employee-cell"><strong>${esc(entry.emp.name)}</strong>${entry.emp.role ? `<small>${esc(entry.emp.role)}</small>` : ''}<small class="activity-name">${teamReportActivityLabels(entry.activities)}</small></td>${chunkDates.map(date => {
           const weekend = isWknd(new Date(`${date}T00:00:00`));
           const cellInfo = teamReportEntryCellInfo(entry, date);
-          return `<td class="${weekend ? 'weekend' : ''}"${cellInfo ? ` style="background:color-mix(in srgb, ${cellInfo.workCode.color} ${cellInfo.tint * 100}%, transparent)"` : ''}>${cellInfo ? cellInfo.html : ''}</td>`;
-        }).join('')}<td class="total-column">${entry.activities.length ? formatHoursNumber(chunkDays) : ''}</td><td class="total-column">${entry.activities.length ? formatHoursNumber(chunkHours) : ''}</td></tr>`;
-      }).join('')}</tbody></table>
+          return `<td class="report-cell${weekend ? ' weekend' : ''}" title="${cellInfo ? esc(cellInfo.items.map(info => `${info.workCode.name} · ${info.physicalShift} · ${formatCompactMeasure(info.days, info.hours)}`).join('; ')) : ''}"${cellInfo ? ` style="--work-code-color:${cellInfo.workCode.color};background:color-mix(in srgb, ${cellInfo.workCode.color} ${cellInfo.tint * 100}%, ${weekend ? 'var(--weekend-bg)' : 'white'})"` : ''}>${cellInfo ? cellInfo.items.map(info => {
+            const assignment = info.activity ? activityAssignment(`${entry.emp.id}_${date}_${info.activity.id}`) : {};
+            const workCodeName = String(info.workCode.name || info.workCode.abbreviation || 'CODE').trim();
+            const workCodeLine = assignment.shift === 'normal' && String(info.workCode.abbreviation || '').toUpperCase() === 'NA'
+              ? 'NA (Normal Arbeidstid)'
+              : workCodeName;
+            const duration = info.activity ? (activityShiftMeta(info.activity, assignment.shift)?.range || info.physicalShift) : info.physicalShift;
+            return `<div class="report-assignment"><strong>${esc(workCodeLine)}</strong><small>Shift duration: ${esc(duration)}</small></div>`;
+          }).join('') : ''}</td>`;
+        }).join('')}<td class="total-column">${formatHoursNumber(chunkDays)}</td><td class="total-column">${formatHoursNumber(chunkHours)}</td></tr>`;
+      }).join('') || `<tr><td colspan="${chunkDates.length + 3}" class="empty-note">No personnel scheduled in this period.</td></tr>`}</tbody></table>
     </section>`);
   }
   const printWindow = window.open('', '_blank', 'width=1400,height=900');
   if (!printWindow) { alert('Please allow pop-ups to print the team schedule.'); return; }
-  printWindow.document.write(`<!doctype html><html><head><title>Team Work Schedule</title><style>@page{size:landscape;margin:8mm}*{box-sizing:border-box}:root{--muted:#666;--text:#111}body{font:8px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0}.report-section{page-break-after:always;break-after:page}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:5px}.report-header h1{font-size:18px;margin:0}.security-label{display:inline-flex;align-items:center;justify-content:center;padding:3px 10px;border-radius:4px;border:1.5px solid currentColor;background:var(--security-label-color,#16a34a);color:#fff;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1;-webkit-print-color-adjust:exact;print-color-adjust:exact}.period{color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{padding:4px 3px;border:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}.employee-column{width:170px}.date-column{width:auto}.total-column{width:38px;font-weight:600}.muted{color:#666;font-size:8px;margin-top:2px}.activity-name{margin-top:3px}.weekend{background:var(--weekend-bg)}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
+  printWindow.document.write(`<!doctype html><html><head><title>Team Work Schedule</title><style>@page{size:A4 landscape;margin:5mm}*{box-sizing:border-box}:root{--muted:#555;--text:#111;--weekend-bg:#fff7ed;--weekend-text:#c2410c;--weekend-border:#fed7aa}html,body{width:100%;height:100%}body{font:7px/1 Arial,sans-serif;color:#111;margin:0}.report-section{height:200mm;max-height:200mm;overflow:hidden;page-break-after:always;break-after:page;display:flex;flex-direction:column}.report-section:last-child{page-break-after:auto;break-after:auto}.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:1mm}.report-header h1{font-size:10px;margin:0}.week-label{font-size:10px;font-weight:700;white-space:nowrap}.security-label{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:3px;border:1px solid currentColor;background:var(--security-label-color,#16a34a);color:#fff;font-size:6px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;line-height:1;-webkit-print-color-adjust:exact;print-color-adjust:exact}.period{color:#555;margin:1px 0 0;font-size:6px}.billing-summary{margin:0 0 1mm!important;padding:2px!important;font-size:5.5px!important}.billing-summary strong{margin-bottom:1px!important}.billing-summary table{font-size:5.5px!important}.billing-summary th,.billing-summary td{padding:1px!important}table{width:100%;border-collapse:collapse;table-layout:fixed;flex:1}thead{display:table-header-group}.fortnight-grid th,.fortnight-grid td{padding:.4px 1px;border:1px solid #999;text-align:center;vertical-align:middle;overflow:hidden}.fortnight-grid .employee-column{width:32mm;text-align:left}.fortnight-grid .date-column{width:auto}.week-number-row th{height:2.5mm;background:#e8e8e8;font-size:5.5px;border-bottom:0}.date-heading-row th{height:4mm;background:#f5f5f5;font-size:5px}.date-heading-row small{display:block;font-weight:400;color:#555;font-size:4.5px;margin-top:0}.date-heading-row .weekend{background:#eee4d8;color:#8b4513}.total-column{width:10mm;font-weight:600}.muted{display:block;color:#555;font-size:5px;margin-top:0}.activity-name{margin-top:0;color:#333;font-size:4.8px}.weekend{background:var(--weekend-bg)}th.weekend{color:var(--weekend-text)}.report-assignment + .report-assignment{margin-top:0;padding-top:0;border-top:1px solid #aaa}.report-assignment strong,.report-assignment small{display:block}.report-assignment strong{font-size:5px}.report-assignment small{font-size:4px;color:#444}.empty-cell{color:#777}.person-row{break-inside:avoid;page-break-inside:avoid;height:3mm}.employee-cell strong,.employee-cell small{display:block}.employee-cell strong{font-size:5.2px}.employee-cell small{font-size:4.3px;max-height:1em;overflow:hidden}.report-cell strong{font-size:5px;white-space:nowrap;overflow:hidden}.report-cell small{font-size:4px;white-space:nowrap;overflow:hidden}.empty-note{text-align:center;padding:4px}@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${sections.join('')}</body></html>`);
   printWindow.document.close(); printWindow.focus(); printWindow.print();
 }
 
@@ -10954,6 +11660,7 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
   const targetDates = new Set(dateStrings);
   const activityById = new Map(activities.map(activity => [activity.id, activity]));
   const assignmentsByDate = new Map();
+  const statusesByDate = new Map(dateStrings.map(date => [date, siFor(getEntryObj(`${emp.id}_${date}`)?.status)]));
   const employeePrefix = `${emp.id}_`;
   for (const key of Object.keys(activityShiftsMap)) {
     if (!key.startsWith(employeePrefix)) continue;
@@ -10961,6 +11668,9 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
     if (!targetDates.has(date)) continue;
     const activity = activityById.get(Number(activityId));
     if (!activity || activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) continue;
+    const status = statusesByDate.get(date);
+    const entry = getEntryObj(`${emp.id}_${date}`);
+    if (status && !statusEntryIsPlanned(entry) && (status.isAbsence || status.isOutOfOffice)) continue;
     if (!assignmentsByDate.has(date)) assignmentsByDate.set(date, []);
     assignmentsByDate.get(date).push(activity);
   }
@@ -11011,6 +11721,9 @@ function getEmployeeWorkload(emp, dateStrings = rollingDatesFor(new Date(), 30))
 }
 function staffingShiftIntervalsFor(empId, date) {
   const intervals = [];
+  const entry = getEntryObj(`${empId}_${date}`);
+  const status = entry ? siFor(entry.status) : null;
+  if (status && !statusEntryIsPlanned(entry) && (status.isAbsence || status.isOutOfOffice)) return intervals;
   for (const activity of activities) {
     if (activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity) || !actParticipantIds(activity).includes(empId)) continue;
     if (date < activity.startDate || date > activity.endDate || (!activity.includeWeekends && isWknd(new Date(`${date}T00:00:00`)))) continue;
@@ -11155,8 +11868,14 @@ function staffingLoadForDates(dateStrings, employeeList = employees) {
 function staffingActivityCountForDates(dateStrings, employeeList = employees) {
   return activities.filter(activity => {
     if (activityStatus(activity) !== 'confirmed' || !activityCountsTowardLoad(activity)) return false;
-    if (!employeeList.some(emp => activityRelevantToEmployee(activity, emp))) return false;
-    return dateStrings.some(date => date >= activity.startDate && date <= activity.endDate);
+    if (!employeeList.some(emp => activityRelevantToEmployee(activity, emp) && dateStrings.some(date => {
+      if (date < activity.startDate || date > activity.endDate) return false;
+      const entry = getEntryObj(`${emp.id}_${date}`);
+      const status = entry ? siFor(entry.status) : null;
+      if (status && !statusEntryIsPlanned(entry) && (status.isAbsence || status.isOutOfOffice)) return false;
+      return activityAssignmentInfo(activity, emp.id, date) !== null;
+    }))) return false;
+    return true;
   }).length;
 }
 function renderTeamStaffingChart(dateStrings, employeeList = employees) {
@@ -11208,6 +11927,14 @@ function renderTeamStaffingChart(dateStrings, employeeList = employees) {
   }).join('');
   return `<div style="overflow:auto"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Team staffing load and activity count over selected interval" style="width:100%;min-width:520px;height:210px;color:var(--muted);display:block"><text x="${left}" y="11" font-size="10" fill="currentColor">Staffing load</text><rect x="${left + 78}" y="3" width="9" height="9" rx="2" fill="#14b8a6" opacity=".55"/><text x="${left + 92}" y="11" font-size="10" fill="currentColor">Activities (max ${maxActivityCount})</text>${activityBars}${gridValue(100)}${gridValue(appSettings.highMax)}<polyline points="${line}" fill="none" stroke="var(--accent-blue)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${markers}${activityLabels}${labels}</svg></div>`;
 }
+function dashboardAvailabilityForEmployee(employee, date) {
+  const entry = getEntryObj(`${employee.id}_${date}`);
+  const status = entry ? siFor(entry.status) : null;
+  const statusUnavailable = Boolean(status && !statusEntryIsPlanned(entry) && entry.durationType !== 'time' && (status.isAbsence || status.isOutOfOffice));
+  const activity = statusUnavailable ? null : unavailableActivityFor(employee.id, date);
+  const explicit = cellUnavailable(employee.id, date);
+  return { entry, status, statusUnavailable, activity, explicit, unavailable: statusUnavailable || Boolean(activity) || Boolean(explicit) };
+}
 function renderDashboard() {
   const today = todayStr();
   const dashboardScope = /^(department|section)::([\s\S]+)$/.exec(dashboardScopeFilter);
@@ -11225,30 +11952,28 @@ function renderDashboard() {
   let absentToday = 0;
   const unavailableTodayPeople = [];
   for (const emp of dashboardEmployees) {
-    const entry = getEntryObj(`${emp.id}_${today}`);
+    const availability = dashboardAvailabilityForEmployee(emp, today);
+    const { entry, status, statusUnavailable } = availability;
     if (entry && counts[entry.status] !== undefined) counts[entry.status]++;
-    const status = entry ? siFor(entry.status) : null;
-    const unavailableActivity = unavailableActivityFor(emp.id, today);
-    const explicitUnavailable = cellUnavailable(emp.id, today);
-    const statusUnavailable = status && !statusEntryIsPlanned(entry) && (status.isAbsence || status.isOutOfOffice);
+    const effectiveUnavailableActivity = availability.activity;
+    const explicitUnavailable = availability.explicit;
     const isPartial = entry?.durationType === 'time';
     const partialHours = isPartial && entry?.time ? (timeRangeHours(entry.time) ?? 0) : 0;
-    const coreHours = appSettings.coreHoursPerDay || 7.5;
-    if (!statusUnavailable && !unavailableActivity && !explicitUnavailable) {
-      availableToday += isPartial ? 0 : 1;
+    if (!statusUnavailable && !effectiveUnavailableActivity && !explicitUnavailable) {
+      availableToday++;
     }
     if (statusUnavailable) {
       unavailableTodayPeople.push({ name: emp.name, status: isPartial ? `${status.label} (${partialHours}h)` : status.label });
-    } else if (unavailableActivity) {
-      const assignment = activityAssignment(`${emp.id}_${today}_${unavailableActivity.id}`);
+    } else if (effectiveUnavailableActivity) {
+      const assignment = activityAssignment(`${emp.id}_${today}_${effectiveUnavailableActivity.id}`);
       const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
-      unavailableTodayPeople.push({ name: emp.name, status: `${workCode?.name || 'Activity'} · ${unavailableActivity.name}` });
+      unavailableTodayPeople.push({ name: emp.name, status: `${workCode?.name || 'Activity'} · ${effectiveUnavailableActivity.name}` });
     } else if (explicitUnavailable) {
       unavailableTodayPeople.push({ name: emp.name, status: explicitUnavailable.reason ? `Unavailable · ${explicitUnavailable.reason}` : 'Unavailable' });
     }
-    if ((statusUnavailable && status.isOutOfOffice) || (!statusUnavailable && unavailableActivity)) oooToday++;
+    if ((statusUnavailable && status.isOutOfOffice) || (!statusUnavailable && effectiveUnavailableActivity)) oooToday++;
     if (statusUnavailable && status.isAbsence) {
-      absentToday += isPartial ? 0 : 1;
+      absentToday++;
     }
   }
   const unavailableTodayInline = unavailableTodayPeople.length
@@ -11263,20 +11988,20 @@ function renderDashboard() {
     let assignmentUnavailable = 0;
     let partialAbsenceHours = 0;
     let unavailableStatusCount = 0;
+    let unavailablePeople = 0;
     statuses.forEach(s => { dayCounts[s.key] = 0; });
     for (const emp of dashboardEmployees) {
-      const entry = getEntryObj(`${emp.id}_${ds}`);
-      const status = entry ? siFor(entry.status) : null;
-      const explicitUnavailable = cellUnavailable(emp.id, ds);
-      const statusAffectsAvailability = !!status && !statusEntryIsPlanned(entry) && (status.isAbsence || status.isOutOfOffice);
+      const availability = dashboardAvailabilityForEmployee(emp, ds);
+      const { entry, status, explicit: explicitUnavailable, statusUnavailable: statusAffectsAvailability, activity: activityUnavailable } = availability;
       if (status && !statusEntryIsPlanned(entry) && dayCounts[entry.status] !== undefined) dayCounts[entry.status]++;
       if (statusAffectsAvailability || explicitUnavailable) unavailableStatusCount++;
-      else if (unavailableActivityFor(emp.id, ds)) assignmentUnavailable++;
+      else if (activityUnavailable) assignmentUnavailable++;
+      if (statusAffectsAvailability || explicitUnavailable || activityUnavailable) unavailablePeople++;
       if (entry?.durationType === 'time' && status?.isAbsence && !statusEntryIsPlanned(entry)) {
         partialAbsenceHours += timeRangeHours(entry.time) ?? 0;
       }
     }
-    const unavailable = unavailableStatusCount + assignmentUnavailable;
+    const unavailable = unavailablePeople;
     const available = Math.max(0, totalEmployees - unavailable);
     return {
       date: d,
@@ -11297,25 +12022,23 @@ function renderDashboard() {
     const idx = key.indexOf('_');
     const empId = +key.slice(0, idx), date = key.slice(idx + 1);
     if (date <= today) continue;
-    const entry = getEntryObj(key);
     const emp = empById(empId);
-    if (!entry || !emp || !dashboardEmployeeIds.has(emp.id)) continue;
-    const unavailableActivity = unavailableActivityFor(emp.id, date);
-    if (entry.status === 'at_work' && !unavailableActivity) continue;
-    const activityAssignmentInfo = unavailableActivity ? activityAssignment(`${emp.id}_${date}_${unavailableActivity.id}`) : null;
-    const workCode = activityAssignmentInfo && (appSettings.workCodes || []).find(code => code.id === activityAssignmentInfo.workCodeId);
+    if (!emp || !dashboardEmployeeIds.has(emp.id)) continue;
+    const availability = dashboardAvailabilityForEmployee(emp, date);
+    const { entry, activity: unavailableActivity } = availability;
+    if (!entry) continue;
     const status = siFor(entry.status);
-    const associatedActivities = activities
-      .filter(activity => activityStatus(activity) !== 'cancelled'
-        && participantFor(activity, emp.id)
-        && date >= activity.startDate && date <= activity.endDate)
-      .map(activity => activity.name)
-      .filter((name, index, names) => name && names.indexOf(name) === index);
-    const destination = associatedActivities.length
-      ? associatedActivities.join(', ')
-      : unavailableActivity
-        ? [unavailableActivity.name, workCode?.name].filter(Boolean).join(' · ')
-        : (status?.label || friendlyStatusLabel(entry.status));
+    const statusUnavailable = status && !statusEntryIsPlanned(entry) && (status.isAbsence || status.isOutOfOffice);
+    const effectiveUnavailableActivity = statusUnavailable ? null : unavailableActivity;
+    if (entry.status === 'at_work' && !effectiveUnavailableActivity) continue;
+    if (entry.status !== 'at_work' && !statusUnavailable && !effectiveUnavailableActivity) continue;
+    const activityAssignmentInfo = effectiveUnavailableActivity ? activityAssignment(`${emp.id}_${date}_${effectiveUnavailableActivity.id}`) : null;
+    const workCode = activityAssignmentInfo && (appSettings.workCodes || []).find(code => code.id === activityAssignmentInfo.workCodeId);
+    const destination = status && entry.status !== 'at_work'
+      ? status.label
+      : effectiveUnavailableActivity
+        ? [effectiveUnavailableActivity.name, workCode?.name].filter(Boolean).join(' · ')
+        : friendlyStatusLabel(entry.status);
     const note = cellNotesMap[`${emp.id}_${date}`] || '';
     upcoming.push({ emp, date, entry, destination, reason: note });
     upcomingKeys.add(`${emp.id}_${date}`);
@@ -11327,7 +12050,9 @@ function renderDashboard() {
     const date = match[2];
     const itemKey = `${match[1]}_${date}`;
     if (date <= today || !emp || !dashboardEmployeeIds.has(emp.id) || upcomingKeys.has(itemKey)) continue;
-    const unavailableActivity = unavailableActivityFor(emp.id, date);
+    const availability = dashboardAvailabilityForEmployee(emp, date);
+    const { entry, activity: unavailableActivity } = availability;
+    if (availability.statusUnavailable) continue;
     if (!unavailableActivity || Number(match[3]) !== Number(unavailableActivity.id)) continue;
     const assignment = activityAssignment(key);
     const workCode = (appSettings.workCodes || []).find(code => code.id === assignment.workCodeId);
